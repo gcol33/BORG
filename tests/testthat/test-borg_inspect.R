@@ -262,3 +262,186 @@ test_that("borg_inspect distinguishes hard and soft violations", {
   # The classification matters for downstream behavior
   expect_false(result@is_valid)  # Hard violations invalidate
 })
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage tests
+# ---------------------------------------------------------------------------
+
+test_that("borg_inspect validates missing object argument", {
+  expect_error(borg_inspect(), "'object' is required")
+})
+
+test_that("borg_inspect validates train_idx type", {
+  data <- data.frame(x = 1:10)
+  expect_error(
+    borg_inspect(data, train_idx = "not numeric", test_idx = 6:10),
+    "'train_idx' must be an integer vector"
+  )
+})
+
+test_that("borg_inspect validates test_idx type", {
+  data <- data.frame(x = 1:10)
+  expect_error(
+    borg_inspect(data, train_idx = 1:5, test_idx = list(1, 2)),
+    "'test_idx' must be an integer vector"
+  )
+})
+
+test_that("borg_inspect handles recipe step_center leakage", {
+  skip_if_not_installed("recipes")
+
+  set.seed(42)
+  data <- data.frame(
+    y = rnorm(100),
+    x1 = rnorm(100, mean = 50, sd = 10)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # BAD: step_center on full data
+  rec_bad <- recipes::recipe(y ~ ., data = data) |>
+    recipes::step_center(recipes::all_numeric_predictors()) |>
+    recipes::prep(training = data)  # Full data
+
+  result_bad <- borg_inspect(rec_bad, train_idx, test_idx, data = data)
+  expect_gt(result_bad@n_hard, 0L)
+
+  # GOOD: step_center on train only
+  rec_good <- recipes::recipe(y ~ ., data = data[train_idx, ]) |>
+    recipes::step_center(recipes::all_numeric_predictors()) |>
+    recipes::prep(training = data[train_idx, ])
+
+  result_good <- borg_inspect(rec_good, train_idx, test_idx, data = data)
+  expect_true(result_good@is_valid)
+})
+
+test_that("borg_inspect handles recipe step_scale leakage", {
+  skip_if_not_installed("recipes")
+
+  set.seed(42)
+  data <- data.frame(
+    y = rnorm(100),
+    x1 = rnorm(100, mean = 0, sd = 20)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # BAD: step_scale on full data
+  rec_bad <- recipes::recipe(y ~ ., data = data) |>
+    recipes::step_scale(recipes::all_numeric_predictors()) |>
+    recipes::prep(training = data)
+
+  result_bad <- borg_inspect(rec_bad, train_idx, test_idx, data = data)
+  expect_gt(result_bad@n_hard, 0L)
+
+  # GOOD: step_scale on train only
+  rec_good <- recipes::recipe(y ~ ., data = data[train_idx, ]) |>
+    recipes::step_scale(recipes::all_numeric_predictors()) |>
+    recipes::prep(training = data[train_idx, ])
+
+  result_good <- borg_inspect(rec_good, train_idx, test_idx, data = data)
+  expect_true(result_good@is_valid)
+})
+
+test_that("borg_inspect handles prcomp leakage detection", {
+  set.seed(42)
+  data <- data.frame(
+    x1 = rnorm(100),
+    x2 = rnorm(100),
+    x3 = rnorm(100)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # BAD: PCA on full data
+  pca_bad <- prcomp(data, center = TRUE, scale. = TRUE)
+
+  result_bad <- borg_inspect(pca_bad, train_idx, test_idx, data = data)
+  expect_gt(result_bad@n_hard, 0L)
+  # PCA leaks are reported as preprocessing_leak with "PCA" in description
+  pca_leak <- Filter(function(r) grepl("PCA", r$description), result_bad@risks)
+  expect_gt(length(pca_leak), 0)
+
+  # GOOD: PCA on train only
+  pca_good <- prcomp(data[train_idx, ], center = TRUE, scale. = TRUE)
+
+  result_good <- borg_inspect(pca_good, train_idx, test_idx, data = data)
+  expect_true(result_good@is_valid)
+})
+
+test_that("borg_inspect handles rsplit objects",
+{
+  skip_if_not_installed("rsample")
+
+  set.seed(42)
+  data <- data.frame(y = rnorm(100), x = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Create an rsplit (from initial_split)
+  split <- rsample::initial_split(data, prop = 0.7)
+
+  # This is an rsplit object, should be inspectable
+  result <- borg_inspect(split, train_idx, test_idx)
+  # rsplit inspection should work without error
+expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles NULL indices gracefully", {
+  data <- data.frame(x = 1:10, y = 11:20)
+
+  # With NULL indices, should still return a BorgRisk
+  result <- borg_inspect(data, train_idx = NULL, test_idx = NULL)
+  expect_s4_class(result, "BorgRisk")
+  expect_true(result@is_valid)  # No violations without indices
+})
+
+test_that("borg_inspect handles print.borg_context output", {
+  data <- data.frame(x = 1:100, y = 101:200)
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  ctx <- borg_guard(
+    data = data,
+    train_idx = train_idx,
+    test_idx = test_idx,
+    mode = "warn"
+  )
+
+  # Test print method produces output
+  output <- capture.output(print(ctx))
+  expect_true(length(output) > 0)
+  expect_true(any(grepl("BORG", output)))
+})
+
+test_that("borg_inspect handles preProcess with multiple methods", {
+  skip_if_not_installed("caret")
+
+  set.seed(42)
+  data <- data.frame(
+    y = rnorm(100),
+    x1 = rnorm(100, mean = 100),
+    x2 = rnorm(100, mean = 50)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # BAD: preProcess on full data with multiple methods
+  pp_bad <- caret::preProcess(
+    data[, c("x1", "x2")],
+    method = c("center", "scale", "pca")
+  )
+
+  result_bad <- borg_inspect(pp_bad, train_idx, test_idx, data = data)
+  expect_gt(result_bad@n_hard, 0L)
+
+  # GOOD: preProcess on train only
+  pp_good <- caret::preProcess(
+    data[train_idx, c("x1", "x2")],
+    method = c("center", "scale")
+  )
+
+  result_good <- borg_inspect(pp_good, train_idx, test_idx, data = data)
+  expect_true(result_good@is_valid)
+})
