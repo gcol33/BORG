@@ -157,6 +157,8 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
    .inspect_parsnip(object, train_idx, test_idx, data, ...)
  } else if (inherits(object, "workflow")) {
    .inspect_workflow(object, train_idx, test_idx, data, ...)
+ } else if (inherits(object, "tune_results")) {
+   .inspect_tune_results(object, train_idx, test_idx, data, ...)
  } else if (is.data.frame(object)) {
    .inspect_data_frame(object, train_idx, test_idx, ...)
  } else if (.is_trainControl(object)) {
@@ -1252,6 +1254,89 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
   # Check 3: Workflow was fitted on correct data
   if (!is.null(object$fit$fit$fit)) {
     # Try to get training row count from underlying model
+  }
+
+  risks
+}
+
+#' @noRd
+.inspect_tune_results <- function(object, train_idx, test_idx, data, ...) {
+  risks <- list()
+
+  if (is.null(train_idx)) return(risks)
+
+  # tune_results from tidymodels tune package contains:
+  # - splits: resampling splits used during tuning
+  # - .metrics: performance metrics
+  # - .notes: any warnings/errors
+
+  # Check 1: Verify splits don't include test data
+  if ("splits" %in% names(object)) {
+    splits <- object$splits
+
+    for (i in seq_along(splits)) {
+      split <- splits[[i]]
+
+      # Get analysis (training) indices for this resample
+      if (!is.null(split$in_id)) {
+        analysis_idx <- split$in_id
+
+        # Check if any test indices are in the analysis set
+        leaked_test <- intersect(analysis_idx, test_idx)
+
+        if (length(leaked_test) > 0) {
+          risks <- c(risks, list(list(
+            type = "tune_test_in_resamples",
+            severity = "hard_violation",
+            description = sprintf(
+              "Tuning resample %d uses %d test indices in training fold. HPO is using test data.",
+              i, length(leaked_test)
+            ),
+            affected_indices = leaked_test,
+            source_object = "tune_results"
+          )))
+        }
+      }
+    }
+  }
+
+  # Check 2: Verify the object was created from train data only
+  # tune_results stores the original data size
+  if (".config" %in% names(attributes(object))) {
+    # Config may contain info about data used
+  }
+
+  # Check 3: Look for suspiciously good metrics (potential overfitting to CV)
+  if (".metrics" %in% names(object)) {
+    # Could check if best metrics are implausibly good
+  }
+
+  # Check 4: Verify resamples are nested within train set
+  n_train <- length(train_idx)
+  n_test <- length(test_idx)
+  n_total <- max(c(train_idx, test_idx))
+
+  # If tune was done on full data, the split indices will span beyond train
+  if ("splits" %in% names(object) && length(object$splits) > 0) {
+    first_split <- object$splits[[1]]
+
+    # Check the data attribute of the split
+    if (!is.null(first_split$data) && is.data.frame(first_split$data)) {
+      split_nrow <- nrow(first_split$data)
+
+      if (split_nrow == n_total) {
+        risks <- c(risks, list(list(
+          type = "tune_on_full_data",
+          severity = "hard_violation",
+          description = sprintf(
+            "Tuning was performed on %d observations (full dataset). Should use only training data (%d observations).",
+            split_nrow, n_train
+          ),
+          affected_indices = test_idx,
+          source_object = "tune_results"
+        )))
+      }
+    }
   }
 
   risks

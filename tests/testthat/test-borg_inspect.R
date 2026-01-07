@@ -445,3 +445,189 @@ test_that("borg_inspect handles preProcess with multiple methods", {
   result_good <- borg_inspect(pp_good, train_idx, test_idx, data = data)
   expect_true(result_good@is_valid)
 })
+
+
+# ---------------------------------------------------------------------------
+# Additional model and generic inspector tests
+# ---------------------------------------------------------------------------
+
+test_that("borg_inspect handles xgboost model", {
+  skip_if_not_installed("xgboost")
+
+  set.seed(42)
+  data <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Create xgboost model on full data (bad)
+  dtrain <- xgboost::xgb.DMatrix(
+    data = as.matrix(data[, c("x1", "x2")]),
+    label = data$y
+  )
+  model <- xgboost::xgb.train(
+    params = list(max_depth = 2, eta = 0.1, objective = "reg:squarederror"),
+    data = dtrain, nrounds = 5, verbose = 0
+  )
+
+  result <- borg_inspect(model, train_idx, test_idx, data = data)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles lightgbm model", {
+  skip_if_not_installed("lightgbm")
+
+  set.seed(42)
+  data <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Create lightgbm model
+  dtrain <- lightgbm::lgb.Dataset(
+    data = as.matrix(data[train_idx, c("x1", "x2")]),
+    label = data$y[train_idx]
+  )
+  model <- lightgbm::lgb.train(
+    params = list(objective = "regression", num_leaves = 5),
+    data = dtrain, nrounds = 5, verbose = -1
+  )
+
+  result <- borg_inspect(model, train_idx, test_idx, data = data)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles generic objects gracefully", {
+  # Create a custom S3 object that borg doesn't know about
+  custom_obj <- structure(list(data = 1:10), class = "custom_model")
+
+  result <- borg_inspect(custom_obj, train_idx = 1:5, test_idx = 6:10)
+  expect_s4_class(result, "BorgRisk")
+  # Generic inspector returns empty list, so no risks
+  expect_equal(result@n_hard, 0L)
+})
+
+test_that("borg_inspect trainControl handles non-nested CV", {
+  skip_if_not_installed("caret")
+
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # trainControl with timeslice (should trigger non-nested check)
+  ctrl <- caret::trainControl(
+    method = "timeslice",
+    initialWindow = 20,
+    horizon = 5,
+    fixedWindow = TRUE
+  )
+
+  result <- borg_inspect(ctrl, train_idx, test_idx)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles trainControl without index", {
+  skip_if_not_installed("caret")
+
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # trainControl without explicit index (just method)
+  ctrl <- caret::trainControl(method = "cv", number = 5)
+
+  result <- borg_inspect(ctrl, train_idx, test_idx)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles prcomp without centering/scaling", {
+  set.seed(42)
+  data <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # PCA without centering/scaling
+  pca <- prcomp(data, center = FALSE, scale. = FALSE)
+
+  result <- borg_inspect(pca, train_idx, test_idx, data = data)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles empty risks list", {
+  # Inspect something that won't generate any risks
+  data <- data.frame(x = 1:10)
+
+  result <- borg_inspect(data, train_idx = 1:5, test_idx = 6:10)
+  expect_equal(length(result@risks), 0)
+  expect_true(result@is_valid)
+})
+
+test_that("borg_inspect handles caret train object", {
+  skip_if_not_installed("caret")
+
+  set.seed(42)
+  data <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Train on full data (bad)
+  ctrl <- caret::trainControl(method = "cv", number = 3)
+  model <- caret::train(y ~ ., data = data, method = "lm", trControl = ctrl)
+
+  result <- borg_inspect(model, train_idx, test_idx, data = data)
+  expect_s4_class(result, "BorgRisk")
+  # Should detect that model was trained on full data
+  expect_gt(result@n_hard, 0L)
+})
+
+test_that("borg_inspect handles caret train on correct data", {
+  skip_if_not_installed("caret")
+
+  set.seed(42)
+  data <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100))
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Train on train data only (good)
+  ctrl <- caret::trainControl(method = "cv", number = 3)
+  model <- caret::train(y ~ ., data = data[train_idx, ], method = "lm", trControl = ctrl)
+
+  result <- borg_inspect(model, train_idx, test_idx, data = data)
+  expect_s4_class(result, "BorgRisk")
+  expect_true(result@is_valid)
+})
+
+test_that("borg_inspect handles trainControl with indexOut", {
+  skip_if_not_installed("caret")
+
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # trainControl with both index and indexOut
+  ctrl <- caret::trainControl(
+    method = "cv",
+    index = list(Fold1 = 1:35, Fold2 = 36:70),
+    indexOut = list(Fold1 = 36:70, Fold2 = 1:35)
+  )
+
+  result <- borg_inspect(ctrl, train_idx, test_idx)
+  expect_s4_class(result, "BorgRisk")
+})
+
+test_that("borg_inspect handles recipe with step_pca leakage", {
+  skip_if_not_installed("recipes")
+
+  set.seed(42)
+  data <- data.frame(
+    y = rnorm(100),
+    x1 = rnorm(100),
+    x2 = rnorm(100),
+    x3 = rnorm(100)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # BAD: recipe with PCA on full data
+  rec_bad <- recipes::recipe(y ~ ., data = data) |>
+    recipes::step_pca(recipes::all_numeric_predictors(), num_comp = 2) |>
+    recipes::prep(training = data)
+
+  result_bad <- borg_inspect(rec_bad, train_idx, test_idx, data = data)
+  expect_gt(result_bad@n_hard, 0L)
+})

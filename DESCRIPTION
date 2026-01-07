@@ -25,6 +25,8 @@ Suggests:
     ranger,
     parsnip,
     workflows,
+    xgboost,
+    lightgbm,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown

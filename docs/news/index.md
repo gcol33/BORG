@@ -36,6 +36,23 @@
   Validate prediction vectors against expected indices
 - [`cv_leakage_report()`](https://gillescolling.com/BORG/reference/cv_leakage_report.md):
   Generate detailed cross-validation leakage reports
+- [`audit_importance()`](https://gillescolling.com/BORG/reference/audit_importance.md):
+  Detect feature importance computed on test data (SHAP, permutation)
+
+#### Tidymodels integration
+
+- Added `tune_results` inspection for tidymodels tuning objects
+- Detects when hyperparameter tuning uses test data in resamples
+
+#### Configuration
+
+- Added
+  [`borg_auto_check()`](https://gillescolling.com/BORG/reference/borg_auto_check.md)
+  to enable/disable automatic validation
+- Added
+  [`borg_options()`](https://gillescolling.com/BORG/reference/borg_options.md)
+  to query current configuration
+- New options: `borg.auto_check`, `borg.strict`, `borg.verbose`
 
 ### Bug fixes
 

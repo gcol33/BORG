@@ -55,8 +55,13 @@ navbar:
       aria-label: GitHub
 
 reference:
+  - title: "Main Entry Point"
+    desc: "Start here"
+    contents:
+      - borg
+
   - title: "Core Functions"
-    desc: "Primary interface for evaluation risk detection"
+    desc: "Detailed validation functions"
     contents:
       - borg_guard
       - borg_inspect
@@ -80,7 +85,14 @@ reference:
     desc: "Prediction and CV auditing"
     contents:
       - audit_predictions
+      - audit_importance
       - cv_leakage_report
+
+  - title: "Configuration"
+    desc: "Options and settings"
+    contents:
+      - borg_auto_check
+      - borg_options
 
   - title: "Classes"
     desc: "Result objects"

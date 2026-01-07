@@ -1,6 +1,6 @@
 # BORG v0.2.0 TODO
 
-## Quick Wins
+## Completed
 
 Add
 [`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md)
@@ -10,10 +10,14 @@ Update NEWS.md with v0.1.0 features
 
 Rebuild pkgdown site
 
-## Feature Improvements
+Feature importance audit
+([`audit_importance()`](https://gillescolling.com/BORG/reference/audit_importance.md))
 
-Feature importance audit (detect SHAP/permutation importance on test
-data)
+tidymodels tune integration (`tune_results` inspector)
+
+CRAN preparation (0 errors, 0 warnings, 0 notes)
+
+## Feature Improvements
 
 Improved
 [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md)
@@ -25,12 +29,10 @@ Add suggested fixes to risk reports
 
 Framework hooks (`options(borg.auto_check = TRUE)`)
 
-tidymodels tune integration
-
 MLOps logging (mlflow, vetiver)
 
 ## Future
 
 Shiny dashboard for interactive exploration
 
-CRAN submission preparation
+CRAN submission

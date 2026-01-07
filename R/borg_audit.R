@@ -331,6 +331,224 @@ cv_leakage_report <- function(cv_object, train_idx, test_idx) {
 }
 
 
+#' Audit Feature Importance Calculations
+#'
+#' Detects when feature importance (SHAP, permutation importance, etc.) is
+#' computed using test data, which can lead to biased feature selection and
+#' data leakage.
+#'
+#' @param importance A vector, matrix, or data frame of importance values.
+#' @param data The data used to compute importance.
+#' @param train_idx Integer vector of training indices.
+#' @param test_idx Integer vector of test indices.
+#' @param method Character indicating the importance method. One of
+#'   "shap", "permutation", "gain", "impurity", or "auto" (default).
+#' @param model Optional fitted model object for additional validation.
+#'
+#' @return A BorgRisk object with audit results.
+#'
+#' @details
+#' Feature importance computed on test data is a form of data leakage because:
+#' \itemize{
+#'   \item SHAP values computed on test data reveal test set structure
+#'   \item Permutation importance on test data uses test labels
+#'   \item Feature selection based on test importance leads to overfit models
+#' }
+#'
+#' This function checks if the data used for importance calculation includes
+#' test indices and flags potential violations.
+#'
+#' @examples
+#' set.seed(42)
+#' data <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100))
+#' train_idx <- 1:70
+#' test_idx <- 71:100
+#'
+#' # Simulate importance values
+#' importance <- c(x1 = 0.6, x2 = 0.4)
+#'
+#' # Good: importance computed on training data
+#' result <- audit_importance(importance, data[train_idx, ], train_idx, test_idx)
+#'
+#' # Bad: importance computed on full data (includes test)
+#' result_bad <- audit_importance(importance, data, train_idx, test_idx)
+#'
+#' @export
+audit_importance <- function(importance, data, train_idx, test_idx,
+                              method = "auto", model = NULL) {
+
+  risks <- list()
+
+  # ===========================================================================
+  # Input validation
+  # ===========================================================================
+
+  if (is.null(importance)) {
+    stop("'importance' must be provided")
+  }
+
+  if (is.null(data)) {
+    stop("'data' must be provided to check for test data usage")
+  }
+
+  n_data <- if (is.data.frame(data) || is.matrix(data)) nrow(data) else length(data)
+  n_train <- length(train_idx)
+  n_test <- length(test_idx)
+  n_total <- max(c(train_idx, test_idx))
+
+  # ===========================================================================
+  # Check 1: Data size indicates test data was used
+  # ===========================================================================
+
+  # If data size matches full dataset (train + test), likely includes test
+  if (n_data == n_total || n_data == (n_train + n_test)) {
+    risks <- c(risks, list(list(
+      type = "importance_on_full_data",
+      severity = "hard_violation",
+      description = sprintf(
+        "Feature importance computed on %d observations (full dataset). Should use only training data (%d observations).",
+        n_data, n_train
+      ),
+      affected_indices = test_idx,
+      source_object = "importance"
+    )))
+  }
+
+  # If data size is larger than train but not full, something is off
+  if (n_data > n_train && n_data < n_total) {
+    risks <- c(risks, list(list(
+      type = "importance_data_size_mismatch",
+      severity = "soft_inflation",
+      description = sprintf(
+        "Feature importance data has %d observations. Expected %d (train) or %d (full). Verify correct data was used.",
+        n_data, n_train, n_total
+      ),
+      affected_indices = integer(0),
+      source_object = "importance"
+    )))
+  }
+
+  # ===========================================================================
+  # Check 2: Method-specific checks
+  # ===========================================================================
+
+  method <- tolower(method)
+
+  if (method %in% c("shap", "auto")) {
+    # SHAP values should be computed on training data only for model explanation
+    # If computing on test data, it's using test information for feature selection
+    if (n_data == n_test) {
+      risks <- c(risks, list(list(
+        type = "shap_on_test_data",
+        severity = "hard_violation",
+        description = sprintf(
+          "SHAP values computed on %d observations (matches test set size). SHAP should be computed on training data for feature selection.",
+          n_data
+        ),
+        affected_indices = test_idx,
+        source_object = "importance"
+      )))
+    }
+  }
+
+  if (method %in% c("permutation", "auto")) {
+    # Permutation importance requires labels - using test labels is leakage
+    if (n_data == n_test) {
+      risks <- c(risks, list(list(
+        type = "permutation_on_test_data",
+        severity = "hard_violation",
+        description = "Permutation importance computed on test data uses test labels, causing information leakage.",
+        affected_indices = test_idx,
+        source_object = "importance"
+      )))
+    }
+  }
+
+  # ===========================================================================
+  # Check 3: Model-based checks
+  # ===========================================================================
+
+  if (!is.null(model)) {
+    # Validate model was trained correctly
+    model_risk <- borg_inspect(model, train_idx, test_idx)
+    if (model_risk@n_hard > 0) {
+      risks <- c(risks, list(list(
+        type = "importance_from_leaked_model",
+        severity = "hard_violation",
+        description = sprintf(
+          "Model used for feature importance has %d hard violations. Importance values are unreliable.",
+          model_risk@n_hard
+        ),
+        affected_indices = test_idx,
+        source_object = class(model)[1]
+      )))
+    }
+  }
+
+  # ===========================================================================
+  # Check 4: Importance value sanity checks
+  # ===========================================================================
+
+  # Extract numeric importance values
+  imp_vals <- if (is.data.frame(importance)) {
+    unlist(importance[sapply(importance, is.numeric)])
+  } else if (is.matrix(importance)) {
+    as.numeric(importance)
+  } else {
+    as.numeric(importance)
+  }
+
+  imp_vals <- imp_vals[!is.na(imp_vals)]
+
+  if (length(imp_vals) > 0) {
+    # Check for suspiciously uniform importance (might indicate random/meaningless)
+    if (length(imp_vals) > 2) {
+      imp_sd <- sd(imp_vals)
+      imp_range <- diff(range(imp_vals))
+
+      if (imp_range > 0 && imp_sd / imp_range < 0.05) {
+        risks <- c(risks, list(list(
+          type = "uniform_importance",
+          severity = "soft_inflation",
+          description = "Feature importance values are nearly uniform. May indicate incorrect calculation or uninformative features.",
+          affected_indices = integer(0),
+          source_object = "importance"
+        )))
+      }
+    }
+
+    # Check for negative importance (valid for some methods, suspicious for others)
+    if (any(imp_vals < 0) && method %in% c("gain", "impurity")) {
+      risks <- c(risks, list(list(
+        type = "negative_importance",
+        severity = "soft_inflation",
+        description = "Negative importance values detected for gain/impurity method. This is unusual.",
+        affected_indices = integer(0),
+        source_object = "importance"
+      )))
+    }
+  }
+
+  # ===========================================================================
+  # Build result
+  # ===========================================================================
+
+  n_hard <- sum(vapply(risks, function(r) r$severity == "hard_violation", logical(1)))
+  n_soft <- sum(vapply(risks, function(r) r$severity == "soft_inflation", logical(1)))
+
+  new("BorgRisk",
+      risks = risks,
+      n_hard = as.integer(n_hard),
+      n_soft = as.integer(n_soft),
+      is_valid = n_hard == 0L,
+      train_indices = train_idx,
+      test_indices = test_idx,
+      timestamp = Sys.time(),
+      call = match.call()
+  )
+}
+
+
 #' Print CV Leakage Report
 #' @param x A borg_cv_report object.
 #' @param ... Additional arguments (ignored).

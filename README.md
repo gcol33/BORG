@@ -29,22 +29,36 @@ The call to `scale()` computed mean and standard deviation using all 1000 rows. 
 ```r
 library(BORG)
 
-ctx <- borg_guard(
- data = data,
- train_idx = 1:800,
- test_idx = 801:1000
-)
+# One function does it all
+borg(data, train_idx = 1:800, test_idx = 801:1000)
 # Error: BORG HARD VIOLATION: preprocessing fitted on full data
 ```
 
 BORG fails closed. The evaluation does not proceed.
 
-## Core Functions
+## Usage
+
+```r
+# Validate a train/test split
+borg(data, train_idx = 1:800, test_idx = 801:1000)
+
+# Check a preprocessing object
+borg(my_recipe, train_idx, test_idx, data = data)
+
+# Check a fitted model
+borg(my_model, train_idx, test_idx, data = data)
+
+# Check a CV object
+borg(my_folds, train_idx, test_idx)
+```
+
+## Functions
 
 | Function | Purpose |
 |----------|---------|
+| `borg()` | **Main entry point** — auto-detects and validates |
 | `borg_guard()` | Create guarded evaluation context |
-| `borg_inspect()` | Check object for leakage signals |
+| `borg_inspect()` | Detailed object inspection |
 | `borg_validate()` | Validate complete workflow |
 | `borg_rewrite()` | Attempt automatic repair |
 

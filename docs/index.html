@@ -107,16 +107,29 @@
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span> data <span class="op">=</span> <span class="va">data</span>,</span>
-<span> train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>,</span>
-<span> test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span></span>
-<span><span class="op">)</span></span>
+<span><span class="co"># One function does it all</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co"># Error: BORG HARD VIOLATION: preprocessing fitted on full data</span></span></code></pre></div>
 <p>BORG fails closed. The evaluation does not proceed.</p>
 </div>
 <div class="section level2">
-<h2 id="core-functions">Core Functions<a class="anchor" aria-label="anchor" href="#core-functions"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
+</h2>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate a train/test split</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check a preprocessing object</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_recipe</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check a fitted model</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_model</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check a CV object</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a>
 </h2>
 <table class="table">
 <thead><tr>
@@ -125,12 +138,17 @@
 </tr></thead>
 <tbody>
 <tr>
+<td><code><a href="reference/borg.html">borg()</a></code></td>
+<td>
+<strong>Main entry point</strong> — auto-detects and validates</td>
+</tr>
+<tr>
 <td><code><a href="reference/borg_guard.html">borg_guard()</a></code></td>
 <td>Create guarded evaluation context</td>
 </tr>
 <tr>
 <td><code><a href="reference/borg_inspect.html">borg_inspect()</a></code></td>
-<td>Check object for leakage signals</td>
+<td>Detailed object inspection</td>
 </tr>
 <tr>
 <td><code><a href="reference/borg_validate.html">borg_validate()</a></code></td>

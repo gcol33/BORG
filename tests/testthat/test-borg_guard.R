@@ -408,3 +408,32 @@ test_that("borg_guard handles combined temporal and group violations", {
     )
   )
 })
+
+
+# ---------------------------------------------------------------------------
+# print.borg_context coverage tests
+# ---------------------------------------------------------------------------
+
+test_that("print.borg_context displays temporal info", {
+  data <- data.frame(x = 1:10, y = 11:20, time = 1:10)
+  ctx <- borg_guard(data, 1:5, 6:10, temporal_col = "time")
+
+  output <- capture.output(print(ctx))
+  expect_true(any(grepl("Temporal", output)))
+})
+
+test_that("print.borg_context displays spatial info", {
+  data <- data.frame(x = 1:10, y = 11:20, lon = runif(10), lat = runif(10))
+  ctx <- borg_guard(data, 1:5, 6:10, spatial_cols = c("lon", "lat"))
+
+  output <- capture.output(print(ctx))
+  expect_true(any(grepl("Spatial", output)))
+})
+
+test_that("print.borg_context displays group info", {
+  data <- data.frame(x = 1:10, y = 11:20, grp = c(1, 1, 2, 2, 3, 4, 4, 5, 5, 6))
+  ctx <- borg_guard(data, 1:5, 6:10, group_col = "grp")
+
+  output <- capture.output(print(ctx))
+  expect_true(any(grepl("Group", output)))
+})

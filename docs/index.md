@@ -38,22 +38,37 @@ performance on unseen data.
 
 library(BORG)
 
-ctx <- borg_guard(
- data = data,
- train_idx = 1:800,
- test_idx = 801:1000
-)
+# One function does it all
+borg(data, train_idx = 1:800, test_idx = 801:1000)
 # Error: BORG HARD VIOLATION: preprocessing fitted on full data
 ```
 
 BORG fails closed. The evaluation does not proceed.
 
-## Core Functions
+## Usage
+
+``` r
+
+# Validate a train/test split
+borg(data, train_idx = 1:800, test_idx = 801:1000)
+
+# Check a preprocessing object
+borg(my_recipe, train_idx, test_idx, data = data)
+
+# Check a fitted model
+borg(my_model, train_idx, test_idx, data = data)
+
+# Check a CV object
+borg(my_folds, train_idx, test_idx)
+```
+
+## Functions
 
 | Function | Purpose |
 |----|----|
+| [`borg()`](https://gillescolling.com/BORG/reference/borg.md) | **Main entry point** — auto-detects and validates |
 | [`borg_guard()`](https://gillescolling.com/BORG/reference/borg_guard.md) | Create guarded evaluation context |
-| [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md) | Check object for leakage signals |
+| [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md) | Detailed object inspection |
 | [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md) | Validate complete workflow |
 | [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md) | Attempt automatic repair |
 

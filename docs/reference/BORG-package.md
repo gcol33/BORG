@@ -67,6 +67,24 @@ BORG integrates with:
 
 - Base R: manual index-based splitting
 
+## Options
+
+BORG respects the following options:
+
+- `borg.auto_check`:
+
+  If TRUE, automatically validate splits when using supported
+  frameworks. Default: FALSE.
+
+- `borg.strict`:
+
+  If TRUE, throw errors on hard violations. If FALSE, return warnings.
+  Default: TRUE.
+
+- `borg.verbose`:
+
+  If TRUE, print diagnostic messages. Default: FALSE.
+
 ## See also
 
 Useful links:

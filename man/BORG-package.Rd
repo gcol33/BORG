@@ -53,6 +53,19 @@ BORG integrates with:
 }
 }
 
+\section{Options}{
+
+BORG respects the following options:
+\describe{
+\item{\code{borg.auto_check}}{If TRUE, automatically validate splits when
+using supported frameworks. Default: FALSE.}
+\item{\code{borg.strict}}{If TRUE, throw errors on hard violations.
+If FALSE, return warnings. Default: TRUE.}
+\item{\code{borg.verbose}}{If TRUE, print diagnostic messages.
+Default: FALSE.}
+}
+}
+
 \seealso{
 Useful links:
 \itemize{

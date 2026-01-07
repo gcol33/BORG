@@ -1,8 +1,15 @@
 # Package index
 
+## Main Entry Point
+
+Start here
+
+- [`borg()`](https://gillescolling.com/BORG/reference/borg.md) : BORG:
+  Validate Model Evaluation
+
 ## Core Functions
 
-Primary interface for evaluation risk detection
+Detailed validation functions
 
 - [`borg_guard()`](https://gillescolling.com/BORG/reference/borg_guard.md)
   : Guard Model Evaluation Against Information Reuse
@@ -39,8 +46,19 @@ Prediction and CV auditing
 
 - [`audit_predictions()`](https://gillescolling.com/BORG/reference/audit_predictions.md)
   : Audit Predictions for Data Leakage
+- [`audit_importance()`](https://gillescolling.com/BORG/reference/audit_importance.md)
+  : Audit Feature Importance Calculations
 - [`cv_leakage_report()`](https://gillescolling.com/BORG/reference/cv_leakage_report.md)
   : Generate CV Leakage Report
+
+## Configuration
+
+Options and settings
+
+- [`borg_auto_check()`](https://gillescolling.com/BORG/reference/borg_auto_check.md)
+  : Enable/Disable BORG Auto-Check Mode
+- [`borg_options()`](https://gillescolling.com/BORG/reference/borg_options.md)
+  : Get Current BORG Options
 
 ## Classes
 

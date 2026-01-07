@@ -94,6 +94,20 @@
 <code><a href="../reference/audit_predictions.html">audit_predictions()</a></code>: Validate prediction vectors against expected indices</li>
 <li>
 <code><a href="../reference/cv_leakage_report.html">cv_leakage_report()</a></code>: Generate detailed cross-validation leakage reports</li>
+<li>
+<code><a href="../reference/audit_importance.html">audit_importance()</a></code>: Detect feature importance computed on test data (SHAP, permutation)</li>
+</ul></div>
+<div class="section level4">
+<h4 id="tidymodels-integration-0-2-0">Tidymodels integration<a class="anchor" aria-label="anchor" href="#tidymodels-integration-0-2-0"></a></h4>
+<ul><li>Added <code>tune_results</code> inspection for tidymodels tuning objects</li>
+<li>Detects when hyperparameter tuning uses test data in resamples</li>
+</ul></div>
+<div class="section level4">
+<h4 id="configuration-0-2-0">Configuration<a class="anchor" aria-label="anchor" href="#configuration-0-2-0"></a></h4>
+<ul><li>Added <code><a href="../reference/borg_auto_check.html">borg_auto_check()</a></code> to enable/disable automatic validation</li>
+<li>Added <code><a href="../reference/borg_options.html">borg_options()</a></code> to query current configuration</li>
+<li>New options: <code>borg.auto_check</code>, <code>borg.strict</code>, <code>borg.verbose</code>
+</li>
 </ul></div>
 </div>
 <div class="section level3">

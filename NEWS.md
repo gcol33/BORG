@@ -21,6 +21,16 @@
 ### Audit functions
 * `audit_predictions()`: Validate prediction vectors against expected indices
 * `cv_leakage_report()`: Generate detailed cross-validation leakage reports
+* `audit_importance()`: Detect feature importance computed on test data (SHAP, permutation)
+
+### Tidymodels integration
+* Added `tune_results` inspection for tidymodels tuning objects
+* Detects when hyperparameter tuning uses test data in resamples
+
+### Configuration
+* Added `borg_auto_check()` to enable/disable automatic validation
+* Added `borg_options()` to query current configuration
+* New options: `borg.auto_check`, `borg.strict`, `borg.verbose`
 
 ## Bug fixes
 * Fixed rsample vfold_cv inspection for attribute structure changes
