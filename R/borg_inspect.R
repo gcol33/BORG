@@ -780,9 +780,17 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
   }
 
   # Check if CV was created on data that includes test indices
-  # The rset stores the total number of observations
-  n_total <- attr(object, "n")
-  if (!is.null(n_total)) {
+
+  # Get total observations from the first split's underlying data
+  n_total <- NULL
+  if (nrow(object) > 0 && "splits" %in% names(object)) {
+    first_split <- object$splits[[1]]
+    if (!is.null(first_split) && !is.null(first_split$data)) {
+      n_total <- nrow(first_split$data)
+    }
+  }
+
+  if (!is.null(n_total) && length(n_total) == 1) {
     expected_n <- length(train_idx)
     if (n_total > expected_n) {
       # CV was created on more data than just training set

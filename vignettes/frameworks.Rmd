@@ -96,27 +96,29 @@ library(recipes)
 library(rsample)
 library(BORG)
 
-data(ames, package = "modeldata")
+# Use mtcars for reproducible example
+data(mtcars)
 
 # Create split
-split <- initial_split(ames, prop = 0.8)
+set.seed(123)
+split <- initial_split(mtcars, prop = 0.8)
 train_idx <- split$in_id
-test_idx <- setdiff(1:nrow(ames), train_idx)
+test_idx <- setdiff(seq_len(nrow(mtcars)), train_idx)
 
 # BAD: recipe prepped on full data
-rec_bad <- recipe(Sale_Price ~ ., data = ames) %>%
+rec_bad <- recipe(mpg ~ ., data = mtcars) %>%
   step_normalize(all_numeric_predictors()) %>%
-  prep()  # Uses full ames data!
+  prep()  # Uses full mtcars data!
 
-result <- borg_inspect(rec_bad, train_idx, test_idx, data = ames)
+result <- borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
 # Detects leak
 
 # GOOD: recipe prepped on training only
-rec_good <- recipe(Sale_Price ~ ., data = training(split)) %>%
+rec_good <- recipe(mpg ~ ., data = training(split)) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()
 
-result <- borg_inspect(rec_good, train_idx, test_idx, data = ames)
+result <- borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
 # Clean
 ```
 
