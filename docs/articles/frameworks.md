@@ -274,7 +274,7 @@ if (!result@is_valid) {
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-07 22:17:13
+#>   Inspected at:     2026-01-07 22:32:07
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
