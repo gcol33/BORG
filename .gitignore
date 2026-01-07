@@ -13,7 +13,7 @@ src/RcppExports.cpp
 .Ruserdata
 
 # pkgdown
-docs/
+# docs/  # Uncomment if using GitHub Actions; commented for deploy from /docs
 
 # IDE
 .vscode/
