@@ -190,3 +190,221 @@ test_that("print.borg_context works", {
  expect_output(print(ctx), "Mode:")
  expect_output(print(ctx), "Train indices:")
 })
+
+
+# ===========================================================================
+# Edge case tests for temporal validation
+# ===========================================================================
+
+test_that("borg_guard handles exact temporal boundary", {
+  # Test where max train time == min test time (edge case)
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    time = c(1, 2, 3, 4, 5, 5, 6, 7, 8, 9)  # train max = 5, test min = 5
+  )
+
+  # This should be allowed (equal boundary is OK)
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", temporal_col = "time")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles single test observation temporal violation", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    time = c(1, 2, 3, 4, 5, 3, 6, 7, 8, 9)  # only row 6 violates (time=3)
+  )
+
+  expect_error(
+    borg_guard(data, 1:5, 6:10, mode = "strict", temporal_col = "time"),
+    "BORG HARD VIOLATION.*Temporal"
+  )
+})
+
+
+test_that("borg_guard handles Date temporal column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    date = seq.Date(as.Date("2020-01-01"), by = "day", length.out = 10)
+  )
+
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", temporal_col = "date")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles POSIXct temporal column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    timestamp = seq.POSIXt(as.POSIXct("2020-01-01"), by = "hour", length.out = 10)
+  )
+
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", temporal_col = "timestamp")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles NA in temporal column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    time = c(1, 2, NA, 4, 5, 6, 7, NA, 9, 10)  # NAs should be handled
+  )
+
+  # Should still work (na.rm = TRUE in max/min)
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", temporal_col = "time")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+# ===========================================================================
+# Edge case tests for group validation
+# ===========================================================================
+
+test_that("borg_guard handles single group in train only", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    group = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)  # group 1 in train, group 2 in test
+  )
+
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", group_col = "group")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles multiple overlapping groups", {
+  data <- data.frame(
+    x = 1:12,
+    y = 1:12,
+    group = c(1, 1, 2, 2, 3, 3,   # train
+              1, 2, 3, 4, 5, 6)   # test - groups 1, 2, 3 overlap
+  )
+
+  expect_error(
+    borg_guard(data, 1:6, 7:12, mode = "strict", group_col = "group"),
+    "BORG HARD VIOLATION.*Groups"
+  )
+})
+
+
+test_that("borg_guard handles character group column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    patient = c("A", "A", "A", "B", "B", "C", "C", "D", "D", "D")
+  )
+
+  # A and B in train only, C, D in test only - OK
+  ctx <- borg_guard(data, 1:5, 6:10, mode = "strict", group_col = "patient")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles factor group column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    group = factor(c("A", "A", "B", "B", "C", "C", "D", "D", "E", "E"))
+  )
+
+  # A, B, C in train; C, D, E in test - overlap at C
+  expect_error(
+    borg_guard(data, 1:6, 5:10, mode = "strict", group_col = "group"),
+    "overlap"
+  )
+})
+
+
+test_that("borg_guard handles NA in group column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    group = c(1, 1, 2, 2, NA, 3, 3, NA, 4, 4)  # NAs in both train and test
+  )
+
+  # NA matches NA, which would be an "overlap"
+  # This behavior may be intentional - NAs treated as a group
+  result <- tryCatch(
+    borg_guard(data, 1:5, 6:10, mode = "warn", group_col = "group"),
+    warning = function(w) w
+  )
+  expect_true(inherits(result, "warning") || inherits(result, "borg_context"))
+})
+
+
+# ===========================================================================
+# Edge case tests for spatial validation
+# ===========================================================================
+
+test_that("borg_guard accepts valid spatial columns", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    lon = runif(10, -180, 180),
+    lat = runif(10, -90, 90)
+  )
+
+  ctx <- borg_guard(data, 1:5, 6:10, spatial_cols = c("lon", "lat"))
+  expect_s3_class(ctx, "borg_context")
+  expect_equal(ctx$spatial_cols, c("lon", "lat"))
+})
+
+
+test_that("borg_guard handles single spatial column", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    location_id = 1:10  # 1D spatial identifier
+  )
+
+  ctx <- borg_guard(data, 1:5, 6:10, spatial_cols = "location_id")
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+# ===========================================================================
+# Combined validation tests
+# ===========================================================================
+
+test_that("borg_guard handles temporal + group validation", {
+  data <- data.frame(
+    x = 1:20,
+    y = 1:20,
+    time = 1:20,
+    group = c(rep(1:5, 2), rep(6:10, 2))  # Groups 1-5 in train, 6-10 in test
+  )
+
+  # Split so no group overlap and temporal ordering OK
+  ctx <- borg_guard(
+    data,
+    train_idx = 1:10,
+    test_idx = 11:20,
+    mode = "strict",
+    temporal_col = "time",
+    group_col = "group"
+  )
+  expect_s3_class(ctx, "borg_context")
+})
+
+
+test_that("borg_guard handles combined temporal and group violations", {
+  data <- data.frame(
+    x = 1:10,
+    y = 11:20,
+    time = c(1, 2, 3, 4, 5, 3, 6, 7, 8, 9),  # temporal violation
+    group = rep(1:5, 2)  # group overlap
+  )
+
+  # In warn mode, should get warnings for both
+  expect_warning(
+    expect_warning(
+      borg_guard(data, 1:5, 6:10, mode = "warn",
+                 temporal_col = "time", group_col = "group")
+    )
+  )
+})

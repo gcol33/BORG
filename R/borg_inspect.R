@@ -207,7 +207,11 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
   method_names <- names(methods_used)
 
   # Get numeric columns that preProcess would have used
+  # May be stored in $mean (centering) or $std (scaling)
   numeric_cols <- names(object$mean)
+  if (is.null(numeric_cols) || length(numeric_cols) == 0) {
+    numeric_cols <- names(object$std)
+  }
   if (is.null(numeric_cols) || length(numeric_cols) == 0) {
     return(risks)
   }
