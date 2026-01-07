@@ -3,7 +3,16 @@
 It intercepts operations that would leak information from test to training
 data and either blocks them (hard violations) or rewrites them (soft violations)."><meta property="og:description" content="borg_guard() wraps an evaluation workflow and enforces valid data handling.
 It intercepts operations that would leak information from test to training
-data and either blocks them (hard violations) or rewrites them (soft violations)."></head><body>
+data and either blocks them (hard violations) or rewrites them (soft violations)."><script>
+// Redirect any case variation of /borg to /BORG
+(function() {
+  var path = window.location.pathname;
+  if (/^\/borg\b/i.test(path) && !/^\/BORG/.test(path)) {
+    var newPath = path.replace(/^\/borg/i, '/BORG');
+    window.location.replace(newPath + window.location.search + window.location.hash);
+  }
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 

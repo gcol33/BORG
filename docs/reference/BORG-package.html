@@ -19,7 +19,16 @@ Spatial autocorrelation violations in block CV
 Target leakage through features derived from outcomes
 Train-test contamination through shared identifiers
 
-"></head><body>
+"><script>
+// Redirect any case variation of /borg to /BORG
+(function() {
+  var path = window.location.pathname;
+  if (/^\/borg\b/i.test(path) && !/^\/BORG/.test(path)) {
+    var newPath = path.replace(/^\/borg/i, '/BORG');
+    window.location.replace(newPath + window.location.search + window.location.hash);
+  }
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 

@@ -12,6 +12,16 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Framework Integration">
+<script>
+// Redirect any case variation of /borg to /BORG
+(function() {
+  var path = window.location.pathname;
+  if (/^\/borg\b/i.test(path) && !/^\/BORG/.test(path)) {
+    var newPath = path.replace(/^\/borg/i, '/BORG');
+    window.location.replace(newPath + window.location.search + window.location.hash);
+  }
+})();
+</script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -328,7 +338,7 @@ objects:</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    105 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     45 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-01-07 18:28:50</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-07 18:45:14</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>

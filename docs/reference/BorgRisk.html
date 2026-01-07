@@ -5,7 +5,16 @@ This class stores identified risks, their classification (hard violation vs
 soft inflation), affected data indices, and recommended remediation actions."><meta property="og:description" content="Holds the result of borg_inspect or borg_validate:
 a structured assessment of evaluation risks detected in a workflow or object.
 This class stores identified risks, their classification (hard violation vs
-soft inflation), affected data indices, and recommended remediation actions."></head><body>
+soft inflation), affected data indices, and recommended remediation actions."><script>
+// Redirect any case variation of /borg to /BORG
+(function() {
+  var path = window.location.pathname;
+  if (/^\/borg\b/i.test(path) && !/^\/BORG/.test(path)) {
+    var newPath = path.replace(/^\/borg/i, '/BORG');
+    window.location.replace(newPath + window.location.search + window.location.hash);
+  }
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
