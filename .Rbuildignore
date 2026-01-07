@@ -26,3 +26,5 @@
 ^figure$
 ^build_site\.R$
 ^TODO\.md$
+^IMPLEMENTATION\.md$
+^Rplots\.pdf$
