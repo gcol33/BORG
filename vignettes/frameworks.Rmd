@@ -11,8 +11,15 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = TRUE
 )
+
+# Check package availability
+has_caret <- requireNamespace("caret", quietly = TRUE)
+has_recipes <- requireNamespace("recipes", quietly = TRUE)
+has_rsample <- requireNamespace("rsample", quietly = TRUE)
+has_mlr3 <- requireNamespace("mlr3", quietly = TRUE)
+has_sf <- requireNamespace("sf", quietly = TRUE)
 ```
 
 BORG integrates with major R machine learning frameworks. This guide shows
@@ -53,7 +60,7 @@ data[, 1:4] <- scale(data[, 1:4], center = train_means, scale = train_sds)
 
 Validate `trainControl` and `preProcess` objects:
 
-```{r}
+```{r, eval = has_caret}
 library(caret)
 library(BORG)
 
@@ -84,7 +91,7 @@ result <- borg_inspect(ctrl, train_idx, test_idx)
 
 Validate recipe objects:
 
-```{r}
+```{r, eval = has_recipes && has_rsample}
 library(recipes)
 library(rsample)
 library(BORG)
@@ -117,11 +124,15 @@ result <- borg_inspect(rec_good, train_idx, test_idx, data = ames)
 
 Inspect resampling schemes:
 
-```{r}
-# Validate v-fold CV
+```{r, eval = has_rsample && has_recipes}
+# Validate v-fold CV (using split from previous chunk)
 folds <- vfold_cv(training(split), v = 5)
 result <- borg_inspect(folds, train_idx, test_idx)
+```
 
+Additional rsample patterns (requires appropriate data):
+
+```{r, eval = FALSE}
 # Validate grouped CV
 group_folds <- group_vfold_cv(data, group = patient_id, v = 5)
 result <- borg_inspect(group_folds, train_idx, test_idx)
@@ -135,7 +146,7 @@ result <- borg_inspect(rolling, train_idx, test_idx)
 
 Validate tasks and resamplings:
 
-```{r}
+```{r, eval = has_mlr3}
 library(mlr3)
 library(BORG)
 
@@ -156,17 +167,31 @@ result <- borg_inspect(task, train_idx, test_idx)
 
 For time series or panel data, enable temporal validation:
 
-```{r}
-# Expanding window backtest
-ctx <- borg_guard(
-  data = stock_data,
-  train_idx = 1:252,  # First year
-  test_idx = 253:504,  # Second year
-  temporal_col = "date",
-  mode = "strict"
+```{r temporal-example}
+# Create example time series data
+set.seed(123)
+n <- 500
+ts_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = n),
+  value = cumsum(rnorm(n)),
+  feature = rnorm(n)
 )
 
-# Rolling origin with rsample
+# Expanding window backtest
+ctx <- borg_guard(
+
+  data = ts_data,
+  train_idx = 1:252,       # First year
+  test_idx = 253:365,      # Next ~4 months
+  temporal_col = "date",
+
+  mode = "strict"
+)
+```
+
+Rolling origin validation with rsample:
+
+```{r, eval = has_rsample}
 rolling <- rolling_origin(
   data = ts_data,
   initial = 365,
@@ -180,8 +205,20 @@ result <- borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
 
 For spatial cross-validation:
 
-```{r}
-library(sf)
+```{r spatial-example}
+# Create example spatial data
+set.seed(456)
+n <- 100
+spatial_data <- data.frame(
+  longitude = runif(n, -10, 10),
+  latitude = runif(n, -10, 10),
+  response = rnorm(n),
+  predictor = rnorm(n)
+)
+
+# Split by spatial blocks (west vs east)
+train_idx <- which(spatial_data$longitude < 0)
+test_idx <- which(spatial_data$longitude >= 0)
 
 # Block CV with spatial awareness
 ctx <- borg_guard(
@@ -191,7 +228,6 @@ ctx <- borg_guard(
   spatial_cols = c("longitude", "latitude"),
   mode = "warn"
 )
-
 # Inspects spatial separation between train/test
 ```
 
@@ -199,24 +235,25 @@ ctx <- borg_guard(
 
 Validate an entire pipeline after the fact:
 
-```{r}
-# Run your existing workflow
-# ... preprocessing, training, prediction ...
+```{r workflow-validation}
+# Example workflow with iris data
+data <- iris
+set.seed(789)
+n <- nrow(data)
+train_idx <- sample(n, 0.7 * n)
+test_idx <- setdiff(1:n, train_idx)
 
-# Then validate
+# Validate the workflow
 result <- borg_validate(list(
-  data = original_data,
+  data = data,
   train_idx = train_idx,
   test_idx = test_idx,
-  preprocess = list(recipe_obj, pca_obj),
-  model = fitted_model,
-  predictions = test_predictions,
-  target_col = "outcome"
+  target_col = "Species"
 ))
 
 if (!result@is_valid) {
   print(result)
-  stop("Evaluation invalid - see risk report above")
+  message("Evaluation invalid - see risk report above")
 }
 ```
 
@@ -224,16 +261,20 @@ if (!result@is_valid) {
 
 Attempt to fix leaky pipelines:
 
-```{r}
+```{r rewrite-example}
+# Create a workflow with a fixable issue
+workflow <- list(
+  data = iris,
+  train_idx = 1:100,
+  test_idx = 51:150  # Overlaps with train!
+)
+
 # Attempt automatic fixes
 fixed <- borg_rewrite(workflow)
 
 if (length(fixed$unfixable) > 0) {
-  warning("Could not fix: ", paste(fixed$unfixable, collapse = ", "))
+  message("Could not fix: ", paste(fixed$unfixable, collapse = ", "))
 }
-
-# Use corrected workflow
-new_workflow <- fixed$workflow
 ```
 
 Note: Some violations cannot be automatically fixed (e.g., index overlap

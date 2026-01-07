@@ -49,6 +49,6 @@
 #' @useDynLib BORG, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom methods is new
-#' @importFrom stats complete.cases cor sd
+#' @importFrom stats complete.cases cor median sd var
 #' @importFrom utils head
 NULL

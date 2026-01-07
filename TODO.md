@@ -42,6 +42,6 @@
 
 ## Low Priority - Documentation
 
-- [ ] Make `frameworks.Rmd` vignette code executable (remove `eval = FALSE`)
-- [ ] Add CHANGELOG.md
-- [ ] Add runnable demonstrations of framework integration
+- [x] Make `frameworks.Rmd` vignette code executable (remove `eval = FALSE`)
+- [x] Add CHANGELOG.md (NEWS.md)
+- [x] Add runnable demonstrations of framework integration
