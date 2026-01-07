@@ -1,70 +1,36 @@
-# BORG TODO List
+# BORG v0.2.0 TODO
 
-## High Priority - Test Coverage
+## Quick Wins
 
-Add tests for
-[`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md)
-function
+Add
+[`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md)
+visualization function
 
-Add tests for
+Update NEWS.md with v0.1.0 features
+
+Rebuild pkgdown site
+
+## Feature Improvements
+
+Feature importance audit (detect SHAP/permutation importance on test
+data)
+
+Improved
 [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md)
-function
+with more automatic fixes
 
-Add tests for preprocessing object inspection (preProcess, recipe,
-prcomp)
+Add suggested fixes to risk reports
 
-Add integration tests with caret
+## Integrations
 
-Add integration tests with tidymodels/recipes
+Framework hooks (`options(borg.auto_check = TRUE)`)
 
-Add edge case tests for temporal validation
+tidymodels tune integration
 
-Add edge case tests for spatial validation
+MLOps logging (mlflow, vetiver)
 
-Add edge case tests for group validation
+## Future
 
-## Medium Priority - Detection Logic
+Shiny dashboard for interactive exploration
 
-Implement target leakage detection (beyond simple correlation)
-
-- Suspicious naming patterns (outcome\_, future\_, \_target, etc.)
-- Perfect categorical separation
-- Temporal ordering checks
-- Group mean leakage detection
-
-Implement feature engineering inspection
-
-- Global standardization detection
-- Rank/percentile feature checks
-- Binning leakage detection
-- Lag/lead feature checks for time series
-
-Implement threshold selection detection
-
-- Threshold optimized on test data
-- Threshold selection using test predictions
-- Post-hoc threshold adjustment
-
-Implement spatial autocorrelation checks
-
-- Spatial proximity between train/test
-- Spatial duplicate locations
-- Spatial block overlap
-- Buffer zone violations
-
-Implement HPO validation checks
-
-- HPO using test data
-- Model selection on test data
-- Non-nested CV warnings
-- Excessive configuration warnings
-- Feature selection leakage in HPO
-- Early stopping on test data
-
-## Low Priority - Documentation
-
-Make `frameworks.Rmd` vignette code executable (remove `eval = FALSE`)
-
-Add CHANGELOG.md (NEWS.md)
-
-Add runnable demonstrations of framework integration
+CRAN submission preparation

@@ -1,5 +1,46 @@
 # Changelog
 
+## BORG 0.2.0 (development)
+
+### New features
+
+#### Visualization functions
+
+- [`plot_split()`](https://gillescolling.com/BORG/reference/plot_split.md):
+  Visualize train/test split distribution with temporal or group
+  structure
+- [`plot_risk()`](https://gillescolling.com/BORG/reference/plot_risk.md):
+  Display risk assessment results as horizontal bar chart
+- [`plot_temporal()`](https://gillescolling.com/BORG/reference/plot_temporal.md):
+  Timeline visualization with gap analysis and look-ahead detection
+- [`plot_spatial()`](https://gillescolling.com/BORG/reference/plot_spatial.md):
+  Spatial split visualization with convex hulls
+- [`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md):
+  Group-based split visualization with leakage highlighting
+
+#### Model inspection
+
+- Extended
+  [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+  to support fitted model objects:
+  - `lm` and `glm` models (checks data used in fitting)
+  - `ranger` random forest models
+  - `xgboost` models
+  - `lightgbm` models
+  - `parsnip` model fits
+  - `workflow` objects (tidymodels)
+
+#### Audit functions
+
+- [`audit_predictions()`](https://gillescolling.com/BORG/reference/audit_predictions.md):
+  Validate prediction vectors against expected indices
+- [`cv_leakage_report()`](https://gillescolling.com/BORG/reference/cv_leakage_report.md):
+  Generate detailed cross-validation leakage reports
+
+### Bug fixes
+
+- Fixed rsample vfold_cv inspection for attribute structure changes
+
 ## BORG 0.1.0
 
 Initial release.

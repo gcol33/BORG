@@ -55,6 +55,53 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="borg-020-development">BORG 0.2.0 (development)<a class="anchor" aria-label="anchor" href="#borg-020-development"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
+<div class="section level4">
+<h4 id="visualization-functions-0-2-0">Visualization functions<a class="anchor" aria-label="anchor" href="#visualization-functions-0-2-0"></a></h4>
+<ul><li>
+<code><a href="../reference/plot_split.html">plot_split()</a></code>: Visualize train/test split distribution with temporal or group structure</li>
+<li>
+<code><a href="../reference/plot_risk.html">plot_risk()</a></code>: Display risk assessment results as horizontal bar chart</li>
+<li>
+<code><a href="../reference/plot_temporal.html">plot_temporal()</a></code>: Timeline visualization with gap analysis and look-ahead detection</li>
+<li>
+<code><a href="../reference/plot_spatial.html">plot_spatial()</a></code>: Spatial split visualization with convex hulls</li>
+<li>
+<code><a href="../reference/plot_groups.html">plot_groups()</a></code>: Group-based split visualization with leakage highlighting</li>
+</ul></div>
+<div class="section level4">
+<h4 id="model-inspection-0-2-0">Model inspection<a class="anchor" aria-label="anchor" href="#model-inspection-0-2-0"></a></h4>
+<ul><li>Extended <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> to support fitted model objects:
+<ul><li>
+<code>lm</code> and <code>glm</code> models (checks data used in fitting)</li>
+<li>
+<code>ranger</code> random forest models</li>
+<li>
+<code>xgboost</code> models</li>
+<li>
+<code>lightgbm</code> models</li>
+<li>
+<code>parsnip</code> model fits</li>
+<li>
+<code>workflow</code> objects (tidymodels)</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="audit-functions-0-2-0">Audit functions<a class="anchor" aria-label="anchor" href="#audit-functions-0-2-0"></a></h4>
+<ul><li>
+<code><a href="../reference/audit_predictions.html">audit_predictions()</a></code>: Validate prediction vectors against expected indices</li>
+<li>
+<code><a href="../reference/cv_leakage_report.html">cv_leakage_report()</a></code>: Generate detailed cross-validation leakage reports</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="bug-fixes-0-2-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0"></a></h3>
+<ul><li>Fixed rsample vfold_cv inspection for attribute structure changes</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="borg-010">BORG 0.1.0<a class="anchor" aria-label="anchor" href="#borg-010"></a></h2>
 <p>Initial release.</p>
 <div class="section level3">

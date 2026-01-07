@@ -1,3 +1,30 @@
+# BORG 0.2.0 (development)
+
+## New features
+
+### Visualization functions
+* `plot_split()`: Visualize train/test split distribution with temporal or group structure
+* `plot_risk()`: Display risk assessment results as horizontal bar chart
+* `plot_temporal()`: Timeline visualization with gap analysis and look-ahead detection
+* `plot_spatial()`: Spatial split visualization with convex hulls
+* `plot_groups()`: Group-based split visualization with leakage highlighting
+
+### Model inspection
+* Extended `borg_inspect()` to support fitted model objects:
+  - `lm` and `glm` models (checks data used in fitting)
+  - `ranger` random forest models
+  - `xgboost` models
+  - `lightgbm` models
+  - `parsnip` model fits
+  - `workflow` objects (tidymodels)
+
+### Audit functions
+* `audit_predictions()`: Validate prediction vectors against expected indices
+* `cv_leakage_report()`: Generate detailed cross-validation leakage reports
+
+## Bug fixes
+* Fixed rsample vfold_cv inspection for attribute structure changes
+
 # BORG 0.1.0
 
 Initial release.

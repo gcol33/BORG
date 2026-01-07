@@ -84,3 +84,28 @@ test_that("plot_spatial handles overlap", {
 
   expect_silent(plot_spatial(x, y, train_idx, test_idx))
 })
+
+test_that("plot_groups works with clean split", {
+  groups <- rep(paste0("Patient_", 1:10), each = 10)
+  train_idx <- which(groups %in% paste0("Patient_", 1:7))
+  test_idx <- which(groups %in% paste0("Patient_", 8:10))
+
+  expect_silent(plot_groups(groups, train_idx, test_idx))
+})
+
+test_that("plot_groups detects group leakage", {
+  groups <- rep(paste0("Patient_", 1:10), each = 10)
+  train_idx <- 1:70
+  test_idx <- 61:100  # Overlaps with Patient_7
+
+  expect_silent(plot_groups(groups, train_idx, test_idx))
+})
+
+test_that("plot_groups handles many groups", {
+  groups <- rep(paste0("G", 1:50), each = 2)  # 50 groups
+  train_idx <- 1:60
+  test_idx <- 61:100
+
+  # Should truncate to max_groups
+  expect_silent(plot_groups(groups, train_idx, test_idx, max_groups = 15))
+})

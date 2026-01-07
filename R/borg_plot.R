@@ -422,3 +422,134 @@ plot_spatial <- function(x, y, train_idx, test_idx,
 
   invisible(NULL)
 }
+
+
+#' Plot Group-Based Split
+#'
+#' Visualizes group membership and train/test assignment, highlighting
+#' any groups that appear in both sets (group leakage).
+#'
+#' @param groups Vector of group assignments for each observation.
+#' @param train_idx Integer vector of training indices.
+#' @param test_idx Integer vector of test indices.
+#' @param title Plot title.
+#' @param max_groups Maximum number of groups to display (for readability).
+#'
+#' @return A base R plot (invisibly returns NULL).
+#'
+#' @examples
+#' # Create grouped data
+#' groups <- rep(paste0("Patient_", 1:10), each = 10)
+#' train_idx <- which(groups %in% paste0("Patient_", 1:7))
+#' test_idx <- which(groups %in% paste0("Patient_", 8:10))
+#' plot_groups(groups, train_idx, test_idx)
+#'
+#' # With group leakage
+#' train_idx_bad <- 1:70
+#' test_idx_bad <- 61:100  # Overlaps with Patient_7
+#' plot_groups(groups, train_idx_bad, test_idx_bad)
+#'
+#' @export
+plot_groups <- function(groups, train_idx, test_idx,
+                        title = "Group-Based Split",
+                        max_groups = 20) {
+
+  n_total <- length(groups)
+
+  # Get unique groups and their assignments
+  unique_groups <- unique(groups)
+  n_groups <- length(unique_groups)
+
+  # Determine group assignment
+  train_groups <- unique(groups[train_idx])
+  test_groups <- unique(groups[test_idx])
+  overlap_groups <- intersect(train_groups, test_groups)
+  train_only <- setdiff(train_groups, test_groups)
+  test_only <- setdiff(test_groups, train_groups)
+
+  # Limit groups for display
+  if (n_groups > max_groups) {
+    # Prioritize showing overlapping groups
+    display_groups <- c(
+      overlap_groups,
+      head(train_only, max(1, (max_groups - length(overlap_groups)) %/% 2)),
+      head(test_only, max(1, (max_groups - length(overlap_groups)) %/% 2))
+    )
+    display_groups <- head(unique(display_groups), max_groups)
+    truncated <- TRUE
+  } else {
+    display_groups <- unique_groups
+    truncated <- FALSE
+  }
+
+  n_display <- length(display_groups)
+
+  # Colors for groups
+  group_colors <- character(n_display)
+  for (i in seq_along(display_groups)) {
+    g <- display_groups[i]
+    if (g %in% overlap_groups) {
+      group_colors[i] <- "#F9A03F"  # Orange for overlap
+    } else if (g %in% train_only) {
+      group_colors[i] <- "#2E86AB"  # Blue for train
+    } else {
+      group_colors[i] <- "#E94F37"  # Red for test
+    }
+  }
+
+  # Count observations per group
+  group_counts <- vapply(display_groups, function(g) sum(groups == g), integer(1))
+
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
+  par(mar = c(4, 8, 4, 2))
+
+  # Horizontal bar chart
+  y_pos <- rev(seq_len(n_display))
+
+  plot(group_counts, y_pos,
+       xlim = c(0, max(group_counts) * 1.2),
+       ylim = c(0.5, n_display + 0.5),
+       type = "n", yaxt = "n",
+       xlab = "Observations", ylab = "",
+       main = title)
+
+  # Draw bars
+  rect(0, y_pos - 0.4, group_counts, y_pos + 0.4,
+       col = rev(group_colors), border = NA)
+
+  # Group labels
+  axis(2, at = y_pos, labels = rev(display_groups), las = 1, cex.axis = 0.7)
+
+  # Count labels on bars
+  text(group_counts + max(group_counts) * 0.02, y_pos,
+       rev(group_counts), adj = 0, cex = 0.7)
+
+  # Legend
+  legend("bottomright",
+         legend = c("Train only", "Test only",
+                    if (length(overlap_groups) > 0) "OVERLAP (leak!)"),
+         fill = c("#2E86AB", "#E94F37",
+                  if (length(overlap_groups) > 0) "#F9A03F"),
+         bty = "n", cex = 0.8)
+
+  # Summary
+  summary_text <- sprintf(
+    "Groups: %d total | Train: %d | Test: %d | Overlap: %d",
+    n_groups, length(train_groups), length(test_groups), length(overlap_groups)
+  )
+  mtext(summary_text, side = 1, line = 2.5, cex = 0.8)
+
+  if (truncated) {
+    mtext(sprintf("(showing %d of %d groups)", n_display, n_groups),
+          side = 1, line = 3.5, cex = 0.7, col = "gray50")
+  }
+
+  if (length(overlap_groups) > 0) {
+    mtext("WARNING: Group leakage detected!", side = 3, line = 0.5,
+          cex = 0.9, col = "#C62828", font = 2)
+  }
+
+  invisible(NULL)
+}

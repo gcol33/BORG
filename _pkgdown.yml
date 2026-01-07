@@ -67,11 +67,27 @@ reference:
     contents:
       - borg_rewrite
 
+  - title: "Visualization"
+    desc: "Plot functions for split analysis"
+    contents:
+      - plot_split
+      - plot_risk
+      - plot_temporal
+      - plot_spatial
+      - plot_groups
+
+  - title: "Audit Functions"
+    desc: "Prediction and CV auditing"
+    contents:
+      - audit_predictions
+      - cv_leakage_report
+
   - title: "Classes"
     desc: "Result objects"
     contents:
       - BorgRisk-class
       - as.data.frame.BorgRisk
+      - print.borg_cv_report
 
 articles:
   - title: "Getting Started"
