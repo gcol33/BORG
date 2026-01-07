@@ -42,6 +42,8 @@ Validate `trainControl` and `preProcess` objects:
 ``` r
 
 library(caret)
+#> Loading required package: ggplot2
+#> Loading required package: lattice
 library(BORG)
 
 data(mtcars)
@@ -74,30 +76,51 @@ Validate recipe objects:
 ``` r
 
 library(recipes)
+#> Loading required package: dplyr
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
+#> 
+#> Attaching package: 'recipes'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
 library(rsample)
+#> 
+#> Attaching package: 'rsample'
+#> The following object is masked from 'package:caret':
+#> 
+#>     calibration
 library(BORG)
 
-data(ames, package = "modeldata")
+# Use mtcars for reproducible example
+data(mtcars)
 
 # Create split
-split <- initial_split(ames, prop = 0.8)
+set.seed(123)
+split <- initial_split(mtcars, prop = 0.8)
 train_idx <- split$in_id
-test_idx <- setdiff(1:nrow(ames), train_idx)
+test_idx <- setdiff(seq_len(nrow(mtcars)), train_idx)
 
 # BAD: recipe prepped on full data
-rec_bad <- recipe(Sale_Price ~ ., data = ames) %>%
+rec_bad <- recipe(mpg ~ ., data = mtcars) %>%
   step_normalize(all_numeric_predictors()) %>%
-  prep()  # Uses full ames data!
+  prep()  # Uses full mtcars data!
 
-result <- borg_inspect(rec_bad, train_idx, test_idx, data = ames)
+result <- borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
 # Detects leak
 
 # GOOD: recipe prepped on training only
-rec_good <- recipe(Sale_Price ~ ., data = training(split)) %>%
+rec_good <- recipe(mpg ~ ., data = training(split)) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()
 
-result <- borg_inspect(rec_good, train_idx, test_idx, data = ames)
+result <- borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
 # Clean
 ```
 
@@ -107,9 +130,14 @@ Inspect resampling schemes:
 
 ``` r
 
-# Validate v-fold CV
+# Validate v-fold CV (using split from previous chunk)
 folds <- vfold_cv(training(split), v = 5)
 result <- borg_inspect(folds, train_idx, test_idx)
+```
+
+Additional rsample patterns (requires appropriate data):
+
+``` r
 
 # Validate grouped CV
 group_folds <- group_vfold_cv(data, group = patient_id, v = 5)
@@ -148,16 +176,31 @@ For time series or panel data, enable temporal validation:
 
 ``` r
 
-# Expanding window backtest
-ctx <- borg_guard(
-  data = stock_data,
-  train_idx = 1:252,  # First year
-  test_idx = 253:504,  # Second year
-  temporal_col = "date",
-  mode = "strict"
+# Create example time series data
+set.seed(123)
+n <- 500
+ts_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = n),
+  value = cumsum(rnorm(n)),
+  feature = rnorm(n)
 )
 
-# Rolling origin with rsample
+# Expanding window backtest
+ctx <- borg_guard(
+
+  data = ts_data,
+  train_idx = 1:252,       # First year
+  test_idx = 253:365,      # Next ~4 months
+  temporal_col = "date",
+
+  mode = "strict"
+)
+```
+
+Rolling origin validation with rsample:
+
+``` r
+
 rolling <- rolling_origin(
   data = ts_data,
   initial = 365,
@@ -173,7 +216,19 @@ For spatial cross-validation:
 
 ``` r
 
-library(sf)
+# Create example spatial data
+set.seed(456)
+n <- 100
+spatial_data <- data.frame(
+  longitude = runif(n, -10, 10),
+  latitude = runif(n, -10, 10),
+  response = rnorm(n),
+  predictor = rnorm(n)
+)
+
+# Split by spatial blocks (west vs east)
+train_idx <- which(spatial_data$longitude < 0)
+test_idx <- which(spatial_data$longitude >= 0)
 
 # Block CV with spatial awareness
 ctx <- borg_guard(
@@ -183,7 +238,6 @@ ctx <- borg_guard(
   spatial_cols = c("longitude", "latitude"),
   mode = "warn"
 )
-
 # Inspects spatial separation between train/test
 ```
 
@@ -193,24 +247,42 @@ Validate an entire pipeline after the fact:
 
 ``` r
 
-# Run your existing workflow
-# ... preprocessing, training, prediction ...
+# Example workflow with iris data
+data <- iris
+set.seed(789)
+n <- nrow(data)
+train_idx <- sample(n, 0.7 * n)
+test_idx <- setdiff(1:n, train_idx)
 
-# Then validate
+# Validate the workflow
 result <- borg_validate(list(
-  data = original_data,
+  data = data,
   train_idx = train_idx,
   test_idx = test_idx,
-  preprocess = list(recipe_obj, pca_obj),
-  model = fitted_model,
-  predictions = test_predictions,
-  target_col = "outcome"
+  target_col = "Species"
 ))
 
 if (!result@is_valid) {
   print(result)
-  stop("Evaluation invalid - see risk report above")
+  message("Evaluation invalid - see risk report above")
 }
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: INVALID (hard violations detected)
+#>   Hard violations:  1
+#>   Soft inflations:  0
+#>   Train indices:    105 rows
+#>   Test indices:     45 rows
+#>   Inspected at:     2026-01-07 18:28:50
+#> 
+#> --- HARD VIOLATIONS (must fix) ---
+#> 
+#> [1] duplicate_rows
+#>     Test set contains 1 rows identical to training rows (memorization risk)
+#>     Source: data.frame
+#>     Affected: 102
+#> Evaluation invalid - see risk report above
 ```
 
 ## Automatic Rewriting
@@ -219,15 +291,20 @@ Attempt to fix leaky pipelines:
 
 ``` r
 
+# Create a workflow with a fixable issue
+workflow <- list(
+  data = iris,
+  train_idx = 1:100,
+  test_idx = 51:150  # Overlaps with train!
+)
+
 # Attempt automatic fixes
 fixed <- borg_rewrite(workflow)
 
 if (length(fixed$unfixable) > 0) {
-  warning("Could not fix: ", paste(fixed$unfixable, collapse = ", "))
+  message("Could not fix: ", paste(fixed$unfixable, collapse = ", "))
 }
-
-# Use corrected workflow
-new_workflow <- fixed$workflow
+#> Could not fix: index_overlap, duplicate_rows
 ```
 
 Note: Some violations cannot be automatically fixed (e.g., index overlap

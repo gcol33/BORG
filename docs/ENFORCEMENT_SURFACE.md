@@ -48,9 +48,10 @@ rewriting.
 
 **Observable Signals in R:** -
 [`caret::trainControl`](https://rdrr.io/pkg/caret/man/trainControl.html)
-objects with `index`/`indexOut` slots - `rsample::vfold_cv` objects
-storing fold assignments - Custom fold vectors as integer indices -
-Preprocessing objects
+objects with `index`/`indexOut` slots -
+[`rsample::vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)
+objects storing fold assignments - Custom fold vectors as integer
+indices - Preprocessing objects
 ([`recipes::recipe`](https://recipes.tidymodels.org/reference/recipe.html),
 [`caret::preProcess`](https://rdrr.io/pkg/caret/man/preProcess.html))
 fitted before splitting
@@ -90,7 +91,8 @@ correlates with time/space indices
 ### 1.3 Leave-One-Out Cross-Validation (LOOCV)
 
 **Observable Signals in R:** - `caret::trainControl(method = "LOOCV")` -
-`rsample::loo_cv()` objects - Fold count equals row count
+[`rsample::loo_cv()`](https://rsample.tidymodels.org/reference/loo_cv.html)
+objects - Fold count equals row count
 
 **Detection Method:** - Check `length(folds) == nrow(data)` - Detect
 global preprocessing before LOOCV
@@ -108,8 +110,8 @@ variance estimates are correlated
 
 **Observable Signals in R:** -
 `caret::trainControl(method = "repeatedcv", repeats = n)` - Multiple
-`rsample::vfold_cv` objects with different seeds - Aggregated metrics
-across repetitions
+[`rsample::vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)
+objects with different seeds - Aggregated metrics across repetitions
 
 **Detection Method:** - Check for consistent bias direction across
 repetitions - Detect if preprocessing was fitted once and reused across
@@ -170,8 +172,9 @@ to be validated against correlation structure
 
 **Observable Signals in R:** -
 [`caret::createDataPartition()`](https://rdrr.io/pkg/caret/man/createDataPartition.html)
-output - `rsample::initial_split()` objects - Row indices in
-train/test - `.Random.seed` state at split time
+output -
+[`rsample::initial_split()`](https://rsample.tidymodels.org/reference/initial_split.html)
+objects - Row indices in train/test - `.Random.seed` state at split time
 
 **Detection Method:** - Check if split was created before or after
 exploratory analysis - Detect if test indices were accessed before final
@@ -227,9 +230,10 @@ further evaluations on same data - Enforce single-use test set policy
 
 ### 3.1 Walk-Forward / Expanding Window Backtest
 
-**Observable Signals in R:** - `rsample::sliding_window()` /
-`rolling_origin()` objects - Time index column in data - Feature columns
-with future-derived values
+**Observable Signals in R:** -
+[`rsample::sliding_window()`](https://rsample.tidymodels.org/reference/slide-resampling.html)
+/ `rolling_origin()` objects - Time index column in data - Feature
+columns with future-derived values
 
 **Detection Method:** - Check feature timestamps against prediction
 timestamps - Detect if features contain information from t+k for

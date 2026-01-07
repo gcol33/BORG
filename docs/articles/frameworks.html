@@ -40,6 +40,7 @@
     <li><a class="dropdown-item" href="../articles/frameworks.html">Framework Integration</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -83,7 +84,7 @@ shows how to validate workflows in each ecosystem.</p>
 </h2>
 <p>Manual index-based splitting:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">BORG</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create data and split</span></span>
 <span><span class="va">data</span> <span class="op">&lt;-</span> <span class="va">iris</span></span>
@@ -115,7 +116,9 @@ shows how to validate workflows in each ecosystem.</p>
 objects:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/topepo/caret/" class="external-link">caret</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">BORG</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Loading required package: ggplot2</span></span>
+<span><span class="co">#&gt; Loading required package: lattice</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">25</span></span>
@@ -145,46 +148,68 @@ objects:</p>
 <p>Validate recipe objects:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Loading required package: dplyr</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     filter, lag</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'recipes'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     step</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rsample.tidymodels.org" class="external-link">rsample</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">BORG</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'rsample'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:caret':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     calibration</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">ames</span>, package <span class="op">=</span> <span class="st">"modeldata"</span><span class="op">)</span></span>
+<span><span class="co"># Use mtcars for reproducible example</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create split</span></span>
-<span><span class="va">split</span> <span class="op">&lt;-</span> <span class="fu">initial_split</span><span class="op">(</span><span class="va">ames</span>, prop <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">split</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/initial_split.html" class="external-link">initial_split</a></span><span class="op">(</span><span class="va">mtcars</span>, prop <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="va">split</span><span class="op">$</span><span class="va">in_id</span></span>
-<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">ames</span><span class="op">)</span>, <span class="va">train_idx</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span><span class="op">)</span>, <span class="va">train_idx</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># BAD: recipe prepped on full data</span></span>
-<span><span class="va">rec_bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="va">Sale_Price</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">ames</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span><span class="va">rec_bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/step_normalize.html" class="external-link">step_normalize</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/has_role.html" class="external-link">all_numeric_predictors</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Uses full ames data!</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Uses full mtcars data!</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">ames</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># Detects leak</span></span>
 <span></span>
 <span><span class="co"># GOOD: recipe prepped on training only</span></span>
-<span><span class="va">rec_good</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="va">Sale_Price</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="fu">training</span><span class="op">(</span><span class="va">split</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span><span class="va">rec_good</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/initial_split.html" class="external-link">training</a></span><span class="op">(</span><span class="va">split</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/step_normalize.html" class="external-link">step_normalize</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/has_role.html" class="external-link">all_numeric_predictors</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">ames</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># Clean</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="rsample-objects">rsample Objects<a class="anchor" aria-label="anchor" href="#rsample-objects"></a>
 </h3>
 <p>Inspect resampling schemes:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Validate v-fold CV</span></span>
-<span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu">vfold_cv</span><span class="op">(</span><span class="fu">training</span><span class="op">(</span><span class="va">split</span><span class="op">)</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Validate grouped CV</span></span>
-<span><span class="va">group_folds</span> <span class="op">&lt;-</span> <span class="fu">group_vfold_cv</span><span class="op">(</span><span class="va">data</span>, group <span class="op">=</span> <span class="va">patient_id</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Validate v-fold CV (using split from previous chunk)</span></span>
+<span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="fu"><a href="https://rsample.tidymodels.org/reference/initial_split.html" class="external-link">training</a></span><span class="op">(</span><span class="va">split</span><span class="op">)</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<p>Additional rsample patterns (requires appropriate data):</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate grouped CV</span></span>
+<span><span class="va">group_folds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/group_vfold_cv.html" class="external-link">group_vfold_cv</a></span><span class="op">(</span><span class="va">data</span>, group <span class="op">=</span> <span class="va">patient_id</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">group_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Validate temporal splits</span></span>
-<span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu">sliding_window</span><span class="op">(</span><span class="va">ts_data</span>, lookback <span class="op">=</span> <span class="fl">100</span>, assess_stop <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
+<span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/slide-resampling.html" class="external-link">sliding_window</a></span><span class="op">(</span><span class="va">ts_data</span>, lookback <span class="op">=</span> <span class="fl">100</span>, assess_stop <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rolling</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -192,9 +217,9 @@ objects:</p>
 <h2 id="mlr3">mlr3<a class="anchor" aria-label="anchor" href="#mlr3"></a>
 </h2>
 <p>Validate tasks and resamplings:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mlr3.mlr-org.com" class="external-link">mlr3</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">BORG</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create task</span></span>
 <span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va">TaskClassif</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"iris"</span>, <span class="va">iris</span>, target <span class="op">=</span> <span class="st">"Species"</span><span class="op">)</span></span>
@@ -212,18 +237,29 @@ objects:</p>
 <h2 id="temporal-data">Temporal Data<a class="anchor" aria-label="anchor" href="#temporal-data"></a>
 </h2>
 <p>For time series or panel data, enable temporal validation:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Expanding window backtest</span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">stock_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">252</span>,  <span class="co"># First year</span></span>
-<span>  test_idx <span class="op">=</span> <span class="fl">253</span><span class="op">:</span><span class="fl">504</span>,  <span class="co"># Second year</span></span>
-<span>  temporal_col <span class="op">=</span> <span class="st">"date"</span>,</span>
-<span>  mode <span class="op">=</span> <span class="st">"strict"</span></span>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create example time series data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">500</span></span>
+<span><span class="va">ts_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-01-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"day"</span>, length.out <span class="op">=</span> <span class="va">n</span><span class="op">)</span>,</span>
+<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  feature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Rolling origin with rsample</span></span>
-<span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu">rolling_origin</span><span class="op">(</span></span>
+<span><span class="co"># Expanding window backtest</span></span>
+<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
+<span></span>
+<span>  data <span class="op">=</span> <span class="va">ts_data</span>,</span>
+<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">252</span>,       <span class="co"># First year</span></span>
+<span>  test_idx <span class="op">=</span> <span class="fl">253</span><span class="op">:</span><span class="fl">365</span>,      <span class="co"># Next ~4 months</span></span>
+<span>  temporal_col <span class="op">=</span> <span class="st">"date"</span>,</span>
+<span></span>
+<span>  mode <span class="op">=</span> <span class="st">"strict"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Rolling origin validation with rsample:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/rolling_origin.html" class="external-link">rolling_origin</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">ts_data</span>,</span>
 <span>  initial <span class="op">=</span> <span class="fl">365</span>,</span>
 <span>  assess <span class="op">=</span> <span class="fl">30</span>,</span>
@@ -235,8 +271,20 @@ objects:</p>
 <h2 id="spatial-data">Spatial Data<a class="anchor" aria-label="anchor" href="#spatial-data"></a>
 </h2>
 <p>For spatial cross-validation:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-spatial.github.io/sf/" class="external-link">sf</a></span><span class="op">)</span></span>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create example spatial data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">456</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
+<span><span class="va">spatial_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  longitude <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  latitude <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  response <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>,</span>
+<span>  predictor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Split by spatial blocks (west vs east)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">spatial_data</span><span class="op">$</span><span class="va">longitude</span> <span class="op">&lt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">spatial_data</span><span class="op">$</span><span class="va">longitude</span> <span class="op">&gt;=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Block CV with spatial awareness</span></span>
 <span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
@@ -246,47 +294,69 @@ objects:</p>
 <span>  spatial_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"longitude"</span>, <span class="st">"latitude"</span><span class="op">)</span>,</span>
 <span>  mode <span class="op">=</span> <span class="st">"warn"</span></span>
 <span><span class="op">)</span></span>
-<span></span>
 <span><span class="co"># Inspects spatial separation between train/test</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="complete-workflow-validation">Complete Workflow Validation<a class="anchor" aria-label="anchor" href="#complete-workflow-validation"></a>
 </h2>
 <p>Validate an entire pipeline after the fact:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Run your existing workflow</span></span>
-<span><span class="co"># ... preprocessing, training, prediction ...</span></span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example workflow with iris data</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="va">iris</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">789</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0.7</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="va">train_idx</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Then validate</span></span>
+<span><span class="co"># Validate the workflow</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_validate.html">borg_validate</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">original_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">data</span>,</span>
 <span>  train_idx <span class="op">=</span> <span class="va">train_idx</span>,</span>
 <span>  test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>  preprocess <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">recipe_obj</span>, <span class="va">pca_obj</span><span class="op">)</span>,</span>
-<span>  model <span class="op">=</span> <span class="va">fitted_model</span>,</span>
-<span>  predictions <span class="op">=</span> <span class="va">test_predictions</span>,</span>
-<span>  target_col <span class="op">=</span> <span class="st">"outcome"</span></span>
+<span>  target_col <span class="op">=</span> <span class="st">"Species"</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Evaluation invalid - see risk report above"</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Evaluation invalid - see risk report above"</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: INVALID (hard violations detected)</span></span>
+<span><span class="co">#&gt;   Hard violations:  1</span></span>
+<span><span class="co">#&gt;   Soft inflations:  0</span></span>
+<span><span class="co">#&gt;   Train indices:    105 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     45 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-07 18:28:50</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] duplicate_rows</span></span>
+<span><span class="co">#&gt;     Test set contains 1 rows identical to training rows (memorization risk)</span></span>
+<span><span class="co">#&gt;     Source: data.frame</span></span>
+<span><span class="co">#&gt;     Affected: 102</span></span>
+<span><span class="co">#&gt; Evaluation invalid - see risk report above</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="automatic-rewriting">Automatic Rewriting<a class="anchor" aria-label="anchor" href="#automatic-rewriting"></a>
 </h2>
 <p>Attempt to fix leaky pipelines:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Attempt automatic fixes</span></span>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a workflow with a fixable issue</span></span>
+<span><span class="va">workflow</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">iris</span>,</span>
+<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>,</span>
+<span>  test_idx <span class="op">=</span> <span class="fl">51</span><span class="op">:</span><span class="fl">150</span>  <span class="co"># Overlaps with train!</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Attempt automatic fixes</span></span>
 <span><span class="va">fixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_rewrite.html">borg_rewrite</a></span><span class="op">(</span><span class="va">workflow</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">fixed</span><span class="op">$</span><span class="va">unfixable</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning</a></span><span class="op">(</span><span class="st">"Could not fix: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">fixed</span><span class="op">$</span><span class="va">unfixable</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Could not fix: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">fixed</span><span class="op">$</span><span class="va">unfixable</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Use corrected workflow</span></span>
-<span><span class="va">new_workflow</span> <span class="op">&lt;-</span> <span class="va">fixed</span><span class="op">$</span><span class="va">workflow</span></span></code></pre></div>
+<span><span class="co">#&gt; Could not fix: index_overlap, duplicate_rows</span></span></code></pre></div>
 <p>Note: Some violations cannot be automatically fixed (e.g., index
 overlap requires a new split).</p>
 </div>
