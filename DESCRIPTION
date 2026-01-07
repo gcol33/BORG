@@ -1,0 +1,33 @@
+Package: BORG
+Title: Bounded Outcome Risk Guard for Model Evaluation
+Version: 0.1.0
+Authors@R:
+    person("Gilles", "Colling", email = "gilles.colling051@gmail.com", role = c("aut", "cre"))
+Description: Automatically detects and enforces valid model evaluation by identifying
+    information reuse between training and evaluation data. Guards against data leakage,
+    look-ahead bias, and invalid cross-validation schemes that inflate performance estimates.
+    Supports temporal, spatial, and grouped evaluation structures.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+LinkingTo: Rcpp
+Imports:
+    Rcpp,
+    methods,
+    stats
+Suggests:
+    caret,
+    rsample,
+    recipes,
+    mlr3,
+    sf,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: https://github.com/gcol33/BORG
+BugReports: https://github.com/gcol33/BORG/issues
+Depends:
+    R (>= 3.5)
+Config/testthat/edition: 3

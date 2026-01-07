@@ -1,0 +1,28 @@
+# R build artifacts
+*.Rcheck/
+*.tar.gz
+src/*.o
+src/*.so
+src/*.dll
+src/RcppExports.cpp
+
+# RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# pkgdown
+docs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*~

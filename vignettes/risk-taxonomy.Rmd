@@ -1,0 +1,188 @@
+---
+title: "Risk Taxonomy"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Risk Taxonomy}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This document catalogs all evaluation risks that BORG detects, organized by
+mechanism.
+
+## Hard Violations
+
+These fundamentally invalidate evaluation. BORG blocks or errors on detection.
+
+### 1. Index Overlap
+
+**What**: Same row indices appear in both training and test sets.
+
+**Detection**: Set intersection of `train_idx` and `test_idx`.
+
+**Example**:
+```r
+train_idx <- 1:60
+test_idx <- 50:100  # Rows 50-60 in both!
+
+borg_guard(data, train_idx, test_idx)
+# Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)
+```
+
+### 2. Duplicate Rows
+
+**What**: Test set contains rows identical to training rows.
+
+**Detection**: Row hashing and comparison.
+
+**Why it matters**: Model may have memorized these exact patterns.
+
+```r
+result <- borg_inspect(data, train_idx, test_idx)
+# risks[[1]]$type == "duplicate_rows"
+```
+
+### 3. Preprocessing Leak
+
+**What**: Normalization, imputation, or PCA fitted on full data before splitting.
+
+**Detection**: Compare preprocessing parameters to train-only statistics.
+
+**Observable signals**:
+
+- `preProcess$mean` includes test statistics
+- `recipe$template` has more rows than training set
+- `prcomp$center` computed on full data
+
+### 4. Target Leakage (Direct)
+
+**What**: Feature has correlation > 0.99 with target.
+
+**Detection**: Correlation matrix inspection.
+
+**Why it matters**: Feature is likely derived from the outcome (e.g.,
+"days_since_diagnosis" to predict "has_disease").
+
+### 5. Temporal Look-Ahead
+
+**What**: Features at time t contain information from time t+k.
+
+**Detection**: Compare feature timestamps to prediction timestamps.
+
+```r
+ctx <- borg_guard(
+  data = ts_data,
+  train_idx = 1:800,
+  test_idx = 801:1000,
+  temporal_col = "date"
+)
+# Errors if test observations predate training
+```
+
+### 6. Group Overlap
+
+**What**: Same group (patient, site, etc.) appears in both train and test.
+
+**Detection**: Group column value comparison.
+
+```r
+ctx <- borg_guard(
+  data = patient_data,
+  train_idx = train_idx,
+  test_idx = test_idx,
+  group_col = "patient_id"
+)
+# Errors if any patient_id in both sets
+```
+
+### 7. Global Feature Engineering
+
+**What**: Target encoding, embeddings, or derived features computed on full data.
+
+**Detection**: Trace encoding objects to their training data.
+
+## Soft Inflation
+
+These bias results but model ranking may be preserved. BORG warns.
+
+### 1. Spatial Autocorrelation
+
+**What**: Spatial block size smaller than autocorrelation range.
+
+**Detection**: Compare block size parameter to variogram estimates.
+
+**Impact**: Nearby test locations leak information from training.
+
+### 2. Insufficient Embargo
+
+**What**: Temporal purge/embargo period shorter than autocorrelation decay.
+
+**Detection**: Compare embargo to measured serial correlation.
+
+### 3. Target Leakage (Proxy)
+
+**What**: Feature has correlation 0.95-0.99 with target.
+
+**Detection**: Correlation screening with domain flagging.
+
+**Why warning not error**: May be legitimate strong predictor, requires
+domain review.
+
+### 4. Post-hoc Subgroup Analysis
+
+**What**: Subgroups discovered or defined after seeing test results.
+
+**Detection**: Check if subgroup definitions predate evaluation.
+
+### 5. External Validation Overlap
+
+**What**: "External" dataset shares time/geography/institution with training.
+
+**Detection**: Metadata and distribution comparison.
+
+## Risk Type Reference
+
+| Risk Type | Severity | Detection Method | Action |
+|-----------|----------|------------------|--------|
+| `index_overlap` | hard | Index intersection | Block |
+| `duplicate_rows` | hard | Row hashing | Block |
+| `preprocessing_leak` | hard | Parameter comparison | Block |
+| `target_leakage_direct` | hard | Correlation > 0.99 | Block |
+| `temporal_lookahead` | hard | Timestamp comparison | Block |
+| `group_overlap` | hard | Group intersection | Block |
+| `encoding_leak` | hard | Training data trace | Block |
+| `target_leakage_proxy` | soft | Correlation 0.95-0.99 | Warn |
+| `spatial_autocorrelation` | soft | Block vs variogram | Warn |
+| `insufficient_embargo` | soft | Embargo vs ACF | Warn |
+| `subgroup_posthoc` | soft | Timestamp check | Warn |
+| `external_overlap` | soft | Distribution comparison | Warn |
+
+## Accessing Risk Details
+
+```r
+result <- borg_inspect(object, train_idx, test_idx)
+
+# Summary
+result@is_valid
+result@n_hard
+result@n_soft
+
+# Individual risks
+for (risk in result@risks) {
+  cat(risk$type, ":", risk$severity, "\n")
+  cat("  ", risk$description, "\n")
+  if (!is.null(risk$affected_indices)) {
+    cat("  Affected:", length(risk$affected_indices), "indices\n")
+  }
+}
+
+# Tabular format
+df <- as.data.frame(result)
+```

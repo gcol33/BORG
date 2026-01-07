@@ -1,0 +1,79 @@
+url: https://gillescolling.com/BORG
+
+template:
+  bootstrap: 5
+  bootswatch: sandstone
+  light-switch: true
+
+figures:
+  dev: svg
+  fig.ext: svg
+  bg: "#F5F6F8"
+
+home:
+  title: "BORG: Bounded Outcome Risk Guard for Model Evaluation"
+  description: >
+    Automatically detects and enforces valid model evaluation by identifying
+    information reuse between training and evaluation data.
+
+authors:
+  Gilles Colling:
+    href: https://github.com/gcol33
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, lightswitch, github]
+  components:
+    intro:
+      text: Get Started
+      href: articles/quickstart.html
+    articles:
+      text: Articles
+      menu:
+        - text: "Quick Start"
+          href: articles/quickstart.html
+        - text: "Risk Taxonomy"
+          href: articles/risk-taxonomy.html
+        - text: "Framework Integration"
+          href: articles/frameworks.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/gcol33/BORG
+      aria-label: GitHub
+
+reference:
+  - title: "Core Functions"
+    desc: "Primary interface for evaluation risk detection"
+    contents:
+      - borg_guard
+      - borg_inspect
+      - borg_validate
+
+  - title: "Remediation"
+    desc: "Automatic pipeline correction"
+    contents:
+      - borg_rewrite
+
+  - title: "Classes"
+    desc: "Result objects"
+    contents:
+      - BorgRisk-class
+      - as.data.frame.BorgRisk
+
+articles:
+  - title: "Getting Started"
+    navbar: ~
+    contents:
+      - quickstart
+
+  - title: "Deep Dives"
+    navbar: ~
+    contents:
+      - risk-taxonomy
+      - frameworks
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with
