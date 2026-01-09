@@ -67,5 +67,5 @@ fixed_workflow <- result$workflow
 }
 \seealso{
 \code{\link{borg_validate}} for validation without rewriting,
-\code{\link{borg_guard}} for proactive enforcement.
+\code{\link{borg}} for proactive enforcement.
 }

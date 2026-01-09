@@ -142,7 +142,7 @@ plot_split <- function(train_idx, test_idx, n_total = NULL,
 #'
 #' Visualizes the risks detected by BORG validation.
 #'
-#' @param risk A BorgRisk object from borg_inspect, borg_validate, or borg_guard.
+#' @param risk A BorgRisk object from borg_inspect, borg_validate, or borg.
 #' @param title Plot title.
 #' @param max_risks Maximum number of risks to display.
 #'

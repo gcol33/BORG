@@ -22,7 +22,9 @@ information reuse between training and evaluation data. It guards against:
 \section{Main Functions}{
 
 \describe{
-\item{\code{\link{borg_guard}}}{Primary interface for guarding evaluation pipelines}
+\item{\code{\link{borg}}}{Primary interface for guarding evaluation pipelines}
+\item{\code{\link{borg_diagnose}}}{Diagnose data dependency structure}
+\item{\code{\link{borg_cv}}}{Generate valid CV schemes based on diagnosis}
 \item{\code{\link{borg_inspect}}}{Inspect R objects for leakage signals}
 \item{\code{\link{borg_validate}}}{Validate a complete evaluation workflow}
 \item{\code{\link{borg_rewrite}}}{Automatically rewrite leaky pipelines}

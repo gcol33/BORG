@@ -61,5 +61,5 @@ show(new("BorgRisk",
 
 }
 \seealso{
-\code{\link{borg_inspect}}, \code{\link{borg_validate}}, \code{\link{borg_guard}}
+\code{\link{borg_inspect}}, \code{\link{borg_validate}}, \code{\link{borg}}
 }

@@ -46,7 +46,7 @@
 #'
 #' @seealso
 #' \code{\link{borg_validate}} for complete workflow validation,
-#' \code{\link{borg_guard}} for automated enforcement during evaluation.
+#' \code{\link{borg}} for automated enforcement during evaluation.
 #'
 #' @examples
 #' # Inspect a preprocessing object

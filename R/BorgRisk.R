@@ -27,7 +27,7 @@
 #' @slot timestamp POSIXct. When the inspection was performed.
 #' @slot call Language object. The original call that triggered inspection.
 #'
-#' @seealso \code{\link{borg_inspect}}, \code{\link{borg_validate}}, \code{\link{borg_guard}}
+#' @seealso \code{\link{borg_inspect}}, \code{\link{borg_validate}}, \code{\link{borg}}
 #'
 #' @examples
 #' # Create an empty BorgRisk object (no risks detected)

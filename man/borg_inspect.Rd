@@ -82,5 +82,5 @@ pp_good <- scale(mtcars[train_idx, -1])
 }
 \seealso{
 \code{\link{borg_validate}} for complete workflow validation,
-\code{\link{borg_guard}} for automated enforcement during evaluation.
+\code{\link{borg}} for automated enforcement during evaluation.
 }

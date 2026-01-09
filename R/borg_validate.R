@@ -33,7 +33,7 @@
 #' }
 #'
 #' @seealso
-#' \code{\link{borg_guard}} for proactive enforcement,
+#' \code{\link{borg}} for proactive enforcement,
 #' \code{\link{borg_inspect}} for single-object inspection.
 #'
 #' @examples
