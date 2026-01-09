@@ -18,13 +18,19 @@ n <- nrow(data)
 train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
-# Guard the evaluation
-ctx <- borg_guard(
-  data = data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  mode = "strict"
-)
+# Quick validation
+borg(data, train_idx, test_idx)
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: VALID (no hard violations)
+#>   Hard violations:  0
+#>   Soft inflations:  0
+#>   Train indices:    105 rows
+#>   Test indices:     45 rows
+#>   Inspected at:     2026-01-09 10:26:31
+#> 
+#> No risks detected.
 
 # Safe preprocessing (train only)
 train_data <- data[train_idx, ]
@@ -42,8 +48,6 @@ Validate `trainControl` and `preProcess` objects:
 ``` r
 
 library(caret)
-#> Loading required package: ggplot2
-#> Loading required package: lattice
 library(BORG)
 
 data(mtcars)
@@ -52,21 +56,21 @@ test_idx <- 26:32
 
 # BAD: preProcess on full data
 pp_bad <- preProcess(mtcars[, -1], method = c("center", "scale"))
-result <- borg_inspect(pp_bad, train_idx, test_idx, data = mtcars)
+borg(pp_bad, train_idx, test_idx, data = mtcars)
 # Detects preprocessing leak
 
 # GOOD: preProcess on train only
 pp_good <- preProcess(mtcars[train_idx, -1], method = c("center", "scale"))
-result <- borg_inspect(pp_good, train_idx, test_idx, data = mtcars)
+borg(pp_good, train_idx, test_idx, data = mtcars)
 # No violations
 
-# Inspect trainControl
+# Check trainControl
 ctrl <- trainControl(
   method = "cv",
   number = 5,
   index = createFolds(mtcars$mpg[train_idx], k = 5)
 )
-result <- borg_inspect(ctrl, train_idx, test_idx)
+borg(ctrl, train_idx, test_idx)
 ```
 
 ## tidymodels / recipes
@@ -76,26 +80,7 @@ Validate recipe objects:
 ``` r
 
 library(recipes)
-#> Loading required package: dplyr
-#> 
-#> Attaching package: 'dplyr'
-#> The following objects are masked from 'package:stats':
-#> 
-#>     filter, lag
-#> The following objects are masked from 'package:base':
-#> 
-#>     intersect, setdiff, setequal, union
-#> 
-#> Attaching package: 'recipes'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
 library(rsample)
-#> 
-#> Attaching package: 'rsample'
-#> The following object is masked from 'package:caret':
-#> 
-#>     calibration
 library(BORG)
 
 # Use mtcars for reproducible example
@@ -112,7 +97,7 @@ rec_bad <- recipe(mpg ~ ., data = mtcars) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()  # Uses full mtcars data!
 
-result <- borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
+borg(rec_bad, train_idx, test_idx, data = mtcars)
 # Detects leak
 
 # GOOD: recipe prepped on training only
@@ -120,7 +105,7 @@ rec_good <- recipe(mpg ~ ., data = training(split)) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()
 
-result <- borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
+borg(rec_good, train_idx, test_idx, data = mtcars)
 # Clean
 ```
 
@@ -132,7 +117,7 @@ Inspect resampling schemes:
 
 # Validate v-fold CV (using split from previous chunk)
 folds <- vfold_cv(training(split), v = 5)
-result <- borg_inspect(folds, train_idx, test_idx)
+borg(folds, train_idx, test_idx)
 ```
 
 Additional rsample patterns (requires appropriate data):
@@ -141,11 +126,11 @@ Additional rsample patterns (requires appropriate data):
 
 # Validate grouped CV
 group_folds <- group_vfold_cv(data, group = patient_id, v = 5)
-result <- borg_inspect(group_folds, train_idx, test_idx)
+borg(group_folds, train_idx, test_idx)
 
 # Validate temporal splits
 rolling <- sliding_window(ts_data, lookback = 100, assess_stop = 50)
-result <- borg_inspect(rolling, train_idx, test_idx)
+borg(rolling, train_idx, test_idx)
 ```
 
 ## mlr3
@@ -167,12 +152,12 @@ resampling$instantiate(task)
 # Inspect
 train_idx <- resampling$train_set(1)
 test_idx <- resampling$test_set(1)
-result <- borg_inspect(task, train_idx, test_idx)
+borg(task, train_idx, test_idx)
 ```
 
 ## Temporal Data
 
-For time series or panel data, enable temporal validation:
+For time series or panel data:
 
 ``` r
 
@@ -185,16 +170,22 @@ ts_data <- data.frame(
   feature = rnorm(n)
 )
 
-# Expanding window backtest
-ctx <- borg_guard(
+train_idx <- 1:252
+test_idx <- 253:365
 
-  data = ts_data,
-  train_idx = 1:252,       # First year
-  test_idx = 253:365,      # Next ~4 months
-  temporal_col = "date",
-
-  mode = "strict"
-)
+# Validate with temporal ordering check
+borg(ts_data, train_idx, test_idx, temporal_col = "date")
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: VALID (no hard violations)
+#>   Hard violations:  0
+#>   Soft inflations:  0
+#>   Train indices:    252 rows
+#>   Test indices:     113 rows
+#>   Inspected at:     2026-01-09 10:26:31
+#> 
+#> No risks detected.
 ```
 
 Rolling origin validation with rsample:
@@ -207,7 +198,7 @@ rolling <- rolling_origin(
   assess = 30,
   cumulative = FALSE
 )
-result <- borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
+borg(rolling, train_idx = NULL, test_idx = NULL)
 ```
 
 ## Spatial Data
@@ -230,20 +221,24 @@ spatial_data <- data.frame(
 train_idx <- which(spatial_data$longitude < 0)
 test_idx <- which(spatial_data$longitude >= 0)
 
-# Block CV with spatial awareness
-ctx <- borg_guard(
-  data = spatial_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  spatial_cols = c("longitude", "latitude"),
-  mode = "warn"
-)
-# Inspects spatial separation between train/test
+# Validate with spatial columns
+borg(spatial_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"))
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: VALID (no hard violations)
+#>   Hard violations:  0
+#>   Soft inflations:  0
+#>   Train indices:    46 rows
+#>   Test indices:     54 rows
+#>   Inspected at:     2026-01-09 10:26:31
+#> 
+#> No risks detected.
 ```
 
 ## Complete Workflow Validation
 
-Validate an entire pipeline after the fact:
+Validate an entire pipeline:
 
 ``` r
 
@@ -254,8 +249,8 @@ n <- nrow(data)
 train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
-# Validate the workflow
-result <- borg_validate(list(
+# Pass a workflow list to borg()
+result <- borg(list(
   data = data,
   train_idx = train_idx,
   test_idx = test_idx,
@@ -274,7 +269,7 @@ if (!result@is_valid) {
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-07 22:32:07
+#>   Inspected at:     2026-01-09 10:26:31
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 

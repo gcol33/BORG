@@ -21,7 +21,7 @@ detection.
 train_idx <- 1:60
 test_idx <- 50:100  # Rows 50-60 in both!
 
-borg_guard(data, train_idx, test_idx)
+borg(data, train_idx, test_idx)
 # Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)
 ```
 
@@ -35,7 +35,7 @@ borg_guard(data, train_idx, test_idx)
 
 ``` r
 
-result <- borg_inspect(data, train_idx, test_idx)
+result <- borg(data, train_idx, test_idx)
 # risks[[1]]$type == "duplicate_rows"
 ```
 
@@ -52,6 +52,12 @@ statistics.
 - `preProcess$mean` includes test statistics
 - `recipe$template` has more rows than training set
 - `prcomp$center` computed on full data
+
+``` r
+
+# Check a preprocessing object
+borg(my_recipe, train_idx, test_idx, data = data)
+```
 
 ### 4. Target Leakage (Direct)
 
@@ -70,13 +76,8 @@ statistics.
 
 ``` r
 
-ctx <- borg_guard(
-  data = ts_data,
-  train_idx = 1:800,
-  test_idx = 801:1000,
-  temporal_col = "date"
-)
-# Errors if test observations predate training
+# Validate temporal ordering
+borg(ts_data, train_idx = 1:800, test_idx = 801:1000)
 ```
 
 ### 6. Group Overlap
@@ -88,12 +89,8 @@ test.
 
 ``` r
 
-ctx <- borg_guard(
-  data = patient_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  group_col = "patient_id"
-)
+# Validate group isolation
+borg(patient_data, train_idx, test_idx, group_col = "patient_id")
 # Errors if any patient_id in both sets
 ```
 
@@ -166,7 +163,7 @@ training.
 
 ``` r
 
-result <- borg_inspect(object, train_idx, test_idx)
+result <- borg(object, train_idx, test_idx, data = data)
 
 # Summary
 result@is_valid

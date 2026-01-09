@@ -35,7 +35,7 @@
 
     <a class="navbar-brand me-2" href="index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,6 +82,13 @@
 <p>Bounded Outcome Risk Guard</p>
 <p>BORG detects invalid model evaluation. It identifies when information flows from test data into training, and blocks the evaluation before misleading metrics are produced.</p>
 <div class="section level2">
+<h2 id="why-borg">Why BORG?<a class="anchor" aria-label="anchor" href="#why-borg"></a>
+</h2>
+<p>You won’t know your evaluation is broken. The code runs fine, metrics look good, you publish or deploy. Months later you find out your 94% accuracy is 70% on real data.</p>
+<p>A <a href="https://reproducible.cs.princeton.edu/" class="external-link">Princeton meta-analysis</a> found leakage errors in <strong>648 published papers across 30 scientific fields</strong>. In civil war prediction research, correcting leakage revealed that “complex ML models do not perform substantively better than decades-old Logistic Regression.” The reported gains were artifacts.</p>
+<p>BORG catches these errors before you compute metrics. It refuses to proceed when evaluation is invalid.</p>
+</div>
+<div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
@@ -99,7 +106,7 @@
 <span><span class="va">test</span> <span class="op">&lt;-</span> <span class="va">data_scaled</span><span class="op">[</span><span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>, <span class="op">]</span></span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">train</span><span class="op">)</span></span>
 <span><span class="va">rmse</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">test</span><span class="op">$</span><span class="va">y</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">test</span><span class="op">)</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>The call to <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> computed mean and standard deviation using all 1000 rows. The test set’s distribution is now encoded in the training data. The reported RMSE does not estimate performance on unseen data.</p>
+<p>The call to <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> computed mean and standard deviation using all 1000 rows. This leaks test set information into training. The reported RMSE won’t match real-world performance.</p>
 </div>
 <div class="section level2">
 <h2 id="the-solution">The Solution<a class="anchor" aria-label="anchor" href="#the-solution"></a>
@@ -110,7 +117,7 @@
 <span><span class="co"># One function does it all</span></span>
 <span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co"># Error: BORG HARD VIOLATION: preprocessing fitted on full data</span></span></code></pre></div>
-<p>BORG fails closed. The evaluation does not proceed.</p>
+<p>BORG fails closed. No metrics get computed.</p>
 </div>
 <div class="section level2">
 <h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
@@ -139,12 +146,7 @@
 <tbody>
 <tr>
 <td><code><a href="reference/borg.html">borg()</a></code></td>
-<td>
-<strong>Main entry point</strong> — auto-detects and validates</td>
-</tr>
-<tr>
-<td><code><a href="reference/borg_guard.html">borg_guard()</a></code></td>
-<td>Create guarded evaluation context</td>
+<td>Validate any object against a train/test split</td>
 </tr>
 <tr>
 <td><code><a href="reference/borg_inspect.html">borg_inspect()</a></code></td>
@@ -164,8 +166,20 @@
 <div class="section level2">
 <h2 id="risk-classification">Risk Classification<a class="anchor" aria-label="anchor" href="#risk-classification"></a>
 </h2>
-<p><strong>Hard Violation</strong> — Evaluation is invalid. Blocked. - Train-test index overlap - Preprocessing fitted on full data - Target leakage (feature derived from outcome) - Temporal look-ahead - Group membership in both splits</p>
-<p><strong>Soft Inflation</strong> — Results biased but bounded. Constrained. - Spatial block size below autocorrelation range - Embargo period below serial dependence - Post-hoc subgroup discovery</p>
+<p><strong>Hard Violation</strong>: Evaluation is invalid. Blocked.</p>
+<ul>
+<li>Train-test index overlap</li>
+<li>Preprocessing fitted on full data</li>
+<li>Target leakage (feature derived from outcome)</li>
+<li>Temporal look-ahead</li>
+<li>Group membership in both splits</li>
+</ul>
+<p><strong>Soft Inflation</strong>: Results biased but bounded. Constrained.</p>
+<ul>
+<li>Spatial block size below autocorrelation range</li>
+<li>Embargo period below serial dependence</li>
+<li>Post-hoc subgroup discovery</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="design-principles">Design Principles<a class="anchor" aria-label="anchor" href="#design-principles"></a>

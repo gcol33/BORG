@@ -16,7 +16,7 @@
 
     <a class="navbar-brand me-2" href="index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,7 +93,7 @@
 <h2 id="id_1-cross-validation-schemes">1. Cross-Validation Schemes<a class="anchor" aria-label="anchor" href="#id_1-cross-validation-schemes"></a></h2>
 <div class="section level3">
 <h3 id="id_11-k-fold-cross-validation">1.1 K-Fold Cross-Validation<a class="anchor" aria-label="anchor" href="#id_11-k-fold-cross-validation"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl</a></code> objects with <code>index</code>/<code>indexOut</code> slots - <code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv</a></code> objects storing fold assignments - Custom fold vectors as integer indices - Preprocessing objects (<code><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipes::recipe</a></code>, <code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">caret::preProcess</a></code>) fitted before splitting</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl</code> objects with <code>index</code>/<code>indexOut</code> slots - <code>rsample::vfold_cv</code> objects storing fold assignments - Custom fold vectors as integer indices - Preprocessing objects (<code>recipes::recipe</code>, <code>caret::preProcess</code>) fitted before splitting</p>
 <p><strong>Detection Method:</strong> - Check if preprocessing parameters (mean, sd, PCA loadings) were computed on full data - Inspect <code>recipe$template</code> row count vs training fold sizes - Compare <code>preProcess$mean</code> against fold-specific means</p>
 <p><strong>Risk Classification:</strong> Hard Violation (if preprocessing leaks), Soft Inflation (if only minor statistics leak)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If <code>preProcess</code> or <code>recipe</code> fitted on full data before fold creation - <strong>Rewrite</strong>: Inject preprocessing into each fold’s training pipeline automatically</p>
@@ -107,21 +107,21 @@
 <hr></div>
 <div class="section level3">
 <h3 id="id_13-leave-one-out-cross-validation-loocv">1.3 Leave-One-Out Cross-Validation (LOOCV)<a class="anchor" aria-label="anchor" href="#id_13-leave-one-out-cross-validation-loocv"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl(method = "LOOCV")</code> - <code><a href="https://rsample.tidymodels.org/reference/loo_cv.html" class="external-link">rsample::loo_cv()</a></code> objects - Fold count equals row count</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl(method = "LOOCV")</code> - <code>rsample::loo_cv()</code> objects - Fold count equals row count</p>
 <p><strong>Detection Method:</strong> - Check <code>length(folds) == nrow(data)</code> - Detect global preprocessing before LOOCV</p>
 <p><strong>Risk Classification:</strong> Hard Violation (preprocessing leak is amplified), Soft Inflation (variance estimates unreliable)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If any global preprocessing detected - <strong>Allow with constraints</strong>: Require acknowledgment that variance estimates are correlated</p>
 <hr></div>
 <div class="section level3">
 <h3 id="id_14-repeated-cross-validation">1.4 Repeated Cross-Validation<a class="anchor" aria-label="anchor" href="#id_14-repeated-cross-validation"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl(method = "repeatedcv", repeats = n)</code> - Multiple <code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv</a></code> objects with different seeds - Aggregated metrics across repetitions</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl(method = "repeatedcv", repeats = n)</code> - Multiple <code>rsample::vfold_cv</code> objects with different seeds - Aggregated metrics across repetitions</p>
 <p><strong>Detection Method:</strong> - Check for consistent bias direction across repetitions - Detect if preprocessing was fitted once and reused across all repetitions</p>
 <p><strong>Risk Classification:</strong> Soft Inflation (averaging hides but doesn’t fix bias)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Allow with constraints</strong>: Verify each repetition independently enforces anti-leakage - Warn that stability ≠ validity</p>
 <hr></div>
 <div class="section level3">
 <h3 id="id_15-nested-cross-validation">1.5 Nested Cross-Validation<a class="anchor" aria-label="anchor" href="#id_15-nested-cross-validation"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl</a></code> with <code>search = "grid"</code> or <code>"random"</code> inside outer loop - <code>mlr3::ResamplingNested</code> objects - Inner/outer fold structure in tuning results</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::trainControl</code> with <code>search = "grid"</code> or <code>"random"</code> inside outer loop - <code>mlr3::ResamplingNested</code> objects - Inner/outer fold structure in tuning results</p>
 <p><strong>Detection Method:</strong> - Trace data flow: outer test indices must not appear in inner loop computations - Check early stopping criteria against outer fold data - Inspect threshold selection data source</p>
 <p><strong>Risk Classification:</strong> Hard Violation (if outer fold influences inner loop)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If outer test data indices appear in inner tuning decisions - <strong>Rewrite</strong>: Enforce strict index separation between inner and outer loops</p>
@@ -138,7 +138,7 @@
 <h2 id="id_2-train-test-splits">2. Train-Test Splits<a class="anchor" aria-label="anchor" href="#id_2-train-test-splits"></a></h2>
 <div class="section level3">
 <h3 id="id_21-random-hold-out-split">2.1 Random Hold-Out Split<a class="anchor" aria-label="anchor" href="#id_21-random-hold-out-split"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/caret/man/createDataPartition.html" class="external-link">caret::createDataPartition()</a></code> output - <code><a href="https://rsample.tidymodels.org/reference/initial_split.html" class="external-link">rsample::initial_split()</a></code> objects - Row indices in train/test - <code>.Random.seed</code> state at split time</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::createDataPartition()</code> output - <code>rsample::initial_split()</code> objects - Row indices in train/test - <code>.Random.seed</code> state at split time</p>
 <p><strong>Detection Method:</strong> - Check if split was created before or after exploratory analysis - Detect if test indices were accessed before final evaluation - Track call history for test set access patterns</p>
 <p><strong>Risk Classification:</strong> Soft Inflation (if split timing uncertain)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Allow with constraints</strong>: Require split creation timestamp before any data exploration - Log all test set accesses</p>
@@ -162,7 +162,7 @@
 <h2 id="id_3-temporal-evaluation-schemes">3. Temporal Evaluation Schemes<a class="anchor" aria-label="anchor" href="#id_3-temporal-evaluation-schemes"></a></h2>
 <div class="section level3">
 <h3 id="id_31-walk-forward--expanding-window-backtest">3.1 Walk-Forward / Expanding Window Backtest<a class="anchor" aria-label="anchor" href="#id_31-walk-forward--expanding-window-backtest"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rsample.tidymodels.org/reference/slide-resampling.html" class="external-link">rsample::sliding_window()</a></code> / <code>rolling_origin()</code> objects - Time index column in data - Feature columns with future-derived values</p>
+<p><strong>Observable Signals in R:</strong> - <code>rsample::sliding_window()</code> / <code>rolling_origin()</code> objects - Time index column in data - Feature columns with future-derived values</p>
 <p><strong>Detection Method:</strong> - Check feature timestamps against prediction timestamps - Detect if features contain information from t+k for predictions at t - Validate that model at time t uses only data ≤ t</p>
 <p><strong>Risk Classification:</strong> Hard Violation (look-ahead bias)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If any feature timestamp exceeds prediction timestamp - <strong>Rewrite</strong>: Automatically filter features to respect temporal ordering</p>
@@ -193,7 +193,7 @@
 <h2 id="id_4-spatial-and-hierarchical-evaluation">4. Spatial and Hierarchical Evaluation<a class="anchor" aria-label="anchor" href="#id_4-spatial-and-hierarchical-evaluation"></a></h2>
 <div class="section level3">
 <h3 id="id_41-spatial-cross-validation-block-cv">4.1 Spatial Cross-Validation (Block CV)<a class="anchor" aria-label="anchor" href="#id_41-spatial-cross-validation-block-cv"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code>sf</code> spatial objects with coordinates - <code><a href="https://edzer.github.io/sp/reference/SpatialPoints.html" class="external-link">sp::SpatialPoints</a></code> coordinate data - <code>blockCV</code> or <code>spatialsample</code> fold objects - Spatial block size parameter</p>
+<p><strong>Observable Signals in R:</strong> - <code>sf</code> spatial objects with coordinates - <code>sp::SpatialPoints</code> coordinate data - <code>blockCV</code> or <code>spatialsample</code> fold objects - Spatial block size parameter</p>
 <p><strong>Detection Method:</strong> - Compute spatial autocorrelation range (variogram) - Compare block size to autocorrelation range - Detect if train/test blocks are spatially adjacent</p>
 <p><strong>Risk Classification:</strong> Soft Inflation (if blocks too small)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Allow with constraints</strong>: Require block size ≥ autocorrelation range - Warn if spatial leakage detected between adjacent blocks</p>
@@ -207,7 +207,7 @@
 <hr></div>
 <div class="section level3">
 <h3 id="id_43-clustered-standard-errors-without-clustered-cv">4.3 Clustered Standard Errors Without Clustered CV<a class="anchor" aria-label="anchor" href="#id_43-clustered-standard-errors-without-clustered-cv"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://sandwich.R-Forge.R-project.org/reference/vcovCL.html" class="external-link">sandwich::vcovCL()</a></code> or <code>clubSandwich</code> usage post-hoc - Cluster variable present but not used in CV splitting - <code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer()</a></code> random effects without grouped CV</p>
+<p><strong>Observable Signals in R:</strong> - <code>sandwich::vcovCL()</code> or <code>clubSandwich</code> usage post-hoc - Cluster variable present but not used in CV splitting - <code>lme4::lmer()</code> random effects without grouped CV</p>
 <p><strong>Detection Method:</strong> - Check if cluster variable exists but CV ignored it - Detect cluster-aware standard errors applied to non-clustered CV results</p>
 <p><strong>Risk Classification:</strong> Soft Inflation (point estimates biased, SE correction insufficient)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: Standard errors from non-clustered CV with clustered correction - <strong>Rewrite</strong>: Force cluster-aware CV splitting</p>
@@ -272,7 +272,7 @@
 <h2 id="id_7-metric-and-threshold-selection">7. Metric and Threshold Selection<a class="anchor" aria-label="anchor" href="#id_7-metric-and-threshold-selection"></a></h2>
 <div class="section level3">
 <h3 id="id_71-threshold-optimization-on-test-data">7.1 Threshold Optimization on Test Data<a class="anchor" aria-label="anchor" href="#id_71-threshold-optimization-on-test-data"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/pROC/man/coords.html" class="external-link">pROC::coords()</a></code> optimal threshold from test ROC - Threshold selection code accessing test labels - Multiple thresholds evaluated on test set</p>
+<p><strong>Observable Signals in R:</strong> - <code>pROC::coords()</code> optimal threshold from test ROC - Threshold selection code accessing test labels - Multiple thresholds evaluated on test set</p>
 <p><strong>Detection Method:</strong> - Check if threshold selection used test labels - Trace threshold value origin to train vs test data - Detect threshold optimization loops over test data</p>
 <p><strong>Risk Classification:</strong> Hard Violation (threshold is a model parameter)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If threshold selected using test labels - <strong>Rewrite</strong>: Move threshold selection to validation set</p>
@@ -327,7 +327,7 @@
 <hr></div>
 <div class="section level3">
 <h3 id="id_92-hyperparameter-optimization-across-full-dataset">9.2 Hyperparameter Optimization Across Full Dataset<a class="anchor" aria-label="anchor" href="#id_92-hyperparameter-optimization-across-full-dataset"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">caret::train()</a></code> with CV including test data - Grid search results using full dataset - Bayesian optimization with test data in CV</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::train()</code> with CV including test data - Grid search results using full dataset - Bayesian optimization with test data in CV</p>
 <p><strong>Detection Method:</strong> - Check if HPO CV indices overlap with final test indices - Trace hyperparameter selection to data used - Validate HPO was nested within train split</p>
 <p><strong>Risk Classification:</strong> Hard Violation (test data influenced hyperparameters)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If HPO used test data in any form - <strong>Rewrite</strong>: Enforce nested CV with strict test set isolation</p>
@@ -351,21 +351,21 @@
 <hr></div>
 <div class="section level3">
 <h3 id="id_102-normalizationscaling-with-test-statistics">10.2 Normalization/Scaling with Test Statistics<a class="anchor" aria-label="anchor" href="#id_102-normalizationscaling-with-test-statistics"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> applied to full data before splitting - <code>caret::preProcess(method = c("center", "scale"))</code> on full data - <code><a href="https://recipes.tidymodels.org/reference/step_normalize.html" class="external-link">recipes::step_normalize()</a></code> trained on full data</p>
+<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> applied to full data before splitting - <code>caret::preProcess(method = c("center", "scale"))</code> on full data - <code>recipes::step_normalize()</code> trained on full data</p>
 <p><strong>Detection Method:</strong> - Compare scaling parameters to train-only mean/sd - Check <code>preProcess$mean</code>, <code>preProcess$std</code> against fold statistics - Trace normalization parameters to training data</p>
 <p><strong>Risk Classification:</strong> Hard Violation (test scale information in training)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If normalization fitted on train+test - <strong>Rewrite</strong>: Compute normalization on train, apply frozen to test</p>
 <hr></div>
 <div class="section level3">
 <h3 id="id_103-feature-selection-using-test-labels">10.3 Feature Selection Using Test Labels<a class="anchor" aria-label="anchor" href="#id_103-feature-selection-using-test-labels"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/pkg/caret/man/rfe.html" class="external-link">caret::rfe()</a></code> using full data - Correlation-based selection on full data - <code>Boruta</code> or similar run before splitting</p>
+<p><strong>Observable Signals in R:</strong> - <code>caret::rfe()</code> using full data - Correlation-based selection on full data - <code>Boruta</code> or similar run before splitting</p>
 <p><strong>Detection Method:</strong> - Check if feature selection used test labels - Compare selected features to train-only selection - Trace selection criteria computation to data used</p>
 <p><strong>Risk Classification:</strong> Hard Violation (test labels drove feature choice)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If feature selection used test labels - <strong>Rewrite</strong>: Perform feature selection within each fold on train-only</p>
 <hr></div>
 <div class="section level3">
 <h3 id="id_104-dimensionality-reduction-pca-umap-on-full-data">10.4 Dimensionality Reduction (PCA, UMAP) on Full Data<a class="anchor" aria-label="anchor" href="#id_104-dimensionality-reduction-pca-umap-on-full-data"></a></h3>
-<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/r/stats/prcomp.html" class="external-link">prcomp()</a></code> or <code><a href="https://rdrr.io/r/stats/princomp.html" class="external-link">stats::princomp()</a></code> on full data - <code>umap::umap()</code> fitted before splitting - <code><a href="https://recipes.tidymodels.org/reference/step_pca.html" class="external-link">recipes::step_pca()</a></code> trained on full data</p>
+<p><strong>Observable Signals in R:</strong> - <code><a href="https://rdrr.io/r/stats/prcomp.html" class="external-link">prcomp()</a></code> or <code><a href="https://rdrr.io/r/stats/princomp.html" class="external-link">stats::princomp()</a></code> on full data - <code>umap::umap()</code> fitted before splitting - <code>recipes::step_pca()</code> trained on full data</p>
 <p><strong>Detection Method:</strong> - Compare PCA loadings to train-only PCA - Check if UMAP embedding used test data - Trace dimensionality reduction object training data</p>
 <p><strong>Risk Classification:</strong> Hard Violation (test structure in reduced space)</p>
 <p><strong>Enforcement Action:</strong> - <strong>Block</strong>: If dimensionality reduction fitted on train+test - <strong>Rewrite</strong>: Fit reduction on train, transform test with frozen parameters</p>

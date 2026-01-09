@@ -78,9 +78,8 @@ Some violations cannot be automatically fixed:
 ## See also
 
 [`borg_validate`](https://gillescolling.com/BORG/reference/borg_validate.md)
-for validation without rewriting,
-[`borg_guard`](https://gillescolling.com/BORG/reference/borg_guard.md)
-for proactive enforcement.
+for validation without rewriting, `borg_guard` for proactive
+enforcement.
 
 ## Examples
 

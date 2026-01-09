@@ -4,7 +4,16 @@
 \alias{borg}
 \title{BORG: Validate Model Evaluation}
 \usage{
-borg(x, train_idx = NULL, test_idx = NULL, data = NULL, ...)
+borg(
+  x,
+  train_idx = NULL,
+  test_idx = NULL,
+  data = NULL,
+  temporal_col = NULL,
+  group_col = NULL,
+  spatial_cols = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{An object to validate. Can be:
@@ -22,6 +31,16 @@ borg(x, train_idx = NULL, test_idx = NULL, data = NULL, ...)
 
 \item{data}{Optional data frame for context when inspecting models.}
 
+\item{temporal_col}{Optional name of a timestamp column. If provided,
+validates that test observations do not precede training observations.}
+
+\item{group_col}{Optional name of a grouping column (e.g., patient ID).
+If provided, validates that no group appears in both train and test.}
+
+\item{spatial_cols}{Optional character vector of coordinate column names
+(e.g., \code{c("longitude", "latitude")}). If provided, checks spatial
+separation between train and test.}
+
 \item{...}{Additional arguments passed to underlying functions.}
 }
 \value{
@@ -36,12 +55,14 @@ validation method based on the input and returns a risk assessment.
 dispatches to the appropriate validation function:
 
 \itemize{
-\item Data frames → \code{\link{borg_inspect}()} with full validation
-\item Preprocessing/model objects → \code{\link{borg_inspect}()}
-\item Workflow lists → \code{\link{borg_validate}()}
+\item Data frames -> \code{\link{borg_inspect}()} with full validation
+\item Preprocessing/model objects -> \code{\link{borg_inspect}()}
+\item Workflow lists -> \code{\link{borg_validate}()}
 }
 
-For fine-grained control, use the specific functions directly.
+When validating data frames, you can optionally specify \code{temporal_col},
+\code{group_col}, or \code{spatial_cols} to enable additional checks for
+temporal ordering, group isolation, or spatial separation.
 }
 \examples{
 # Validate a train/test split
@@ -57,9 +78,16 @@ borg(pca, train_idx = 1:70, test_idx = 71:100, data = data)
 model <- lm(y ~ x, data = data[1:70, ])
 borg(model, train_idx = 1:70, test_idx = 71:100, data = data)
 
+# Validate with group isolation
+data$patient <- rep(1:10, each = 10)
+borg(data, train_idx = 1:50, test_idx = 51:100, group_col = "patient")
+
+# Validate temporal ordering
+data$date <- seq.Date(as.Date("2020-01-01"), by = "day", length.out = 100)
+borg(data, train_idx = 1:70, test_idx = 71:100, temporal_col = "date")
+
 }
 \seealso{
-\code{\link{borg_guard}} for creating guarded evaluation contexts,
 \code{\link{borg_inspect}} for detailed object inspection,
-\code{\link{borg_validate}} for comprehensive workflow validation.
+\code{\link{borg_validate}} for workflow validation.
 }

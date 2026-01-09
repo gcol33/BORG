@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -106,7 +106,7 @@ test sets.</p>
 <code class="sourceCode R"><span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">60</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">50</span><span class="op">:</span><span class="fl">100</span>  <span class="co"># Rows 50-60 in both!</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
 <span><span class="co"># Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -118,7 +118,7 @@ rows.</p>
 <p><strong>Why it matters</strong>: Model may have memorized these exact
 patterns.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
 <span><span class="co"># risks[[1]]$type == "duplicate_rows"</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -137,6 +137,9 @@ train-only statistics.</p>
 <li>
 <code>prcomp$center</code> computed on full data</li>
 </ul>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check a preprocessing object</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_recipe</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="target-leakage-direct">4. Target Leakage (Direct)<a class="anchor" aria-label="anchor" href="#target-leakage-direct"></a>
@@ -154,14 +157,9 @@ outcome (e.g., “days_since_diagnosis” to predict “has_disease”).</p>
 time t+k.</p>
 <p><strong>Detection</strong>: Compare feature timestamps to prediction
 timestamps.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">ts_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>,</span>
-<span>  temporal_col <span class="op">=</span> <span class="st">"date"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Errors if test observations predate training</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate temporal ordering</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ts_data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="group-overlap">6. Group Overlap<a class="anchor" aria-label="anchor" href="#group-overlap"></a>
@@ -169,13 +167,9 @@ timestamps.</p>
 <p><strong>What</strong>: Same group (patient, site, etc.) appears in
 both train and test.</p>
 <p><strong>Detection</strong>: Group column value comparison.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">patient_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="va">train_idx</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>  group_col <span class="op">=</span> <span class="st">"patient_id"</span></span>
-<span><span class="op">)</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate group isolation</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">patient_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, group_col <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
 <span><span class="co"># Errors if any patient_id in both sets</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -325,8 +319,8 @@ time/geography/institution with training.</p>
 <div class="section level2">
 <h2 id="accessing-risk-details">Accessing Risk Details<a class="anchor" aria-label="anchor" href="#accessing-risk-details"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Summary</span></span>
 <span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span></span>

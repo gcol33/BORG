@@ -46,15 +46,10 @@ rewriting.
 
 ### 1.1 K-Fold Cross-Validation
 
-**Observable Signals in R:** -
-[`caret::trainControl`](https://rdrr.io/pkg/caret/man/trainControl.html)
-objects with `index`/`indexOut` slots -
-[`rsample::vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)
-objects storing fold assignments - Custom fold vectors as integer
-indices - Preprocessing objects
-([`recipes::recipe`](https://recipes.tidymodels.org/reference/recipe.html),
-[`caret::preProcess`](https://rdrr.io/pkg/caret/man/preProcess.html))
-fitted before splitting
+**Observable Signals in R:** - `caret::trainControl` objects with
+`index`/`indexOut` slots - `rsample::vfold_cv` objects storing fold
+assignments - Custom fold vectors as integer indices - Preprocessing
+objects (`recipes::recipe`, `caret::preProcess`) fitted before splitting
 
 **Detection Method:** - Check if preprocessing parameters (mean, sd, PCA
 loadings) were computed on full data - Inspect `recipe$template` row
@@ -91,8 +86,7 @@ correlates with time/space indices
 ### 1.3 Leave-One-Out Cross-Validation (LOOCV)
 
 **Observable Signals in R:** - `caret::trainControl(method = "LOOCV")` -
-[`rsample::loo_cv()`](https://rsample.tidymodels.org/reference/loo_cv.html)
-objects - Fold count equals row count
+`rsample::loo_cv()` objects - Fold count equals row count
 
 **Detection Method:** - Check `length(folds) == nrow(data)` - Detect
 global preprocessing before LOOCV
@@ -110,8 +104,8 @@ variance estimates are correlated
 
 **Observable Signals in R:** -
 `caret::trainControl(method = "repeatedcv", repeats = n)` - Multiple
-[`rsample::vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)
-objects with different seeds - Aggregated metrics across repetitions
+`rsample::vfold_cv` objects with different seeds - Aggregated metrics
+across repetitions
 
 **Detection Method:** - Check for consistent bias direction across
 repetitions - Detect if preprocessing was fitted once and reused across
@@ -128,9 +122,8 @@ validity
 
 ### 1.5 Nested Cross-Validation
 
-**Observable Signals in R:** -
-[`caret::trainControl`](https://rdrr.io/pkg/caret/man/trainControl.html)
-with `search = "grid"` or `"random"` inside outer loop -
+**Observable Signals in R:** - `caret::trainControl` with
+`search = "grid"` or `"random"` inside outer loop -
 `mlr3::ResamplingNested` objects - Inner/outer fold structure in tuning
 results
 
@@ -170,11 +163,9 @@ to be validated against correlation structure
 
 ### 2.1 Random Hold-Out Split
 
-**Observable Signals in R:** -
-[`caret::createDataPartition()`](https://rdrr.io/pkg/caret/man/createDataPartition.html)
-output -
-[`rsample::initial_split()`](https://rsample.tidymodels.org/reference/initial_split.html)
-objects - Row indices in train/test - `.Random.seed` state at split time
+**Observable Signals in R:** - `caret::createDataPartition()` output -
+`rsample::initial_split()` objects - Row indices in train/test -
+`.Random.seed` state at split time
 
 **Detection Method:** - Check if split was created before or after
 exploratory analysis - Detect if test indices were accessed before final
@@ -230,10 +221,9 @@ further evaluations on same data - Enforce single-use test set policy
 
 ### 3.1 Walk-Forward / Expanding Window Backtest
 
-**Observable Signals in R:** -
-[`rsample::sliding_window()`](https://rsample.tidymodels.org/reference/slide-resampling.html)
-/ `rolling_origin()` objects - Time index column in data - Feature
-columns with future-derived values
+**Observable Signals in R:** - `rsample::sliding_window()` /
+`rolling_origin()` objects - Time index column in data - Feature columns
+with future-derived values
 
 **Detection Method:** - Check feature timestamps against prediction
 timestamps - Detect if features contain information from t+k for
@@ -304,9 +294,8 @@ vintage timestamps - Require point-in-time database or vintage column
 ### 4.1 Spatial Cross-Validation (Block CV)
 
 **Observable Signals in R:** - `sf` spatial objects with coordinates -
-[`sp::SpatialPoints`](https://edzer.github.io/sp/reference/SpatialPoints.html)
-coordinate data - `blockCV` or `spatialsample` fold objects - Spatial
-block size parameter
+`sp::SpatialPoints` coordinate data - `blockCV` or `spatialsample` fold
+objects - Spatial block size parameter
 
 **Detection Method:** - Compute spatial autocorrelation range
 (variogram) - Compare block size to autocorrelation range - Detect if
@@ -340,12 +329,9 @@ statement of transfer claim scope
 
 ### 4.3 Clustered Standard Errors Without Clustered CV
 
-**Observable Signals in R:** -
-[`sandwich::vcovCL()`](https://sandwich.R-Forge.R-project.org/reference/vcovCL.html)
-or `clubSandwich` usage post-hoc - Cluster variable present but not used
-in CV splitting -
-[`lme4::lmer()`](https://rdrr.io/pkg/lme4/man/lmer.html) random effects
-without grouped CV
+**Observable Signals in R:** - `sandwich::vcovCL()` or `clubSandwich`
+usage post-hoc - Cluster variable present but not used in CV splitting -
+`lme4::lmer()` random effects without grouped CV
 
 **Detection Method:** - Check if cluster variable exists but CV ignored
 it - Detect cluster-aware standard errors applied to non-clustered CV
@@ -501,10 +487,9 @@ using train-only data
 
 ### 7.1 Threshold Optimization on Test Data
 
-**Observable Signals in R:** -
-[`pROC::coords()`](https://rdrr.io/pkg/pROC/man/coords.html) optimal
-threshold from test ROC - Threshold selection code accessing test
-labels - Multiple thresholds evaluated on test set
+**Observable Signals in R:** - `pROC::coords()` optimal threshold from
+test ROC - Threshold selection code accessing test labels - Multiple
+thresholds evaluated on test set
 
 **Detection Method:** - Check if threshold selection used test labels -
 Trace threshold value origin to train vs test data - Detect threshold
@@ -632,10 +617,9 @@ base train, base validation, meta train, final test
 
 ### 9.2 Hyperparameter Optimization Across Full Dataset
 
-**Observable Signals in R:** -
-[`caret::train()`](https://rdrr.io/pkg/caret/man/train.html) with CV
-including test data - Grid search results using full dataset - Bayesian
-optimization with test data in CV
+**Observable Signals in R:** - `caret::train()` with CV including test
+data - Grid search results using full dataset - Bayesian optimization
+with test data in CV
 
 **Detection Method:** - Check if HPO CV indices overlap with final test
 indices - Trace hyperparameter selection to data used - Validate HPO was
@@ -694,9 +678,7 @@ train-only data
 **Observable Signals in R:** -
 [`scale()`](https://rdrr.io/r/base/scale.html) applied to full data
 before splitting - `caret::preProcess(method = c("center", "scale"))` on
-full data -
-[`recipes::step_normalize()`](https://recipes.tidymodels.org/reference/step_normalize.html)
-trained on full data
+full data - `recipes::step_normalize()` trained on full data
 
 **Detection Method:** - Compare scaling parameters to train-only
 mean/sd - Check `preProcess$mean`, `preProcess$std` against fold
@@ -713,10 +695,9 @@ to test
 
 ### 10.3 Feature Selection Using Test Labels
 
-**Observable Signals in R:** -
-[`caret::rfe()`](https://rdrr.io/pkg/caret/man/rfe.html) using full
-data - Correlation-based selection on full data - `Boruta` or similar
-run before splitting
+**Observable Signals in R:** - `caret::rfe()` using full data -
+Correlation-based selection on full data - `Boruta` or similar run
+before splitting
 
 **Detection Method:** - Check if feature selection used test labels -
 Compare selected features to train-only selection - Trace selection
@@ -736,8 +717,7 @@ train-only
 **Observable Signals in R:** -
 [`prcomp()`](https://rdrr.io/r/stats/prcomp.html) or
 [`stats::princomp()`](https://rdrr.io/r/stats/princomp.html) on full
-data - `umap::umap()` fitted before splitting -
-[`recipes::step_pca()`](https://recipes.tidymodels.org/reference/step_pca.html)
+data - `umap::umap()` fitted before splitting - `recipes::step_pca()`
 trained on full data
 
 **Detection Method:** - Compare PCA loadings to train-only PCA - Check

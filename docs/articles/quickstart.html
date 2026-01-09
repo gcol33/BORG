@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -90,174 +90,161 @@
 <div class="section level2">
 <h2 id="what-is-borg">What is BORG?<a class="anchor" aria-label="anchor" href="#what-is-borg"></a>
 </h2>
-<p>BORG (Bounded Outcome Risk Guard) automatically detects when model
-evaluation is compromised by information leakage between training and
-test data. It identifies violations that inflate performance estimates
-and provides actionable remediation.</p>
+<p>BORG inspects your preprocessing and model objects to detect data
+leakage. It checks whether information from the test set leaked into
+training, and blocks evaluation before you compute misleading
+metrics.</p>
+<p>You pass fitted objects to <code><a href="../reference/borg.html">borg()</a></code> and it checks for
+leakage signatures.</p>
 </div>
 <div class="section level2">
 <h2 id="the-problem">The Problem<a class="anchor" aria-label="anchor" href="#the-problem"></a>
 </h2>
-<p>Consider a common machine learning workflow:</p>
+<p>Consider a common mistake:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Typical workflow (PROBLEMATIC)</span></span>
+<code class="sourceCode R"><span><span class="co"># PROBLEMATIC WORKFLOW</span></span>
 <span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"my_data.csv"</span><span class="op">)</span></span>
+<span><span class="va">data_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span>  <span class="co"># Fitted on ALL rows</span></span>
 <span></span>
-<span><span class="co"># Preprocessing on FULL data - LEAKS TEST INFO</span></span>
-<span><span class="va">data_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Split AFTER preprocessing</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span></span>
 <span><span class="va">train</span> <span class="op">&lt;-</span> <span class="va">data_scaled</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span></span>
 <span><span class="va">test</span> <span class="op">&lt;-</span> <span class="va">data_scaled</span><span class="op">[</span><span class="va">test_idx</span>, <span class="op">]</span></span>
 <span></span>
-<span><span class="co"># Model training and evaluation</span></span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">train_model</span><span class="op">(</span><span class="va">train</span><span class="op">)</span></span>
 <span><span class="va">performance</span> <span class="op">&lt;-</span> <span class="fu">evaluate</span><span class="op">(</span><span class="va">model</span>, <span class="va">test</span><span class="op">)</span>  <span class="co"># Inflated!</span></span></code></pre></div>
-<p>The problem: <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> computed mean and standard
-deviation using ALL data, including the test set. This means:</p>
-<ul>
-<li>Training data contains test set statistics</li>
-<li>Test performance is artificially inflated</li>
-<li>Results do not generalize to truly unseen data</li>
-</ul>
+<p>The <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> call used all 1000 rows to compute mean and
+SD. Test set statistics leaked into the training data. The reported
+performance won’t match real-world results.</p>
 </div>
 <div class="section level2">
-<h2 id="borg-solution">BORG Solution<a class="anchor" aria-label="anchor" href="#borg-solution"></a>
+<h2 id="how-borg-catches-this">How BORG Catches This<a class="anchor" aria-label="anchor" href="#how-borg-catches-this"></a>
 </h2>
-<div class="section level3">
-<h3 id="proactive-guarding">Proactive Guarding<a class="anchor" aria-label="anchor" href="#proactive-guarding"></a>
-</h3>
-<p>Use <code><a href="../reference/borg_guard.html">borg_guard()</a></code> to create a protected evaluation
-context:</p>
+<p>BORG inspects objects after you create them:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Create guarded context BEFORE any preprocessing</span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">my_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>,</span>
+<span><span class="co"># You did preprocessing</span></span>
+<span><span class="va">pp</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">data</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>,</span>
-<span>  mode <span class="op">=</span> <span class="st">"strict"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Mode options:</span></span>
-<span><span class="co">#   "strict"  - Error on any violation</span></span>
-<span><span class="co">#   "warn"    - Warn but continue</span></span>
-<span><span class="co">#   "rewrite" - Auto-fix where possible</span></span></code></pre></div>
+<span><span class="co"># Now check it for leakage</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">pp</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span><span class="co"># Error: BORG HARD VIOLATION: preprocessing fitted on 1000 rows, but training set has 800</span></span></code></pre></div>
+<p>BORG detected that <code>preProcess</code> was fitted on more rows
+than the training set. The evaluation is blocked before you compute
+metrics.</p>
 </div>
-<div class="section level3">
-<h3 id="object-inspection">Object Inspection<a class="anchor" aria-label="anchor" href="#object-inspection"></a>
-</h3>
-<p>Inspect existing objects for leakage:</p>
+<div class="section level2">
+<h2 id="typical-workflow">Typical Workflow<a class="anchor" aria-label="anchor" href="#typical-workflow"></a>
+</h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check a preprocessing object</span></span>
-<span><span class="va">pp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">preProcess</a></span><span class="op">(</span><span class="va">full_data</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>, data <span class="op">=</span> <span class="va">full_data</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>  <span class="co"># Detailed risk report</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="co"># 1. Define your split</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span></span>
+<span></span>
+<span><span class="co"># 2. Do preprocessing on TRAINING ONLY</span></span>
+<span><span class="va">pp</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">data</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Check the preprocessing object</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">pp</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span><span class="co"># No error - preprocessing is clean</span></span>
+<span></span>
+<span><span class="co"># 4. Fit model on training data</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">train</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">train_data</span>, preProcess <span class="op">=</span> <span class="va">pp</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 5. Check the model</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span><span class="co"># No error - model is clean</span></span>
+<span></span>
+<span><span class="co"># 6. Now safe to evaluate</span></span>
+<span><span class="va">predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">test_data</span><span class="op">)</span></span>
+<span><span class="va">performance</span> <span class="op">&lt;-</span> <span class="fu">compute_metrics</span><span class="op">(</span><span class="va">predictions</span>, <span class="va">test_data</span><span class="op">$</span><span class="va">y</span><span class="op">)</span></span></code></pre></div>
+<p>The key point: call <code><a href="../reference/borg.html">borg()</a></code> on objects <em>after</em> you
+create them, <em>before</em> you compute metrics.</p>
 </div>
-<div class="section level3">
-<h3 id="workflow-validation">Workflow Validation<a class="anchor" aria-label="anchor" href="#workflow-validation"></a>
-</h3>
-<p>Validate an entire evaluation pipeline:</p>
+<div class="section level2">
+<h2 id="what-borg-can-check">What BORG Can Check<a class="anchor" aria-label="anchor" href="#what-borg-can-check"></a>
+</h2>
+<p>Pass any of these to <code><a href="../reference/borg.html">borg()</a></code>:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_validate.html">borg_validate</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">my_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="va">train_idx</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>  preprocess <span class="op">=</span> <span class="va">my_recipe</span>,</span>
-<span>  model <span class="op">=</span> <span class="va">fitted_model</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Data frame - checks split validity</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Check results</span></span>
-<span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span>      <span class="co"># TRUE/FALSE</span></span>
-<span><span class="va">result</span><span class="op">@</span><span class="va">n_hard</span>        <span class="co"># Count of hard violations</span></span>
-<span><span class="va">result</span><span class="op">@</span><span class="va">n_soft</span>        <span class="co"># Count of soft warnings</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>  <span class="co"># Tabular risk summary</span></span></code></pre></div>
+<span><span class="co"># Preprocessing object - checks for leakage</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_recipe</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_prcomp</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Model - checks training data scope</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_model</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># CV object - checks fold structure</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 </div>
+<div class="section level2">
+<h2 id="split-validation">Split Validation<a class="anchor" aria-label="anchor" href="#split-validation"></a>
+</h2>
+<p>For data frames, BORG checks split validity:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Index overlap</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">60</span>, test_idx <span class="op">=</span> <span class="fl">50</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span></span>
+<span><span class="co"># Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)</span></span>
+<span></span>
+<span><span class="co"># Group leakage (same patient in train and test)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, group_col <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Temporal leakage (test data predates training)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, temporal_col <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span></code></pre></div>
+<p>These checks run immediately - no object inspection needed.</p>
 </div>
 <div class="section level2">
 <h2 id="risk-classification">Risk Classification<a class="anchor" aria-label="anchor" href="#risk-classification"></a>
 </h2>
-<p>BORG classifies risks into two categories:</p>
-<div class="section level3">
-<h3 id="hard-violations-block">Hard Violations (Block)<a class="anchor" aria-label="anchor" href="#hard-violations-block"></a>
-</h3>
-<p>These invalidate evaluation entirely:</p>
+<p><strong>Hard Violations</strong> - Evaluation is invalid.
+Blocked.</p>
 <ul>
-<li>
-<strong>Index overlap</strong>: Same rows in train and test</li>
-<li>
-<strong>Preprocessing leak</strong>: Normalization/imputation fitted
-on full data</li>
-<li>
-<strong>Target leakage</strong>: Features derived from the
-outcome</li>
-<li>
-<strong>Temporal look-ahead</strong>: Using future information for
-past predictions</li>
+<li>Index overlap between train and test</li>
+<li>Preprocessing fitted on full data</li>
+<li>Target leakage (feature derived from outcome)</li>
+<li>Temporal look-ahead</li>
+<li>Group membership in both splits</li>
 </ul>
-</div>
-<div class="section level3">
-<h3 id="soft-inflation-warn">Soft Inflation (Warn)<a class="anchor" aria-label="anchor" href="#soft-inflation-warn"></a>
-</h3>
-<p>These bias results but may preserve model ranking:</p>
+<p><strong>Soft Inflation</strong> - Results biased but bounded.
+Warning.</p>
 <ul>
-<li>
-<strong>Insufficient spatial blocking</strong>: Block size smaller
-than autocorrelation range</li>
-<li>
-<strong>Post-hoc subgroup analysis</strong>: Discovering subgroups
-on test data</li>
-<li>
-<strong>Proxy leakage</strong>: Features suspiciously correlated
-with target</li>
+<li>Spatial block size below autocorrelation range</li>
+<li>Post-hoc subgroup discovery</li>
+<li>Proxy leakage (high correlation with target)</li>
 </ul>
-</div>
 </div>
 <div class="section level2">
-<h2 id="common-patterns">Common Patterns<a class="anchor" aria-label="anchor" href="#common-patterns"></a>
+<h2 id="other-functions">Other Functions<a class="anchor" aria-label="anchor" href="#other-functions"></a>
 </h2>
-<div class="section level3">
-<h3 id="cross-validation">Cross-Validation<a class="anchor" aria-label="anchor" href="#cross-validation"></a>
-</h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># BAD: preprocessing before CV</span></span>
-<span><span class="va">data_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
-<span><span class="va">cv_results</span> <span class="op">&lt;-</span> <span class="fu">cross_validate</span><span class="op">(</span><span class="va">data_scaled</span><span class="op">)</span>  <span class="co"># Leaky!</span></span>
-<span></span>
-<span><span class="co"># GOOD: preprocessing inside CV folds</span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, mode <span class="op">=</span> <span class="st">"strict"</span><span class="op">)</span></span>
-<span><span class="co"># Preprocessing must happen per-fold</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="temporal-splits">Temporal Splits<a class="anchor" aria-label="anchor" href="#temporal-splits"></a>
-</h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Enable temporal validation</span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">ts_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span>,</span>
-<span>  temporal_col <span class="op">=</span> <span class="st">"date"</span>  <span class="co"># Validates ordering</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="grouped-data">Grouped Data<a class="anchor" aria-label="anchor" href="#grouped-data"></a>
-</h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Ensure group isolation</span></span>
-<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_guard.html">borg_guard</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">patient_data</span>,</span>
-<span>  train_idx <span class="op">=</span> <span class="va">train_idx</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>  group_col <span class="op">=</span> <span class="st">"patient_id"</span>  <span class="co"># No patient in both sets</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
+<table class="table">
+<thead><tr class="header">
+<th>Function</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/borg.html">borg()</a></code></td>
+<td>Check any object for leakage</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/borg_inspect.html">borg_inspect()</a></code></td>
+<td>Detailed risk report</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/borg_validate.html">borg_validate()</a></code></td>
+<td>Check a complete workflow list</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/borg_rewrite.html">borg_rewrite()</a></code></td>
+<td>Attempt automatic repair</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>

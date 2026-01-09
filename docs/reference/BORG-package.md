@@ -22,7 +22,7 @@ guards against:
 
 ## Main Functions
 
-- [`borg_guard`](https://gillescolling.com/BORG/reference/borg_guard.md):
+- `borg_guard`:
 
   Primary interface for guarding evaluation pipelines
 

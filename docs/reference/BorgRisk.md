@@ -82,7 +82,7 @@ show(object)
 
 [`borg_inspect`](https://gillescolling.com/BORG/reference/borg_inspect.md),
 [`borg_validate`](https://gillescolling.com/BORG/reference/borg_validate.md),
-[`borg_guard`](https://gillescolling.com/BORG/reference/borg_guard.md)
+`borg_guard`
 
 ## Examples
 

@@ -2,166 +2,153 @@
 
 ## What is BORG?
 
-BORG (Bounded Outcome Risk Guard) automatically detects when model
-evaluation is compromised by information leakage between training and
-test data. It identifies violations that inflate performance estimates
-and provides actionable remediation.
+BORG inspects your preprocessing and model objects to detect data
+leakage. It checks whether information from the test set leaked into
+training, and blocks evaluation before you compute misleading metrics.
+
+You pass fitted objects to
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) and it
+checks for leakage signatures.
 
 ## The Problem
 
-Consider a common machine learning workflow:
+Consider a common mistake:
 
 ``` r
 
-# Typical workflow (PROBLEMATIC)
+# PROBLEMATIC WORKFLOW
 data <- read.csv("my_data.csv")
+data_scaled <- scale(data)  # Fitted on ALL rows
 
-# Preprocessing on FULL data - LEAKS TEST INFO
-data_scaled <- scale(data)
-
-# Split AFTER preprocessing
 train_idx <- 1:800
 test_idx <- 801:1000
 train <- data_scaled[train_idx, ]
 test <- data_scaled[test_idx, ]
 
-# Model training and evaluation
 model <- train_model(train)
 performance <- evaluate(model, test)  # Inflated!
 ```
 
-The problem: [`scale()`](https://rdrr.io/r/base/scale.html) computed
-mean and standard deviation using ALL data, including the test set. This
-means:
+The [`scale()`](https://rdrr.io/r/base/scale.html) call used all 1000
+rows to compute mean and SD. Test set statistics leaked into the
+training data. The reported performance won’t match real-world results.
 
-- Training data contains test set statistics
-- Test performance is artificially inflated
-- Results do not generalize to truly unseen data
+## How BORG Catches This
 
-## BORG Solution
-
-### Proactive Guarding
-
-Use
-[`borg_guard()`](https://gillescolling.com/BORG/reference/borg_guard.md)
-to create a protected evaluation context:
+BORG inspects objects after you create them:
 
 ``` r
 
 library(BORG)
 
-# Create guarded context BEFORE any preprocessing
-ctx <- borg_guard(
-  data = my_data,
-  train_idx = 1:800,
+# You did preprocessing
+pp <- preProcess(data, method = c("center", "scale"))
 
-  test_idx = 801:1000,
-  mode = "strict"
-)
-# Mode options:
-#   "strict"  - Error on any violation
-#   "warn"    - Warn but continue
-#   "rewrite" - Auto-fix where possible
+# Now check it for leakage
+borg(pp, train_idx = 1:800, test_idx = 801:1000, data = data)
+# Error: BORG HARD VIOLATION: preprocessing fitted on 1000 rows, but training set has 800
 ```
 
-### Object Inspection
+BORG detected that `preProcess` was fitted on more rows than the
+training set. The evaluation is blocked before you compute metrics.
 
-Inspect existing objects for leakage:
+## Typical Workflow
 
 ``` r
 
-# Check a preprocessing object
-pp <- preProcess(full_data, method = c("center", "scale"))
-result <- borg_inspect(pp, train_idx = 1:800, test_idx = 801:1000, data = full_data)
+library(BORG)
 
-if (!result@is_valid) {
-  print(result)  # Detailed risk report
-}
+# 1. Define your split
+train_idx <- 1:800
+test_idx <- 801:1000
+
+# 2. Do preprocessing on TRAINING ONLY
+pp <- preProcess(data[train_idx, ], method = c("center", "scale"))
+
+# 3. Check the preprocessing object
+borg(pp, train_idx, test_idx, data = data)
+# No error - preprocessing is clean
+
+# 4. Fit model on training data
+model <- train(y ~ ., data = train_data, preProcess = pp)
+
+# 5. Check the model
+borg(model, train_idx, test_idx, data = data)
+# No error - model is clean
+
+# 6. Now safe to evaluate
+predictions <- predict(model, test_data)
+performance <- compute_metrics(predictions, test_data$y)
 ```
 
-### Workflow Validation
+The key point: call
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) on objects
+*after* you create them, *before* you compute metrics.
 
-Validate an entire evaluation pipeline:
+## What BORG Can Check
+
+Pass any of these to
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md):
 
 ``` r
 
-result <- borg_validate(list(
-  data = my_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  preprocess = my_recipe,
-  model = fitted_model
-))
+# Data frame - checks split validity
+borg(data, train_idx, test_idx)
 
-# Check results
-result@is_valid      # TRUE/FALSE
-result@n_hard        # Count of hard violations
-result@n_soft        # Count of soft warnings
-as.data.frame(result)  # Tabular risk summary
+# Preprocessing object - checks for leakage
+borg(my_recipe, train_idx, test_idx, data = data)
+borg(my_prcomp, train_idx, test_idx, data = data)
+
+# Model - checks training data scope
+borg(my_model, train_idx, test_idx, data = data)
+
+# CV object - checks fold structure
+borg(my_folds, train_idx, test_idx)
 ```
+
+## Split Validation
+
+For data frames, BORG checks split validity:
+
+``` r
+
+# Index overlap
+borg(data, train_idx = 1:60, test_idx = 50:100)
+# Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)
+
+# Group leakage (same patient in train and test)
+borg(data, train_idx, test_idx, group_col = "patient_id")
+
+# Temporal leakage (test data predates training)
+borg(data, train_idx, test_idx, temporal_col = "date")
+```
+
+These checks run immediately - no object inspection needed.
 
 ## Risk Classification
 
-BORG classifies risks into two categories:
+**Hard Violations** - Evaluation is invalid. Blocked.
 
-### Hard Violations (Block)
+- Index overlap between train and test
+- Preprocessing fitted on full data
+- Target leakage (feature derived from outcome)
+- Temporal look-ahead
+- Group membership in both splits
 
-These invalidate evaluation entirely:
+**Soft Inflation** - Results biased but bounded. Warning.
 
-- **Index overlap**: Same rows in train and test
-- **Preprocessing leak**: Normalization/imputation fitted on full data
-- **Target leakage**: Features derived from the outcome
-- **Temporal look-ahead**: Using future information for past predictions
+- Spatial block size below autocorrelation range
+- Post-hoc subgroup discovery
+- Proxy leakage (high correlation with target)
 
-### Soft Inflation (Warn)
+## Other Functions
 
-These bias results but may preserve model ranking:
-
-- **Insufficient spatial blocking**: Block size smaller than
-  autocorrelation range
-- **Post-hoc subgroup analysis**: Discovering subgroups on test data
-- **Proxy leakage**: Features suspiciously correlated with target
-
-## Common Patterns
-
-### Cross-Validation
-
-``` r
-
-# BAD: preprocessing before CV
-data_scaled <- scale(data)
-cv_results <- cross_validate(data_scaled)  # Leaky!
-
-# GOOD: preprocessing inside CV folds
-ctx <- borg_guard(data, train_idx, test_idx, mode = "strict")
-# Preprocessing must happen per-fold
-```
-
-### Temporal Splits
-
-``` r
-
-# Enable temporal validation
-ctx <- borg_guard(
-  data = ts_data,
-  train_idx = 1:800,
-  test_idx = 801:1000,
-  temporal_col = "date"  # Validates ordering
-)
-```
-
-### Grouped Data
-
-``` r
-
-# Ensure group isolation
-ctx <- borg_guard(
-  data = patient_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  group_col = "patient_id"  # No patient in both sets
-)
-```
+| Function | Purpose |
+|----|----|
+| [`borg()`](https://gillescolling.com/BORG/reference/borg.md) | Check any object for leakage |
+| [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md) | Detailed risk report |
+| [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md) | Check a complete workflow list |
+| [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md) | Attempt automatic repair |
 
 ## Next Steps
 

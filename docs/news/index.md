@@ -64,9 +64,8 @@ Initial release.
 
 ### Core functionality
 
-- [`borg_guard()`](https://gillescolling.com/BORG/reference/borg_guard.md):
-  Creates a validation context for train/test splits with support for
-  temporal, spatial, and grouped structures
+- `borg_guard()`: Creates a validation context for train/test splits
+  with support for temporal, spatial, and grouped structures
 - [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md):
   Comprehensive workflow validation including:
   - Index overlap detection

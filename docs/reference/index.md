@@ -11,8 +11,6 @@ Start here
 
 Detailed validation functions
 
-- [`borg_guard()`](https://gillescolling.com/BORG/reference/borg_guard.md)
-  : Guard Model Evaluation Against Information Reuse
 - [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
   : Inspect R Objects for Evaluation Risks
 - [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md)
