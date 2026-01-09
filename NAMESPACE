@@ -3,6 +3,7 @@
 S3method(as.data.frame,BorgRisk)
 S3method(print,borg_cv)
 S3method(print,borg_cv_report)
+S3method(print,borg_result)
 export(audit_importance)
 export(audit_predictions)
 export(borg)

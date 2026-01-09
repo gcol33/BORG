@@ -20,54 +20,55 @@ test_that("borg() detects data frame overlap", {
   )
 })
 
-test_that("borg() requires indices for data frames", {
-  data <- data.frame(x = 1:10)
+test_that("borg() requires both indices together in validation mode", {
+  data <- data.frame(x = 1:100, y = rnorm(100))
 
-
-  expect_error(borg(data), "'train_idx' and 'test_idx' are required")
-  expect_error(borg(data, train_idx = 1:5), "'train_idx' and 'test_idx' are required")
+  # Only train_idx provided
+  expect_error(borg(data, train_idx = 1:50), "must be provided together")
+  # Only test_idx provided
+  expect_error(borg(data, test_idx = 51:100), "must be provided together")
 })
 
-test_that("borg() inspects preprocessing objects", {
+test_that("borg_inspect() inspects preprocessing objects", {
   set.seed(42)
-  data <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
+  df <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
   train_idx <- 1:70
   test_idx <- 71:100
 
   # PCA on full data (bad)
-  pca <- prcomp(data, center = TRUE, scale. = TRUE)
+  pca <- prcomp(df, center = TRUE, scale. = TRUE)
 
-  result <- borg(pca, train_idx, test_idx, data = data)
+  result <- borg_inspect(pca, train_idx, test_idx, data = df)
 
   expect_s4_class(result, "BorgRisk")
   expect_gt(result@n_hard, 0L)
 })
 
-test_that("borg() inspects model objects", {
+test_that("borg_inspect() inspects model objects", {
   set.seed(42)
-  data <- data.frame(y = rnorm(100), x = rnorm(100))
+  df <- data.frame(y = rnorm(100), x = rnorm(100))
   train_idx <- 1:70
   test_idx <- 71:100
 
   # Model on full data (bad)
-  model <- lm(y ~ x, data = data)
+  model <- lm(y ~ x, data = df)
 
-  result <- borg(model, train_idx, test_idx, data = data)
+  result <- borg_inspect(model, train_idx, test_idx, data = df)
 
   expect_s4_class(result, "BorgRisk")
   expect_gt(result@n_hard, 0L)
 })
 
-test_that("borg() inspects model on correct data", {
+test_that("borg_inspect() inspects model on correct data", {
   set.seed(42)
-  data <- data.frame(y = rnorm(100), x = rnorm(100))
+  df <- data.frame(y = rnorm(100), x = rnorm(100))
   train_idx <- 1:70
   test_idx <- 71:100
 
   # Model on train data only (good)
-  model <- lm(y ~ x, data = data[train_idx, ])
+  model <- lm(y ~ x, data = df[train_idx, ])
 
-  result <- borg(model, train_idx, test_idx, data = data)
+  result <- borg_inspect(model, train_idx, test_idx, data = df)
 
   expect_s4_class(result, "BorgRisk")
   expect_true(result@is_valid)
@@ -82,7 +83,7 @@ test_that("borg() returns BorgRisk unchanged", {
   expect_identical(original, returned)
 })
 
-test_that("borg() inspects CV objects", {
+test_that("borg_inspect() inspects CV objects", {
   skip_if_not_installed("caret")
 
   train_idx <- 1:70
@@ -95,26 +96,26 @@ test_that("borg() inspects CV objects", {
   )
   ctrl <- caret::trainControl(method = "cv", index = bad_folds)
 
-  result <- borg(ctrl, train_idx, test_idx)
+  result <- borg_inspect(ctrl, train_idx, test_idx)
 
   expect_s4_class(result, "BorgRisk")
   expect_gt(result@n_hard, 0L)
 })
 
-test_that("borg() inspects recipe objects", {
+test_that("borg_inspect() inspects recipe objects", {
   skip_if_not_installed("recipes")
 
   set.seed(42)
-  data <- data.frame(y = rnorm(100), x1 = rnorm(100))
+  df <- data.frame(y = rnorm(100), x1 = rnorm(100))
   train_idx <- 1:70
   test_idx <- 71:100
 
   # Recipe prepped on full data (bad)
-  rec <- recipes::recipe(y ~ ., data = data) |>
+  rec <- recipes::recipe(y ~ ., data = df) |>
     recipes::step_normalize(recipes::all_numeric_predictors()) |>
-    recipes::prep(training = data)
+    recipes::prep(training = df)
 
-  result <- borg(rec, train_idx, test_idx, data = data)
+  result <- borg_inspect(rec, train_idx, test_idx, data = df)
 
   expect_s4_class(result, "BorgRisk")
   expect_gt(result@n_hard, 0L)
@@ -165,7 +166,7 @@ test_that("borg() detects direct target leakage", {
   train_idx <- 1:70
   test_idx <- 71:100
 
-  result <- borg(data, train_idx, test_idx, target_col = "y")
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, target = "y")
 
   expect_s4_class(result, "BorgRisk")
   expect_false(result@is_valid)
@@ -196,7 +197,7 @@ test_that("borg() detects proxy target leakage", {
   train_idx <- 1:70
   test_idx <- 71:100
 
-  result <- borg(data, train_idx, test_idx, target_col = "y")
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, target = "y")
 
   expect_s4_class(result, "BorgRisk")
   expect_gt(result@n_soft, 0L)
@@ -216,7 +217,7 @@ test_that("borg() does not flag normal correlations", {
   train_idx <- 1:70
   test_idx <- 71:100
 
-  result <- borg(data, train_idx, test_idx, target_col = "y")
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, target = "y")
 
   expect_s4_class(result, "BorgRisk")
   expect_true(result@is_valid)
@@ -240,7 +241,7 @@ test_that("borg() detects spatial overlap", {
   train_idx <- sample(100, 70)
   test_idx <- setdiff(1:100, train_idx)
 
-  result <- borg(data, train_idx, test_idx, spatial_cols = c("x", "y_coord"))
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, coords = c("x", "y_coord"))
 
   expect_s4_class(result, "BorgRisk")
   # Should have spatial warnings
@@ -260,7 +261,7 @@ test_that("borg() accepts spatial blocks", {
   train_idx <- 1:70   # West
   test_idx <- 71:100  # East
 
-  result <- borg(data, train_idx, test_idx, spatial_cols = c("lon", "lat"))
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, coords = c("lon", "lat"))
 
   expect_s4_class(result, "BorgRisk")
   # Should have no spatial overlap (regions are separated)
@@ -281,11 +282,10 @@ test_that("borg() detects group overlap", {
   # Split where indices don't overlap, but same patient is in both
   # Patient 5 has rows 41-50, patient 6 has rows 51-60
   train_idx <- c(1:50, 55:60)   # patients 1-5 + part of patient 6
-
   test_idx <- c(51:54, 61:100)  # part of patient 6 + patients 7-10
 
   expect_error(
-    borg(data, train_idx, test_idx, group_col = "patient_id"),
+    borg(data, train_idx = train_idx, test_idx = test_idx, groups = "patient_id"),
     "BORG HARD VIOLATION.*Groups"
   )
 })
@@ -300,7 +300,7 @@ test_that("borg() accepts clean group split", {
   train_idx <- 1:70
   test_idx <- 71:100
 
-  result <- borg(data, train_idx, test_idx, group_col = "patient_id")
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, groups = "patient_id")
 
   expect_s4_class(result, "BorgRisk")
   expect_true(result@is_valid)
@@ -314,11 +314,10 @@ test_that("borg() detects temporal violation", {
   )
   # Split where test predates training
   train_idx <- 50:100  # Later dates
-
   test_idx <- 1:49     # Earlier dates
 
   expect_error(
-    borg(data, train_idx, test_idx, temporal_col = "date"),
+    borg(data, train_idx = train_idx, test_idx = test_idx, time = "date"),
     "BORG HARD VIOLATION.*Temporal"
   )
 })
@@ -333,8 +332,157 @@ test_that("borg() accepts correct temporal split", {
   train_idx <- 1:70    # Earlier dates
   test_idx <- 71:100   # Later dates
 
-  result <- borg(data, train_idx, test_idx, temporal_col = "date")
+  result <- borg(data, train_idx = train_idx, test_idx = test_idx, time = "date")
 
   expect_s4_class(result, "BorgRisk")
   expect_true(result@is_valid)
+})
+
+
+# ===========================================================================
+# DIAGNOSIS MODE tests (new unified entry point)
+# ===========================================================================
+
+test_that("borg() diagnosis mode returns borg_result for clustered data", {
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:15, each = 20),
+    value = rep(rnorm(15, sd = 2), each = 20) + rnorm(300, sd = 0.5)
+  )
+
+  result <- borg(data, groups = "site", target = "value")
+
+  expect_s3_class(result, "borg_result")
+  expect_s4_class(result$diagnosis, "BorgDiagnosis")
+  expect_true(result$diagnosis@clustered$detected)
+  expect_equal(result$cv$strategy, "group_fold")
+  expect_length(result$folds, 5)
+})
+
+test_that("borg() diagnosis mode returns borg_result for spatial data", {
+  set.seed(42)
+  data <- data.frame(
+    x = runif(200, 0, 100),
+    y = runif(200, 0, 100),
+    response = rnorm(200)
+  )
+
+  result <- borg(data, coords = c("x", "y"), target = "response")
+
+  expect_s3_class(result, "borg_result")
+  expect_s4_class(result$diagnosis, "BorgDiagnosis")
+  expect_length(result$folds, 5)
+
+  # Verify folds have train/test structure
+  expect_true(all(c("train", "test") %in% names(result$folds[[1]])))
+})
+
+test_that("borg() diagnosis mode returns borg_result for temporal data", {
+  set.seed(42)
+  n <- 200
+  data <- data.frame(
+    date = seq(as.Date("2020-01-01"), by = "day", length.out = n),
+    value = cumsum(rnorm(n))
+  )
+
+  result <- borg(data, time = "date", target = "value")
+
+  expect_s3_class(result, "borg_result")
+  expect_s4_class(result$diagnosis, "BorgDiagnosis")
+  expect_length(result$folds, 5)
+})
+
+test_that("borg() diagnosis mode respects v parameter", {
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:20, each = 10),
+    value = rnorm(200)
+  )
+
+  result <- borg(data, groups = "site", v = 10)
+
+  expect_length(result$folds, 10)
+})
+
+test_that("borg() diagnosis mode includes inflation estimate", {
+  set.seed(42)
+  # Create highly clustered data
+  n_clusters <- 10
+  data <- data.frame(
+    site = rep(1:n_clusters, each = 30),
+    value = rep(rnorm(n_clusters, sd = 3), each = 30) + rnorm(n_clusters * 30, sd = 0.3)
+  )
+
+  result <- borg(data, groups = "site", target = "value")
+
+  expect_true(!is.na(result$diagnosis@inflation_estimate$auc_inflation))
+  expect_true(result$diagnosis@inflation_estimate$auc_inflation > 0)
+})
+
+test_that("borg() shows message when no structure specified", {
+  data <- data.frame(x = rnorm(100), y = rnorm(100))
+
+  expect_message(
+    borg(data),
+    "No structure specified"
+  )
+})
+
+test_that("borg() returns rsample output when requested", {
+  skip_if_not_installed("rsample")
+
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:10, each = 20),
+    value = rnorm(200)
+  )
+
+  result <- borg(data, groups = "site", output = "rsample")
+
+  expect_s3_class(result, "rset")
+})
+
+test_that("borg() returns caret output when requested", {
+  skip_if_not_installed("caret")
+
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:10, each = 20),
+    value = rnorm(200)
+  )
+
+  result <- borg(data, groups = "site", output = "caret")
+
+  expect_s3_class(result, "trainControl")
+})
+
+test_that("print.borg_result works", {
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:10, each = 20),
+    value = rep(rnorm(10, sd = 2), each = 20) + rnorm(200, sd = 0.5)
+  )
+
+  result <- borg(data, groups = "site", target = "value")
+
+  expect_output(print(result), "BORG Result")
+  expect_output(print(result), "Dependency:")
+  expect_output(print(result), "Strategy:")
+})
+
+test_that("borg() folds have no group overlap in diagnosis mode", {
+  set.seed(42)
+  data <- data.frame(
+    site = rep(1:15, each = 10),
+    value = rnorm(150)
+  )
+
+  result <- borg(data, groups = "site")
+
+  # Check each fold has no group overlap
+  for (fold in result$folds) {
+    train_sites <- unique(data$site[fold$train])
+    test_sites <- unique(data$site[fold$test])
+    expect_length(intersect(train_sites, test_sites), 0)
+  }
 })

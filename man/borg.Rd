@@ -2,97 +2,147 @@
 % Please edit documentation in R/borg.R
 \name{borg}
 \alias{borg}
-\title{BORG: Validate Model Evaluation}
+\title{BORG: Guard Your Model Evaluation}
 \usage{
 borg(
-  x,
+  data,
+  coords = NULL,
+  time = NULL,
+  groups = NULL,
+  target = NULL,
+  v = 5,
   train_idx = NULL,
   test_idx = NULL,
-  data = NULL,
-  temporal_col = NULL,
-  group_col = NULL,
-  spatial_cols = NULL,
-  target_col = NULL,
+  output = c("list", "rsample", "caret", "mlr3"),
   ...
 )
 }
 \arguments{
-\item{x}{An object to validate. Can be:
-\itemize{
-\item A \code{data.frame} - validates train/test split
-\item A preprocessing object (\code{preProcess}, \code{recipe}, \code{prcomp})
-\item A model object (\code{lm}, \code{glm}, \code{ranger}, \code{train})
-\item A CV object (\code{trainControl}, \code{vfold_cv}, \code{rset})
-\item A workflow or parsnip model
-}}
+\item{data}{A data frame to diagnose and create CV folds for.}
 
-\item{train_idx}{Integer vector of training indices.}
+\item{coords}{Character vector of length 2 specifying coordinate column names
+(e.g., \code{c("lon", "lat")}). Triggers spatial autocorrelation detection.}
 
-\item{test_idx}{Integer vector of test indices.}
+\item{time}{Character string specifying the time column name. Triggers
+temporal autocorrelation detection.}
 
-\item{data}{Optional data frame for context when inspecting models.}
+\item{groups}{Character string specifying the grouping column name
+(e.g., "site_id", "patient_id"). Triggers clustered structure detection.}
 
-\item{temporal_col}{Optional name of a timestamp column. If provided,
-validates that test observations do not precede training observations.}
+\item{target}{Character string specifying the response variable column name.
+Used for more accurate autocorrelation diagnostics.}
 
-\item{group_col}{Optional name of a grouping column (e.g., patient ID).
-If provided, validates that no group appears in both train and test.}
+\item{v}{Integer. Number of CV folds. Default: 5.}
 
-\item{spatial_cols}{Optional character vector of coordinate column names
-(e.g., \code{c("longitude", "latitude")}). If provided, checks spatial
-separation between train and test.}
+\item{train_idx}{Integer vector of training indices. If provided along with
+\code{test_idx}, validates an existing split instead of generating one.}
 
-\item{target_col}{Optional name of the target/outcome column. If provided,
-checks for target leakage (features with suspiciously high correlation
-with the target).}
+\item{test_idx}{Integer vector of test indices. Required if \code{train_idx}
+is provided.}
+
+\item{output}{Character. CV output format: "list" (default), "rsample",
+"caret", "mlr3". Ignored when validating an existing split.}
 
 \item{...}{Additional arguments passed to underlying functions.}
 }
 \value{
-A \code{\link{BorgRisk}} object containing the risk assessment.
+Depends on usage mode:
+
+\strong{Diagnosis mode} (no train_idx/test_idx): A list with class "borg_result"
+containing:
+\describe{
+\item{diagnosis}{A \code{\link{BorgDiagnosis}} object with dependency analysis}
+\item{cv}{A \code{borg_cv} object with valid cross-validation folds}
+\item{folds}{Shortcut to \code{cv$folds} for convenience}
+}
+
+\strong{Validation mode} (with train_idx/test_idx): A \code{\link{BorgRisk}}
+object containing the risk assessment of the provided split.
 }
 \description{
-The main entry point for BORG. Automatically detects the appropriate
-validation method based on the input and returns a risk assessment.
+The main entry point for BORG. Diagnoses data dependencies, generates
+valid cross-validation schemes, and validates evaluation workflows.
 }
 \details{
-\code{borg()} is the recommended entry point for most users. It automatically
-dispatches to the appropriate validation function:
+\code{borg()} operates in two modes:
 
-\itemize{
-\item Data frames -> \code{\link{borg_inspect}()} with full validation
-\item Preprocessing/model objects -> \code{\link{borg_inspect}()}
-\item Workflow lists -> \code{\link{borg_validate}()}
+\subsection{Diagnosis Mode (Recommended)}{
+When called with structure hints (\code{coords}, \code{time}, \code{groups})
+but without \code{train_idx}/\code{test_idx}, BORG:
+\enumerate{
+\item Diagnoses data dependencies (spatial, temporal, clustered)
+\item Estimates how much random CV would inflate metrics
+\item Generates appropriate CV folds that respect the dependency structure
+\item Returns everything needed to proceed with valid evaluation
 }
 
-When validating data frames, you can optionally specify \code{temporal_col},
-\code{group_col}, or \code{spatial_cols} to enable additional checks for
-temporal ordering, group isolation, or spatial separation.
+This is the recommended workflow. Let BORG tell you how to split your data.
+}
+
+\subsection{Validation Mode}{
+When called with \code{train_idx} and \code{test_idx}, BORG validates the
+existing split:
+\itemize{
+\item Checks for index overlap
+\item Validates group isolation (if \code{groups} specified)
+\item Validates temporal ordering (if \code{time} specified)
+\item Checks spatial separation (if \code{coords} specified)
+\item Detects preprocessing leakage, target leakage, etc.
+}
+
+Use this mode to verify splits you've created yourself.
+}
 }
 \examples{
-# Validate a train/test split
+# ===== DIAGNOSIS MODE (recommended) =====
+
+# Spatial data: let BORG create valid folds
+set.seed(42)
+spatial_data <- data.frame(
+  x = runif(200, 0, 100),
+  y = runif(200, 0, 100),
+  response = rnorm(200)
+)
+
+result <- borg(spatial_data, coords = c("x", "y"), target = "response")
+result$diagnosis
+result$folds[[1]]  # First fold's train/test indices
+
+# Clustered data
+clustered_data <- data.frame(
+  site = rep(1:20, each = 10),
+  value = rep(rnorm(20), each = 10) + rnorm(200, sd = 0.5)
+)
+
+result <- borg(clustered_data, groups = "site", target = "value")
+result$diagnosis@recommended_cv  # "group_fold"
+
+# Temporal data
+temporal_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = 200),
+  value = cumsum(rnorm(200))
+)
+
+result <- borg(temporal_data, time = "date", target = "value")
+
+\dontrun{
+# Get rsample-compatible output for tidymodels (requires rsample package)
+result <- borg(spatial_data, coords = c("x", "y"), output = "rsample")
+}
+
+# ===== VALIDATION MODE =====
+
+# Validate an existing split
 data <- data.frame(x = 1:100, y = rnorm(100))
-result <- borg(data, train_idx = 1:70, test_idx = 71:100)
-result
+borg(data, train_idx = 1:70, test_idx = 71:100)
 
-# Check a preprocessing object
-pca <- prcomp(data[1:70, ], center = TRUE, scale. = TRUE)
-borg(pca, train_idx = 1:70, test_idx = 71:100, data = data)
-
-# Check a model
-model <- lm(y ~ x, data = data[1:70, ])
-borg(model, train_idx = 1:70, test_idx = 71:100, data = data)
-
-# Validate with group isolation
+# Validate with group constraint
 data$patient <- rep(1:10, each = 10)
-borg(data, train_idx = 1:50, test_idx = 51:100, group_col = "patient")
-
-# Validate temporal ordering
-data$date <- seq.Date(as.Date("2020-01-01"), by = "day", length.out = 100)
-borg(data, train_idx = 1:70, test_idx = 71:100, temporal_col = "date")
+borg(data, train_idx = 1:50, test_idx = 51:100, groups = "patient")
 
 }
 \seealso{
-\code{\link{borg_inspect}} for detailed object inspection,
-\code{\link{borg_validate}} for workflow validation.
+\code{\link{borg_diagnose}} for diagnosis only,
+\code{\link{borg_cv}} for CV generation only,
+\code{\link{borg_inspect}} for detailed object inspection.
 }
