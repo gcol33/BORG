@@ -1,5 +1,7 @@
 ---
 title: "Framework Integration"
+author: "Gilles Colling"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Framework Integration}
@@ -11,141 +13,189 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = TRUE
+  fig.width = 7,
+  fig.height = 5
 )
+library(BORG)
 
 # Check package availability
 has_caret <- requireNamespace("caret", quietly = TRUE)
 has_recipes <- requireNamespace("recipes", quietly = TRUE)
 has_rsample <- requireNamespace("rsample", quietly = TRUE)
 has_mlr3 <- requireNamespace("mlr3", quietly = TRUE)
-has_sf <- requireNamespace("sf", quietly = TRUE)
 ```
 
-BORG integrates with major R machine learning frameworks. This guide shows
-how to validate workflows in each ecosystem.
+BORG integrates with major R machine learning frameworks. This guide shows how to validate workflows and use BORG-guarded CV functions in each ecosystem.
 
 ## Base R
 
-Manual index-based splitting:
+The simplest integration - manual index-based splitting:
 
-```{r}
-library(BORG)
-
-# Create data and split
+```{r base-r}
+# Create data
 data <- iris
 set.seed(42)
 n <- nrow(data)
 train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
-# Quick validation
+# Validate the split
 borg(data, train_idx = train_idx, test_idx = test_idx)
+```
 
-# Safe preprocessing (train only)
+### Safe Preprocessing Pattern
+
+```{r preprocessing-pattern}
+# CORRECT: Fit preprocessing on training data only
 train_data <- data[train_idx, ]
 train_means <- colMeans(train_data[, 1:4])
 train_sds <- apply(train_data[, 1:4], 2, sd)
 
-# Apply to both sets using TRAIN statistics
-data[, 1:4] <- scale(data[, 1:4], center = train_means, scale = train_sds)
+# Apply train statistics to both sets
+scaled_train <- scale(data[train_idx, 1:4], center = train_means, scale = train_sds)
+scaled_test <- scale(data[test_idx, 1:4], center = train_means, scale = train_sds)
 ```
+
+---
 
 ## caret
 
-Validate `trainControl` and `preProcess` objects:
+BORG can validate `preProcess` and `trainControl` objects, and provides a guarded wrapper.
 
-```{r, eval = has_caret}
+### Validating preProcess Objects
+
+```{r caret-preprocess, eval = has_caret}
 library(caret)
-library(BORG)
 
 data(mtcars)
 train_idx <- 1:25
 test_idx <- 26:32
 
-# BAD: preProcess on full data
+# BAD: preProcess on full data (LEAKS!)
 pp_bad <- preProcess(mtcars[, -1], method = c("center", "scale"))
 borg_inspect(pp_bad, train_idx, test_idx, data = mtcars)
-# Detects preprocessing leak
 
-# GOOD: preProcess on train only
+# GOOD: preProcess on training data only
 pp_good <- preProcess(mtcars[train_idx, -1], method = c("center", "scale"))
 borg_inspect(pp_good, train_idx, test_idx, data = mtcars)
-# No violations
-
-# Check trainControl
-ctrl <- trainControl(
-  method = "cv",
-  number = 5,
-  index = createFolds(mtcars$mpg[train_idx], k = 5)
-)
-borg_inspect(ctrl, train_idx, test_idx)
 ```
 
-## tidymodels / recipes
+### BORG-Guarded trainControl
 
-Validate recipe objects:
+Use `borg_trainControl()` to automatically block random resampling when dependencies are detected:
 
-```{r, eval = has_recipes && has_rsample}
+```{r caret-traincontrol, eval = FALSE}
+# Standard caret workflow with spatial data
+spatial_data <- data.frame(
+  lon = runif(200, 0, 100),
+  lat = runif(200, 0, 100),
+  response = rnorm(200)
+)
+
+# This will warn/error if random CV is inappropriate
+ctrl <- borg_trainControl(
+  data = spatial_data,
+  coords = c("lon", "lat"),
+  method = "cv",
+  number = 5
+)
+# If spatial autocorrelation detected, blocks random CV
+# Use auto_block = TRUE to automatically switch to spatial blocking
+```
+
+---
+
+## tidymodels (rsample + recipes)
+
+### Validating Recipe Objects
+
+```{r tidymodels-recipes, eval = has_recipes && has_rsample}
 library(recipes)
 library(rsample)
-library(BORG)
 
-# Use mtcars for reproducible example
 data(mtcars)
-
-# Create split
 set.seed(123)
 split <- initial_split(mtcars, prop = 0.8)
 train_idx <- split$in_id
 test_idx <- setdiff(seq_len(nrow(mtcars)), train_idx)
 
-# BAD: recipe prepped on full data
-rec_bad <- recipe(mpg ~ ., data = mtcars) %>%
-  step_normalize(all_numeric_predictors()) %>%
-  prep()  # Uses full mtcars data!
+# BAD: Recipe prepped on full data
+rec_bad <- recipe(mpg ~ ., data = mtcars) |>
+  step_normalize(all_numeric_predictors()) |>
+  prep()  # Uses full mtcars!
 
 borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
-# Detects leak
 
-# GOOD: recipe prepped on training only
-rec_good <- recipe(mpg ~ ., data = training(split)) %>%
-  step_normalize(all_numeric_predictors()) %>%
+# GOOD: Recipe prepped on training only
+rec_good <- recipe(mpg ~ ., data = training(split)) |>
+  step_normalize(all_numeric_predictors()) |>
   prep()
 
 borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
-# Clean
 ```
 
-### rsample Objects
+### BORG-Guarded rsample Functions
 
-Inspect resampling schemes:
+BORG provides drop-in replacements for rsample functions that respect data dependencies:
 
-```{r, eval = has_rsample && has_recipes}
-# Validate v-fold CV (using split from previous chunk)
-folds <- vfold_cv(training(split), v = 5)
-borg_inspect(folds, train_idx, test_idx)
+```{r borg-vfold, eval = FALSE}
+# Standard rsample
+folds <- vfold_cv(data, v = 5)  # Random folds
+
+# BORG-guarded version
+folds <- borg_vfold_cv(
+  data = spatial_data,
+  coords = c("lon", "lat"),
+  v = 5,
+  auto_block = TRUE  # Switches to spatial blocking if needed
+)
 ```
 
-Additional rsample patterns (requires appropriate data):
-
-```{r, eval = FALSE}
-# Validate grouped CV
-group_folds <- group_vfold_cv(data, group = patient_id, v = 5)
-borg_inspect(group_folds, train_idx, test_idx)
-
-# Validate temporal splits
-rolling <- sliding_window(ts_data, lookback = 100, assess_stop = 50)
-borg_inspect(rolling, train_idx, test_idx)
+```{r borg-group-vfold, eval = FALSE}
+# For grouped data
+folds <- borg_group_vfold_cv(
+  data = clinical_data,
+  group = patient_id,
+  v = 5
+)
 ```
+
+```{r borg-initial-split, eval = FALSE}
+# For temporal data - enforces chronological ordering
+split <- borg_initial_split(
+  data = ts_data,
+  time = "date",
+  prop = 0.8
+)
+```
+
+### Validating rsample Objects
+
+```{r rsample-validation, eval = has_rsample}
+# Validate existing rsample objects
+ts_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = 200),
+  value = cumsum(rnorm(200))
+)
+
+rolling <- rolling_origin(
+  data = ts_data,
+  initial = 100,
+  assess = 20,
+  cumulative = FALSE
+)
+
+# Check for temporal leakage
+borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
+```
+
+---
 
 ## mlr3
 
-Validate tasks and resamplings:
-
-```{r, eval = has_mlr3}
+Validate mlr3 tasks and resamplings:
+```{r mlr3-example, eval = has_mlr3}
 library(mlr3)
-library(BORG)
 
 # Create task
 task <- TaskClassif$new("iris", iris, target = "Species")
@@ -154,113 +204,195 @@ task <- TaskClassif$new("iris", iris, target = "Species")
 resampling <- rsmp("cv", folds = 5)
 resampling$instantiate(task)
 
-# Inspect
+# Validate first fold
 train_idx <- resampling$train_set(1)
 test_idx <- resampling$test_set(1)
 borg_inspect(task, train_idx, test_idx)
 ```
 
-## Temporal Data
+---
 
-For time series or panel data:
+## Temporal Data Workflows
 
-```{r temporal-example}
-# Create example time series data
+For time series and panel data, temporal ordering is critical.
+
+### Basic Temporal Validation
+
+```{r temporal-basic}
 set.seed(123)
-n <- 500
+n <- 365
 ts_data <- data.frame(
   date = seq(as.Date("2020-01-01"), by = "day", length.out = n),
   value = cumsum(rnorm(n)),
   feature = rnorm(n)
 )
 
+# Chronological split
 train_idx <- 1:252
 test_idx <- 253:365
 
-# Validate with temporal ordering check
-borg(ts_data, train_idx = train_idx, test_idx = test_idx, time = "date")
+# Validate temporal ordering
+result <- borg(ts_data, train_idx = train_idx, test_idx = test_idx, time = "date")
+result
 ```
 
-Rolling origin validation with rsample:
+### Rolling Origin with rsample
 
-```{r, eval = has_rsample}
+```{r rolling-origin, eval = has_rsample}
 rolling <- rolling_origin(
   data = ts_data,
-  initial = 365,
+  initial = 200,
   assess = 30,
   cumulative = FALSE
 )
+
+# Validate the resampling scheme
 borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
 ```
 
-## Spatial Data
+---
 
-For spatial cross-validation:
+## Spatial Data Workflows
 
-```{r spatial-example}
-# Create example spatial data
+For spatial data, nearby points are often correlated.
+
+### Spatial Block Validation
+
+```{r spatial-basic}
 set.seed(456)
-n <- 100
+n <- 200
 spatial_data <- data.frame(
-  longitude = runif(n, -10, 10),
-  latitude = runif(n, -10, 10),
+  lon = runif(n, -10, 10),
+  lat = runif(n, -10, 10),
   response = rnorm(n),
   predictor = rnorm(n)
 )
 
-# Split by spatial blocks (west vs east)
-train_idx <- which(spatial_data$longitude < 0)
-test_idx <- which(spatial_data$longitude >= 0)
+# Geographic split (west vs east)
+train_idx <- which(spatial_data$lon < 0)
+test_idx <- which(spatial_data$lon >= 0)
 
-# Validate with spatial columns
-borg(spatial_data, train_idx = train_idx, test_idx = test_idx,
-     coords = c("longitude", "latitude"))
+# Validate with spatial awareness
+result <- borg(spatial_data,
+               train_idx = train_idx,
+               test_idx = test_idx,
+               coords = c("lon", "lat"))
+result
 ```
 
-## Complete Workflow Validation
+### Automatic Spatial CV Generation
 
-Validate an entire pipeline:
+```{r spatial-auto}
+# Let BORG generate spatially-blocked folds
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response", v = 5)
+result$diagnosis@recommended_cv
 
-```{r workflow-validation}
-# Example workflow with iris data
+# Access the folds
+length(result$folds)
+```
+
+---
+
+## Grouped Data Workflows
+
+For hierarchical data (patients, sites, species):
+
+```{r grouped-workflow}
+# Clinical trial data with repeated measures
+clinical_data <- data.frame(
+  patient_id = rep(1:50, each = 4),
+  visit = rep(1:4, times = 50),
+  outcome = rnorm(200)
+)
+
+# Let BORG create leave-group-out folds
+result <- borg(clinical_data, groups = "patient_id", target = "outcome", v = 5)
+result$diagnosis@recommended_cv
+
+# Verify no patient appears in both train and test
+fold1 <- result$folds[[1]]
+train_patients <- unique(clinical_data$patient_id[fold1$train])
+test_patients <- unique(clinical_data$patient_id[fold1$test])
+length(intersect(train_patients, test_patients))  # Should be 0
+```
+
+---
+
+## Complete Pipeline Validation
+
+Validate an entire workflow at once:
+
+```{r pipeline-validation}
+# Build a workflow
 data <- iris
 set.seed(789)
 n <- nrow(data)
 train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
-# Pass a workflow list to borg_validate()
+# Validate everything
 result <- borg_validate(list(
   data = data,
   train_idx = train_idx,
   test_idx = test_idx
 ))
 
-if (!result@is_valid) {
-  print(result)
-  message("Evaluation invalid - see risk report above")
-}
+result
 ```
 
-## Automatic Rewriting
+### With Problematic Workflow
 
-Attempt to fix leaky pipelines:
+```{r pipeline-bad}
+# Workflow with overlap (common mistake)
+bad_workflow <- list(
+  data = iris,
+  train_idx = 1:100,
+  test_idx = 51:150  # Overlaps!
+)
 
-```{r rewrite-example}
-# Create a workflow with a fixable issue
+result <- borg_validate(bad_workflow)
+result
+```
+
+---
+
+## Automatic Repair with borg_rewrite()
+
+BORG can attempt to fix some issues automatically:
+
+```{r rewrite}
+# Workflow with fixable issues
 workflow <- list(
   data = iris,
   train_idx = 1:100,
-  test_idx = 51:150  # Overlaps with train!
+  test_idx = 51:150  # Overlap
 )
 
-# Attempt automatic fixes
+# Attempt fixes
 fixed <- borg_rewrite(workflow)
 
 if (length(fixed$unfixable) > 0) {
-  message("Could not fix: ", paste(fixed$unfixable, collapse = ", "))
+  cat("Could not fix:", paste(fixed$unfixable, collapse = ", "), "\n")
+} else {
+  cat("Workflow repaired successfully\n")
 }
 ```
 
-Note: Some violations cannot be automatically fixed (e.g., index overlap
-requires a new split).
+Note: Index overlap cannot be automatically fixed - it requires choosing a new split strategy.
+
+---
+
+## Summary: Framework Integration Patterns
+
+| Framework | Validation Function | Guarded Alternative |
+|-----------|--------------------|--------------------|
+| Base R | `borg()`, `borg_inspect()` | - |
+| caret | `borg_inspect(preProcess)` | `borg_trainControl()` |
+| rsample | `borg_inspect(vfold_cv)` | `borg_vfold_cv()`, `borg_initial_split()` |
+| recipes | `borg_inspect(recipe)` | - |
+| mlr3 | `borg_inspect(task)` | - |
+
+## See Also
+
+- `vignette("quickstart")` - Basic usage and concepts
+- `vignette("risk-taxonomy")` - Complete catalog of detectable risks

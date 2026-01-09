@@ -1,5 +1,7 @@
 ---
 title: "Quick Start"
+author: "Gilles Colling"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Quick Start}
@@ -10,184 +12,262 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
 )
-```
-
-## What is BORG?
-
-BORG inspects your preprocessing and model objects to detect data leakage. It
-checks whether information from the test set leaked into training, and blocks
-evaluation before you compute misleading metrics.
-
-You pass fitted objects to `borg()` and it checks for leakage signatures.
-
-## The Problem
-
-Consider a common mistake:
-
-```r
-# PROBLEMATIC WORKFLOW
-data <- read.csv("my_data.csv")
-data_scaled <- scale(data)  # Fitted on ALL rows
-
-train_idx <- 1:800
-test_idx <- 801:1000
-train <- data_scaled[train_idx, ]
-test <- data_scaled[test_idx, ]
-
-model <- train_model(train)
-performance <- evaluate(model, test)  # Inflated!
-```
-
-The `scale()` call used all 1000 rows to compute mean and SD. Test set
-statistics leaked into the training data. The reported performance won't
-match real-world results.
-
-## How BORG Catches This
-
-BORG inspects objects after you create them:
-
-```r
 library(BORG)
-
-# You did preprocessing
-pp <- preProcess(data, method = c("center", "scale"))
-
-# Now check it for leakage
-borg(pp, train_idx = 1:800, test_idx = 801:1000, data = data)
-# Error: BORG HARD VIOLATION: preprocessing fitted on 1000 rows, but training set has 800
 ```
 
-BORG detected that `preProcess` was fitted on more rows than the training set.
-The evaluation is blocked before you compute metrics.
+# Why Your Test Accuracy Might Be Wrong
 
-## Typical Workflow
+A model shows 95% accuracy on test data, then drops to 60% in production. The usual culprit: data leakage.
 
-```r
-library(BORG)
+Leakage happens when information from your test set contaminates training. Common causes:
 
-# 1. Define your split
-train_idx <- 1:800
-test_idx <- 801:1000
+- Preprocessing (scaling, PCA) fitted on all data before splitting
+- Features derived from the outcome variable
+- Same patient/site appearing in both train and test
+- Random CV on spatially autocorrelated data
 
-# 2. Do preprocessing on TRAINING ONLY
-pp <- preProcess(data[train_idx, ], method = c("center", "scale"))
+BORG checks for these problems before you compute metrics.
 
-# 3. Check the preprocessing object
-borg(pp, train_idx, test_idx, data = data)
-# No error - preprocessing is clean
+## Basic Usage
 
-# 4. Fit model on training data
-model <- train(y ~ ., data = train_data, preProcess = pp)
+```{r basic-usage}
+# Create sample data
+set.seed(42)
+data <- data.frame(
+  x1 = rnorm(100),
+  x2 = rnorm(100),
+  y = rnorm(100)
+)
 
-# 5. Check the model
-borg(model, train_idx, test_idx, data = data)
-# No error - model is clean
+# Define a split
+train_idx <- 1:70
+test_idx <- 71:100
 
-# 6. Now safe to evaluate
-predictions <- predict(model, test_data)
-performance <- compute_metrics(predictions, test_data$y)
+# Inspect the split
+result <- borg_inspect(data, train_idx = train_idx, test_idx = test_idx)
+result
 ```
 
-The key point: call `borg()` on objects *after* you create them, *before* you
-compute metrics.
+No violations detected. But what if we made a mistake?
 
-## What BORG Can Check
-
-Pass any of these to `borg()`:
-
-```r
-# Data frame - checks split validity and target leakage
-borg(data, train_idx, test_idx, target_col = "y")
-
-# Preprocessing object - checks for leakage
-borg(my_recipe, train_idx, test_idx, data = data)
-borg(my_prcomp, train_idx, test_idx, data = data)
-
-# Model - checks training data scope
-borg(my_model, train_idx, test_idx, data = data)
-
-# CV object - checks fold structure
-borg(my_folds, train_idx, test_idx)
+```{r overlap-detection}
+# Accidental overlap in indices
+bad_result <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
+bad_result
 ```
 
-## Split Validation
+BORG caught the overlap immediately.
 
-For data frames, BORG checks split validity:
+## The Main Entry Point: `borg()`
 
-```r
-# Index overlap
-borg(data, train_idx = 1:60, test_idx = 50:100)
-# Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)
+For most workflows, `borg()` is all you need. It handles two modes:
 
-# Group leakage (same patient in train and test)
-borg(data, train_idx, test_idx, group_col = "patient_id")
+### Mode 1: Diagnose Data Dependencies
 
-# Temporal leakage (test data predates training)
-borg(data, train_idx, test_idx, temporal_col = "date")
+When you have structured data (spatial coordinates, time column, or groups), BORG diagnoses dependencies and generates appropriate CV folds:
+
+```{r diagnosis-mode}
+# Spatial data with coordinates
+set.seed(42)
+spatial_data <- data.frame(
+  lon = runif(200, -10, 10),
+  lat = runif(200, -10, 10),
+  elevation = rnorm(200, 500, 100),
+  response = rnorm(200)
+)
+
+# Let BORG diagnose and create CV folds
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
+result
 ```
 
-## Target Leakage Detection
+BORG detected spatial structure and recommended spatial block CV instead of random CV.
 
-Check if any feature is suspiciously correlated with the target:
+### Mode 2: Validate Existing Splits
 
-```r
-# Detect features derived from outcome
-borg(data, train_idx, test_idx, target_col = "outcome")
-# Error: BORG HARD VIOLATION: Feature 'days_since_event' has correlation 0.998
-#   with target 'outcome'. Likely derived from outcome.
+When you have your own train/test indices, BORG validates them:
+
+```{r validation-mode}
+# Validate a manual split
+risk <- borg(spatial_data, train_idx = 1:150, test_idx = 151:200)
+risk
 ```
 
-Features with |correlation| > 0.99 are flagged as hard violations (likely
-derived from the target). Features with correlation 0.95-0.99 produce warnings
-(may be legitimate strong predictors, but worth checking).
+## Visualizing Results
 
-## Spatial Validation
+Use standard R `plot()` and `summary()`:
 
-For spatial data, check that train and test regions are properly separated:
-
-```r
-# Check spatial separation
-borg(geo_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"))
-# Warning: 85% of test points fall within the training region convex hull.
-#   Consider spatial blocking.
+```{r plot-results, fig.width=7, fig.height=5}
+# Plot the risk assessment
+plot(risk)
 ```
 
-BORG checks two things:
-1. Whether test points are very close to training points (< 1% of spatial spread)
-2. Whether test points fall inside the training region's convex hull
+```{r summary-results}
+# Generate methods text for publications
+summary(result)
+```
 
-## Risk Classification
+## Data Dependency Types
 
-**Hard Violations** - Evaluation is invalid. Blocked.
+BORG handles three types of data dependencies:
 
-- Index overlap between train and test
-- Duplicate rows between train and test
-- Preprocessing fitted on full data
-- PCA computed on full data
-- CV folds containing test indices
-- Model trained on wrong data scope
-- Target leakage (|correlation| > 0.99 with target)
-- Group membership in both splits
-- Temporal ordering violated
+### Spatial Autocorrelation
 
-**Soft Inflation** - Results biased but bounded. Warning.
+Points close together tend to have similar values. Random CV underestimates error because train and test points are intermixed.
 
-- Proxy leakage (correlation 0.95-0.99 with target)
-- Spatial proximity (test points close to train)
-- Spatial overlap (test inside train convex hull)
+```{r spatial-example}
+result_spatial <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
+result_spatial$diagnosis@recommended_cv
+```
 
-## Other Functions
+### Temporal Autocorrelation
+
+Sequential observations are correlated. Future data must not leak into past predictions.
+
+```{r temporal-example}
+temporal_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = 200),
+  value = cumsum(rnorm(200))
+)
+
+result_temporal <- borg(temporal_data, time = "date", target = "value")
+result_temporal$diagnosis@recommended_cv
+```
+
+### Clustered/Grouped Data
+
+Observations within groups (patients, sites, species) are more similar than between groups.
+
+```{r grouped-example}
+grouped_data <- data.frame(
+  site = rep(1:20, each = 10),
+  measurement = rnorm(200)
+)
+
+result_grouped <- borg(grouped_data, groups = "site", target = "measurement")
+result_grouped$diagnosis@recommended_cv
+```
+
+## Risk Categories
+
+BORG classifies risks into two categories:
+
+### Hard Violations (Evaluation Invalid)
+
+These invalidate your results completely:
+
+| Risk | Description |
+|------|-------------|
+| `index_overlap` | Same row in both train and test |
+| `duplicate_rows` | Identical observations in train and test |
+| `target_leakage` | Feature with |r| > 0.99 with target |
+| `group_leakage` | Same group in train and test |
+| `temporal_leakage` | Test data predates training data |
+| `preprocessing_leakage` | Scaler/PCA fitted on full data |
+
+### Soft Inflation (Results Biased)
+
+These inflate metrics but don't completely invalidate:
+
+| Risk | Description |
+|------|-------------|
+| `proxy_leakage` | Feature with |r| 0.95-0.99 with target |
+| `spatial_proximity` | Test points too close to train |
+| `random_cv_inflation` | Random CV on dependent data |
+
+## Detecting Specific Leakage Types
+
+### Target Leakage
+
+Features derived from the outcome:
+
+```{r target-leakage}
+# Simulate target leakage
+leaky_data <- data.frame(
+  x = rnorm(100),
+  leaked_feature = rnorm(100),  # Will be made leaky
+  outcome = rnorm(100)
+)
+# Make leaked_feature highly correlated with outcome
+leaky_data$leaked_feature <- leaky_data$outcome + rnorm(100, sd = 0.05)
+
+result <- borg_inspect(leaky_data, train_idx = 1:70, test_idx = 71:100,
+                       target = "outcome")
+result
+```
+
+### Group Leakage
+
+Same entity in train and test:
+
+```{r group-leakage}
+# Simulate clinical data with patient IDs
+clinical_data <- data.frame(
+  patient_id = rep(1:10, each = 10),
+  visit = rep(1:10, times = 10),
+  measurement = rnorm(100)
+)
+
+# Random split ignoring patients (BAD)
+set.seed(123)
+all_idx <- sample(100)
+train_idx <- all_idx[1:70]
+test_idx <- all_idx[71:100]
+
+# Check for group leakage
+result <- borg_inspect(clinical_data, train_idx = train_idx, test_idx = test_idx,
+                       groups = "patient_id")
+result
+```
+
+## Working with CV Folds
+
+Access the generated folds directly:
+
+```{r cv-folds}
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response", v = 5)
+
+# Number of folds
+length(result$folds)
+
+# First fold's train/test sizes
+cat("Fold 1 - Train:", length(result$folds[[1]]$train),
+    "Test:", length(result$folds[[1]]$test), "\n")
+```
+
+## Exporting Results
+
+For reproducibility, export validation certificates:
+
+```{r certificate}
+# Create a certificate
+cert <- borg_certificate(result$diagnosis, data = spatial_data)
+cert
+```
+
+```{r export, eval=FALSE}
+# Export to file
+borg_export(result$diagnosis, spatial_data, "validation.yaml")
+borg_export(result$diagnosis, spatial_data, "validation.json")
+```
+
+## Interface Summary
 
 | Function | Purpose |
 |----------|---------|
-| `borg()` | Check any object for leakage |
-| `borg_inspect()` | Detailed risk report |
-| `borg_validate()` | Check a complete workflow list |
-| `borg_rewrite()` | Attempt automatic repair |
+| `borg()` | Main entry point - diagnose data or validate splits |
+| `borg_inspect()` | Detailed inspection of train/test split |
+| `borg_diagnose()` | Analyze data dependencies only |
+| `plot()` | Visualize results |
+| `summary()` | Generate methods text |
+| `borg_certificate()` | Create validation certificate |
+| `borg_export()` | Export certificate to YAML/JSON |
 
-## Next Steps
+## See Also
 
-- [Risk Taxonomy](risk-taxonomy.html): Full catalog of detectable risks
-- [Framework Integration](frameworks.html): Using BORG with caret, tidymodels, mlr3
+- `vignette("risk-taxonomy")` - Complete catalog of detectable risks
+- `vignette("frameworks")` - Integration with caret, tidymodels, mlr3

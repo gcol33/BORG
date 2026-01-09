@@ -1,5 +1,7 @@
 ---
 title: "Risk Taxonomy"
+author: "Gilles Colling"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Risk Taxonomy}
@@ -10,107 +12,209 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
 )
+library(BORG)
 ```
 
-This document catalogs all evaluation risks that BORG detects, organized by
-mechanism.
+This document catalogs all evaluation risks that BORG detects, organized by severity and mechanism.
 
-## Hard Violations
+## Risk Classification
 
-These fundamentally invalidate evaluation. BORG blocks or errors on detection.
+BORG classifies risks into two categories based on their impact on evaluation validity:
 
-### 1. Index Overlap
+| Category | Impact | BORG Response |
+|----------|--------|---------------|
+| **Hard Violation** | Results are invalid | Blocks evaluation, requires fix |
+| **Soft Inflation** | Results are biased | Warns, allows with caution |
+
+# Hard Violations
+
+These make your evaluation results invalid. Any metrics computed with these violations are unreliable.
+
+## 1. Index Overlap
 
 **What**: Same row indices appear in both training and test sets.
 
+**Why it matters**: The model has seen the exact data it's being tested on. This is the most basic form of leakage.
+
 **Detection**: Set intersection of `train_idx` and `test_idx`.
 
-**Example**:
-```r
-train_idx <- 1:60
-test_idx <- 50:100  # Rows 50-60 in both!
+```{r index-overlap}
+data <- data.frame(x = 1:100, y = rnorm(100))
 
-borg(data, train_idx, test_idx)
-# Error: BORG HARD VIOLATION: train_idx and test_idx overlap (11 shared indices)
+# Accidental overlap
+result <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
+result
 ```
 
-### 2. Duplicate Rows
+**Fix**: Ensure indices are mutually exclusive. Use `setdiff()` to create non-overlapping sets.
+
+## 2. Duplicate Rows
 
 **What**: Test set contains rows identical to training rows.
 
+**Why it matters**: Model may have memorized these exact patterns. Even without index overlap, identical feature values constitute leakage.
+
 **Detection**: Row hashing and comparison (C++ backend for numeric data).
 
-**Why it matters**: Model may have memorized these exact patterns.
+```{r duplicate-rows}
+# Data with duplicate rows
+dup_data <- rbind(
+  data.frame(x = 1:5, y = 1:5),
+  data.frame(x = 1:5, y = 1:5)  # Duplicates
+)
 
-```r
-result <- borg(data, train_idx, test_idx)
-# risks[[1]]$type == "duplicate_rows"
+result <- borg_inspect(dup_data, train_idx = 1:5, test_idx = 6:10)
+result
 ```
 
-### 3. Preprocessing Leak
+**Fix**: Remove duplicate rows before splitting, or ensure splits respect duplicates (keep all copies in same set).
 
-**What**: Normalization, imputation, or PCA fitted on full data before splitting.
+## 3. Preprocessing Leakage
 
-**Detection**: Recompute statistics on train-only data and compare to stored
-parameters. If they differ, preprocessing used test data.
+**What**: Normalization, imputation, or dimensionality reduction fitted on full data before splitting.
+
+**Why it matters**: Test set statistics influenced the preprocessing parameters applied to training data. Information flows backwards from test to train.
+
+**Detection**: Recompute statistics on train-only data and compare to stored parameters. Discrepancy indicates leakage.
 
 **Supported objects**:
 
-- `caret::preProcess` - checks `$mean` and `$std`
-- `recipes::recipe` - checks step parameters after `prep()`
-- `prcomp` - checks `$center`, `$scale`, and rotation matrix
+| Object Type | Parameters Checked |
+|-------------|-------------------|
+| `caret::preProcess` | `$mean`, `$std` |
+| `recipes::recipe` | Step parameters after `prep()` |
+| `prcomp` | `$center`, `$scale`, rotation matrix |
+| `scale()` attributes | `center`, `scale` |
 
-```r
-# Check a preprocessing object
-borg(my_recipe, train_idx, test_idx, data = data)
+```{r preprocessing-leak, eval=FALSE}
+# BAD: Scale fitted on all data
+scaled_data <- scale(data)  # Uses all rows!
+train <- scaled_data[1:70, ]
+test <- scaled_data[71:100, ]
+
+# BORG detects this
+borg_inspect(scaled_data, train_idx = 1:70, test_idx = 71:100)
 ```
 
-### 4. Target Leakage (Direct)
-
-**What**: Feature has |correlation| > 0.99 with target.
-
-**Detection**: Compute correlation of each numeric feature with target column
-on training data.
-
-**Why it matters**: Feature is likely derived from the outcome (e.g.,
-"days_since_diagnosis" to predict "has_disease").
+**Fix**: Fit preprocessing on training data only, then apply to test:
 
 ```r
-borg(data, train_idx, test_idx, target_col = "outcome")
-# Error: Feature 'days_since_event' has correlation 0.998 with target.
+train_data <- data[1:70, ]
+test_data <- data[71:100, ]
+
+# Fit on train
+means <- colMeans(train_data)
+sds <- apply(train_data, 2, sd)
+
+# Apply to both
+train_scaled <- scale(train_data, center = means, scale = sds)
+test_scaled <- scale(test_data, center = means, scale = sds)
 ```
 
-### 5. Temporal Ordering
+## 4. Target Leakage (Direct)
+
+**What**: Feature has absolute correlation > 0.99 with target.
+
+**Why it matters**: Feature is almost certainly derived from the outcome. Examples:
+- `days_since_diagnosis` when predicting `has_disease`
+- `total_spent` when predicting `is_customer`
+- Aggregated future values leaked into current features
+
+**Detection**: Compute Pearson correlation of each numeric feature with target on training data.
+
+```{r target-leakage}
+# Simulate target leakage
+leaky <- data.frame(
+  x = rnorm(100),
+  outcome = rnorm(100)
+)
+leaky$leaked <- leaky$outcome + rnorm(100, sd = 0.01)  # Near-perfect correlation
+
+result <- borg_inspect(leaky, train_idx = 1:70, test_idx = 71:100, target = "outcome")
+result
+```
+
+**Fix**: Remove or investigate the leaky feature. If it's a legitimate predictor, document why correlation > 0.99 is expected.
+
+## 5. Group Leakage
+
+**What**: Same group (patient, site, species) appears in both train and test.
+
+**Why it matters**: Observations within a group tend to be similar. If the same patient appears in train and test, the model can exploit patient-specific patterns that won't exist for new patients.
+
+**Detection**: Set intersection of group membership values.
+
+```{r group-leakage}
+# Clinical data with patient IDs
+clinical <- data.frame(
+  patient_id = rep(1:10, each = 10),
+  measurement = rnorm(100)
+)
+
+# Random split ignoring patients
+set.seed(123)
+all_idx <- sample(100)
+train_idx <- all_idx[1:70]
+test_idx <- all_idx[71:100]
+
+result <- borg_inspect(clinical, train_idx = train_idx, test_idx = test_idx,
+                       groups = "patient_id")
+result
+```
+
+**Fix**: Use group-aware splitting:
+
+```r
+# Split at the patient level
+train_patients <- sample(unique(clinical$patient_id), 7)
+train_idx <- which(clinical$patient_id %in% train_patients)
+test_idx <- which(!clinical$patient_id %in% train_patients)
+```
+
+## 6. Temporal Ordering Violation
 
 **What**: Test observations predate training observations.
 
+**Why it matters**: Model uses future information to predict the past. In deployment, future data won't be available.
+
 **Detection**: Compare max training timestamp to min test timestamp.
 
-```r
-borg(ts_data, train_idx, test_idx, temporal_col = "date")
-# Error: BORG HARD VIOLATION: Temporal ordering violated. 50 test observations
-#   predate training data.
+```{r temporal-leak}
+# Time series data
+ts_data <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
+  value = cumsum(rnorm(100))
+)
+
+# Wrong: random split ignores time
+set.seed(42)
+random_idx <- sample(100)
+train_idx <- random_idx[1:70]
+test_idx <- random_idx[71:100]
+
+result <- borg_inspect(ts_data, train_idx = train_idx, test_idx = test_idx,
+                       time = "date")
+result
 ```
 
-### 6. Group Overlap
-
-**What**: Same group (patient, site, etc.) appears in both train and test.
-
-**Detection**: Set intersection of group values.
+**Fix**: Use chronological splits where all test data comes after training:
 
 ```r
-borg(patient_data, train_idx, test_idx, group_col = "patient_id")
-# Error: BORG HARD VIOLATION: Groups appear in both train and test (3 overlapping)
+train_idx <- 1:70
+test_idx <- 71:100
 ```
 
-### 7. CV Fold Contamination
+## 7. CV Fold Contamination
 
-**What**: Cross-validation folds contain test indices.
+**What**: Cross-validation folds contain test indices, or folds overlap incorrectly.
 
-**Detection**: Check if any fold's training indices intersect with held-out
-test set.
+**Why it matters**: Nested CV requires the outer test set to be completely held out from all inner training.
+
+**Detection**: Check if any fold's training indices intersect with held-out test set.
 
 **Supported objects**:
 
@@ -118,90 +222,151 @@ test set.
 - `rsample::vfold_cv` and other `rset` objects
 - `rsample::rsplit` objects
 
-### 8. Model Scope
+## 8. Model Scope
 
-**What**: Model was trained on more rows than the training set.
+**What**: Model was trained on more rows than claimed training set.
 
-**Detection**: Compare `nrow(trainingData)` or `length(fitted.values)` to
-`length(train_idx)`.
+**Why it matters**: Model saw test data during training, even if indirectly (e.g., through hyperparameter tuning on full data).
 
-**Supported objects**: `lm`, `glm`, `ranger`, `caret::train`, parsnip models,
-workflows.
+**Detection**: Compare `nrow(trainingData)` or `length(fitted.values)` to `length(train_idx)`.
 
-## Soft Warnings
+**Supported objects**: `lm`, `glm`, `ranger`, `caret::train`, parsnip models, workflows.
 
-These bias results but model ranking may be preserved. BORG warns but continues.
+# Soft Inflation Risks
 
-### 1. Target Leakage (Proxy)
+These bias results but may not completely invalidate them. Model ranking might be preserved even if absolute metrics are optimistic.
+
+## 1. Target Leakage (Proxy)
 
 **What**: Feature has correlation 0.95-0.99 with target.
 
+**Why warning not error**: May be a legitimate strong predictor. Requires domain knowledge to judge.
+
 **Detection**: Same as direct leakage, different threshold.
 
-**Why warning not error**: May be legitimate strong predictor, requires
-domain review.
+```{r proxy-leakage}
+# Strong but not extreme correlation
+proxy <- data.frame(
+  x = rnorm(100),
+  outcome = rnorm(100)
+)
+proxy$strong_predictor <- proxy$outcome + rnorm(100, sd = 0.3)  # r ~ 0.96
 
-```r
-result <- borg(data, train_idx, test_idx, target_col = "y")
-# Warning: Feature 'x2' has correlation 0.96 with target. May be a proxy.
+result <- borg_inspect(proxy, train_idx = 1:70, test_idx = 71:100, target = "outcome")
+result
 ```
 
-### 2. Spatial Proximity
+**Action**: Review whether the feature should be available at prediction time in production.
 
-**What**: Test points are very close to training points.
+## 2. Spatial Proximity
 
-**Detection**: Compute minimum distance from each test point to nearest
-training point. Flag if < 1% of spatial spread.
+**What**: Test points are very close to training points in geographic space.
 
-**Impact**: Spatial autocorrelation may inflate apparent performance.
+**Why it matters**: Spatial autocorrelation means nearby points share variance. Model learns local patterns that don't generalize to distant locations.
 
-```r
-borg(geo_data, train_idx, test_idx, spatial_cols = c("lon", "lat"))
+**Detection**: Compute minimum distance from each test point to nearest training point. Flag if < 1% of spatial spread.
+
+```{r spatial-proximity}
+set.seed(42)
+spatial <- data.frame(
+  lon = runif(100, 0, 100),
+  lat = runif(100, 0, 100),
+  value = rnorm(100)
+)
+
+# Random split intermixes nearby points
+train_idx <- sample(100, 70)
+test_idx <- setdiff(1:100, train_idx)
+
+result <- borg_inspect(spatial, train_idx = train_idx, test_idx = test_idx,
+                       coords = c("lon", "lat"))
+result
 ```
 
-### 3. Spatial Overlap
-
-**What**: Test region falls inside training region.
-
-**Detection**: Compute convex hull of training points, count how many test
-points fall inside.
-
-**Threshold**: Warning if > 50% of test points inside training hull.
-
-## Risk Type Reference
-
-| Risk Type | Severity | Detection Method |
-|-----------|----------|------------------|
-| `index_overlap` | hard | Index intersection |
-| `duplicate_rows` | hard | Row hashing |
-| `preprocessing_leak` | hard | Parameter comparison |
-| `target_leakage_direct` | hard | Correlation > 0.99 |
-| `group_overlap` | hard | Group intersection |
-| `cv_leak` | hard | Fold index check |
-| `model_scope` | hard | Row count comparison |
-| `target_leakage_proxy` | soft | Correlation 0.95-0.99 |
-| `spatial_proximity` | soft | Distance check |
-| `spatial_overlap` | soft | Convex hull test |
-
-## Accessing Risk Details
+**Fix**: Use spatial blocking:
 
 ```r
-result <- borg(data, train_idx, test_idx, target_col = "y")
+# Geographic split
+train_idx <- which(spatial$lon < 50)  # West
+test_idx <- which(spatial$lon >= 50)  # East
+```
+
+## 3. Spatial Overlap
+
+**What**: Test region falls inside training region's convex hull.
+
+**Why it matters**: Interpolation is easier than extrapolation. Model performance on "surrounded" test points overestimates performance on truly new regions.
+
+**Detection**: Compute convex hull of training points, count test points inside.
+
+**Threshold**: Warning if > 50% of test points fall inside training hull.
+
+## 4. Random CV on Dependent Data
+
+**What**: Using random k-fold CV when data has spatial, temporal, or group structure.
+
+**Why it matters**: Random folds break dependencies artificially, leading to optimistic error estimates.
+
+```{r random-cv-inflation}
+# Diagnose data dependencies
+spatial <- data.frame(
+  lon = runif(200, 0, 100),
+  lat = runif(200, 0, 100),
+  response = rnorm(200)
+)
+
+diagnosis <- borg_diagnose(spatial, coords = c("lon", "lat"), target = "response",
+                           verbose = FALSE)
+diagnosis@recommended_cv
+```
+
+**Fix**: Use `borg()` to generate appropriate blocked CV folds.
+
+# Quick Reference
+
+| Risk Type | Severity | Detection Method | Fix |
+|-----------|----------|------------------|-----|
+| `index_overlap` | Hard | Index intersection | Use `setdiff()` |
+| `duplicate_rows` | Hard | Row hashing | Deduplicate or group |
+| `preprocessing_leak` | Hard | Parameter comparison | Fit on train only |
+| `target_leakage` | Hard | Correlation > 0.99 | Remove feature |
+| `group_leakage` | Hard | Group intersection | Group-aware split |
+| `temporal_leak` | Hard | Timestamp comparison | Chronological split |
+| `cv_contamination` | Hard | Fold index check | Rebuild folds |
+| `model_scope` | Hard | Row count | Refit on train only |
+| `proxy_leakage` | Soft | Correlation 0.95-0.99 | Domain review |
+| `spatial_proximity` | Soft | Distance check | Spatial blocking |
+| `spatial_overlap` | Soft | Convex hull | Geographic split |
+
+# Accessing Risk Details
+
+```{r risk-access}
+# Create result with violations
+result <- borg_inspect(
+  data.frame(x = 1:100, y = rnorm(100)),
+  train_idx = 1:60,
+  test_idx = 51:100
+)
 
 # Summary
-result@is_valid
-result@n_hard
-result@n_soft
+cat("Valid:", result@is_valid, "\n")
+cat("Hard violations:", result@n_hard, "\n")
+cat("Soft warnings:", result@n_soft, "\n")
 
 # Individual risks
 for (risk in result@risks) {
-  cat(risk$type, ":", risk$severity, "\n")
+  cat("\n", risk$type, "(", risk$severity, "):\n", sep = "")
   cat("  ", risk$description, "\n")
-  if (!is.null(risk$affected_indices)) {
-    cat("  Affected:", length(risk$affected_indices), "indices\n")
+  if (!is.null(risk$affected)) {
+    cat("  Affected:", head(risk$affected, 5), "...\n")
   }
 }
 
 # Tabular format
-df <- as.data.frame(result)
+as.data.frame(result)
 ```
+
+## See Also
+
+- `vignette("quickstart")` - Basic usage
+- `vignette("frameworks")` - Framework integration
