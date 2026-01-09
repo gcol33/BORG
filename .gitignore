@@ -19,6 +19,9 @@ src/RcppExports.cpp
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -26,3 +29,5 @@ Thumbs.db
 # Temporary files
 *.tmp
 *~
+/doc/
+/Meta/
