@@ -1,5 +1,5 @@
 #include <Rcpp.h>
-#include "borg_types.h"
+#include "BORG_types.h"
 #include "index_checks.h"
 #include "hash_utils.h"
 

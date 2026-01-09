@@ -1,6 +1,6 @@
 # BORG
 
-[![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yml)
+[![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Bounded Outcome Risk Guard for Model Evaluation**

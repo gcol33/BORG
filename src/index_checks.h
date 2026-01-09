@@ -2,7 +2,7 @@
 #define INDEX_CHECKS_H
 
 #include <Rcpp.h>
-#include "borg_types.h"
+#include "BORG_types.h"
 
 // Fast index overlap check
 inline bool hasOverlap(const IndexSet& set1, const IndexSet& set2) {

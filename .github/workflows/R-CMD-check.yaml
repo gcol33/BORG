@@ -1,12 +1,15 @@
+name: R-CMD-check
+
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
-name: R-CMD-check
-
-permissions: read-all
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   R-CMD-check:
@@ -18,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
+          - {os: macos-14,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
@@ -34,17 +37,61 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
+        if: runner.os != 'macOS'
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      # macOS: don't use RSPM (missing ARM64 binaries cause download failures)
+      - uses: r-lib/actions/setup-r@v2
+        if: runner.os == 'macOS'
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: false
+
+      # Standard install (Linux, Windows - not macOS, not oldrel-1)
       - uses: r-lib/actions/setup-r-dependencies@v2
+        if: runner.os != 'macOS' && matrix.config.r != 'oldrel-1'
+        with:
+          extra-packages: any::rcmdcheck
+          cache-version: 2
+          needs: check
+
+      # macOS: install deps using remotes (CRAN has ARM64 binaries, unlike RSPM)
+      - name: Install R dependencies on macOS
+        if: runner.os == 'macOS'
+        run: |
+          options(repos = c(CRAN = "https://cloud.r-project.org"))
+          install.packages(c("remotes", "Rcpp", "rcmdcheck", "knitr", "rmarkdown"))
+          remotes::install_deps(dependencies = TRUE)
+        shell: Rscript {0}
+
+      # oldrel-1: standard install with _R_CHECK_FORCE_SUGGESTS_=false
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.config.r == 'oldrel-1'
         with:
           extra-packages: any::rcmdcheck
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+        if: runner.os != 'macOS' && matrix.config.r != 'oldrel-1'
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      - uses: r-lib/actions/check-r-package@v2
+        if: runner.os == 'macOS'
+        env:
+          _R_CHECK_FORCE_SUGGESTS_: false
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      - uses: r-lib/actions/check-r-package@v2
+        if: matrix.config.r == 'oldrel-1'
+        env:
+          _R_CHECK_FORCE_SUGGESTS_: false
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
