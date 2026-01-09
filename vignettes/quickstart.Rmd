@@ -15,10 +15,10 @@ knitr::opts_chunk$set(
 ```
 
 ## What is BORG?
-BORG (Bounded Outcome Risk Guard) automatically detects when model evaluation
-is compromised by information leakage between training and test data. It
-identifies violations that inflate performance estimates and provides
-actionable remediation.
+
+BORG (Bounded Outcome Risk Guard) detects when model evaluation is compromised
+by information leakage between training and test data. It identifies violations
+that inflate performance estimates and blocks invalid evaluations.
 
 ## The Problem
 
@@ -47,59 +47,49 @@ including the test set. This means:
 
 - Training data contains test set statistics
 - Test performance is artificially inflated
-- Results do not generalize to truly unseen data
+- Results won't generalize to truly unseen data
 
-## BORG Solution
+## The Solution
 
-### Proactive Guarding
-
-Use `borg_guard()` to create a protected evaluation context:
+Use `borg()` to validate any object:
 
 ```r
 library(BORG)
 
-# Create guarded context BEFORE any preprocessing
-ctx <- borg_guard(
-  data = my_data,
-  train_idx = 1:800,
+# Check a train/test split
+borg(data, train_idx = 1:800, test_idx = 801:1000)
 
-  test_idx = 801:1000,
-  mode = "strict"
-)
-# Mode options:
-#   "strict"  - Error on any violation
-#   "warn"    - Warn but continue
-#   "rewrite" - Auto-fix where possible
-```
-
-### Object Inspection
-
-Inspect existing objects for leakage:
-
-```r
 # Check a preprocessing object
-pp <- preProcess(full_data, method = c("center", "scale"))
-result <- borg_inspect(pp, train_idx = 1:800, test_idx = 801:1000, data = full_data)
+borg(my_recipe, train_idx, test_idx, data = data)
 
-if (!result@is_valid) {
-  print(result)  # Detailed risk report
-}
+# Check a fitted model
+borg(my_model, train_idx, test_idx, data = data)
 ```
 
-### Workflow Validation
-
-Validate an entire evaluation pipeline:
+`borg()` auto-detects the object type and runs the appropriate validation. If
+something is wrong, it errors with a clear message:
 
 ```r
-result <- borg_validate(list(
-  data = my_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  preprocess = my_recipe,
-  model = fitted_model
-))
+borg(data, train_idx = 1:800, test_idx = 801:1000)
+# Error: BORG HARD VIOLATION: preprocessing fitted on full data
+```
 
-# Check results
+## Other Functions
+
+| Function | Use Case |
+|----------|----------|
+| `borg()` | Validate any object |
+| `borg_inspect()` | Detailed object inspection with risk report |
+| `borg_validate()` | Validate a complete workflow |
+| `borg_rewrite()` | Attempt automatic repair |
+
+### Detailed Inspection
+
+`borg()` returns a risk report:
+
+```r
+result <- borg(my_recipe, train_idx, test_idx, data = data)
+
 result@is_valid      # TRUE/FALSE
 result@n_hard        # Count of hard violations
 result@n_soft        # Count of soft warnings
@@ -136,33 +126,23 @@ These bias results but may preserve model ranking:
 data_scaled <- scale(data)
 cv_results <- cross_validate(data_scaled)  # Leaky!
 
-# GOOD: preprocessing inside CV folds
-ctx <- borg_guard(data, train_idx, test_idx, mode = "strict")
+# GOOD: check with borg first
+borg(data, train_idx, test_idx)
 # Preprocessing must happen per-fold
 ```
 
 ### Temporal Splits
 
 ```r
-# Enable temporal validation
-ctx <- borg_guard(
-  data = ts_data,
-  train_idx = 1:800,
-  test_idx = 801:1000,
-  temporal_col = "date"  # Validates ordering
-)
+# Validate temporal ordering
+borg(ts_data, train_idx = 1:800, test_idx = 801:1000, temporal_col = "date")
 ```
 
 ### Grouped Data
 
 ```r
-# Ensure group isolation
-ctx <- borg_guard(
-  data = patient_data,
-  train_idx = train_idx,
-  test_idx = test_idx,
-  group_col = "patient_id"  # No patient in both sets
-)
+# Ensure no patient appears in both sets
+borg(patient_data, train_idx, test_idx, group_col = "patient_id")
 ```
 
 ## Next Steps
