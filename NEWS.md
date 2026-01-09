@@ -1,3 +1,38 @@
+# BORG 0.2.1
+
+## New features
+
+### Empirical CV comparison
+* `borg_compare_cv()`: Run random vs blocked CV on the same data to empirically demonstrate metric inflation
+  - Supports spatial, temporal, and clustered data
+  - Custom model and predict functions
+  - Multiple metrics: RMSE, MAE, R², AUC, accuracy
+  - Paired t-test for statistical significance
+  - Plot methods: boxplot, density, paired comparison
+
+### Publication-ready reporting
+* `borg_methods_text()`: Generate copy-paste methods section text for manuscripts
+  - Includes dependency diagnosis details
+  - Cites quantitative metrics (Moran's I, ICC, etc.)
+  - Optional empirical comparison results
+  - BORG package citation
+
+* `borg_certificate()`: Create structured validation certificates
+  - Machine-readable format
+  - Includes data characteristics, diagnosis, and inflation estimates
+  - Timestamps and version tracking
+
+* `borg_export()`: Export certificates to YAML or JSON format
+
+### API improvements
+* Unified `borg()` entry point with two modes:
+  - Diagnosis mode: `borg(data, coords=, time=, groups=)` returns diagnosis + CV folds
+
+  - Validation mode: `borg(data, train_idx=, test_idx=)` validates existing splits
+* Renamed parameters for consistency: `temporal_col` → `time`, `group_col` → `groups`, `spatial_cols` → `coords`
+
+---
+
 # BORG 0.2.0
 
 ## Major changes: From Validator to Enforcer

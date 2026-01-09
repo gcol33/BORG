@@ -1,23 +1,23 @@
 # BORG Evolution Plan: From Validator to Enforcer
 
-## Current Status (v0.2.0)
+## Current Status (v0.2.1)
 
-**Overall: 75/100** — Production-ready core, Phases 1-2 complete.
+**Overall: 85/100** — Production-ready with reporting features.
 
 | Dimension | Score | Notes |
 |-----------|-------|-------|
 | Core Vision (Enforcer) | 85% | Diagnosis + enforced CV generation works; random CV is blocked |
 | Validation Depth | 90% | Comprehensive leakage detection across many object types |
 | Framework Integration | 75% | Good output formats, but no hook interception yet |
-| Reporting | 30% | Plots exist, but no certificates/machine-readable output |
+| Reporting | 75% | Certificates, methods text, YAML/JSON export |
 | API Cleanliness | 90% | Unified `borg()` entry point is clean and intuitive |
-| Test Coverage | 85% | 317 passing tests, good coverage of core paths |
+| Test Coverage | 90% | 368+ passing tests |
 | Documentation | 80% | Good roxygen docs, 3 vignettes |
 
-### Package Stats (v0.2.0)
-- **R code**: 6,144 lines across 11 files
-- **Test code**: 3,851 lines
-- **Exported functions**: 19
+### Package Stats (v0.2.1)
+- **R code**: ~7,000 lines across 13 files
+- **Test code**: ~4,500 lines
+- **Exported functions**: 24
 - **R CMD check**: 0 errors, 0 warnings, 0 notes
 
 ---
@@ -180,80 +180,76 @@ Based on:
 - More sophisticated theoretical models
 - Confidence intervals on estimates
 
-### 3.2 Empirical Inflation Check ❌ NOT IMPLEMENTED
+### 3.2 Empirical Inflation Check ✅ IMPLEMENTED
 
 ```r
-borg_compare_cv(model, data, diagnosis)
+comparison <- borg_compare_cv(
+  data = spatial_data,
+  formula = response ~ x + y,
+  coords = c("x", "y"),
+  repeats = 10
+)
+print(comparison)
+plot(comparison)
 ```
 
-**This is the highest-impact missing feature.**
-
-Would run both random and blocked CV, reporting:
-- Metric difference (AUC, RMSE, etc.)
-- Variance ratio
-- Leakage severity score
+✅ Implemented features:
+- Runs both random and blocked CV on same data
+- Reports metric difference with statistical test (paired t-test)
+- Supports multiple metrics: RMSE, MAE, R², AUC, accuracy
+- Custom model functions supported
+- Plot methods: boxplot, density, paired comparison
 
 This is the "smoking gun" for reviewers — empirical proof that random CV inflates metrics.
 
-**Priority**: HIGH — critical for adoption.
-
 ---
 
-## Phase 4: Reviewer-Ready Reports ❌ NOT STARTED
+## Phase 4: Reviewer-Ready Reports ✅ IMPLEMENTED
 
 **Goal**: Generate artifacts reviewers can require.
 
-**Status**: Not implemented. Visualization exists (`plot_*` functions) but no formal reports.
+**Status**: Fully implemented with methods text, certificates, and export.
 
-### 4.1 Validation Certificate ❌
+### 4.1 Validation Certificate ✅
 
 ```r
-cert <- borg_certificate(workflow, data, diagnosis)
-export(cert, "validation_certificate.pdf")
+cert <- borg_certificate(diagnosis, data, comparison = comparison)
+print(cert)
+borg_export(cert, "validation_certificate.yaml")
 ```
 
-Would contain:
+✅ Contains:
+- BORG version and timestamp
+- Data characteristics (n, features, hash)
 - Dependency diagnosis summary
-- CV strategy used and why
-- Comparison with random CV (inflation estimate)
-- Checksums for reproducibility
+- CV strategy and parameters
+- Theoretical and empirical inflation estimates
 
-### 4.2 Structured Report Format ❌
+### 4.2 Structured Report Format ✅
 
-Machine-readable YAML/JSON for automated review:
-
-```yaml
-borg_validation:
-  version: "0.2.0"
-  diagnosis:
-    spatial_autocorrelation: true
-    range_km: 12.3
-    temporal_autocorrelation: false
-  cv_strategy:
-    type: "spatial_block"
-    block_size_km: 15.0
-    n_folds: 5
-  validation:
-    passed: true
-    inflation_avoided: "~35% AUC"
-  timestamp: "2025-01-09T14:32:00Z"
-  data_hash: "sha256:abc123..."
-```
-
-### 4.3 Inline Report for Manuscripts ❌
+Machine-readable YAML/JSON export via `borg_export()`:
 
 ```r
-borg_methods_text(cert)
+borg_export(cert, "validation.yaml")
+borg_export(cert, "validation.json")
 ```
 
-Would generate copy-paste methods section:
+### 4.3 Inline Report for Manuscripts ✅
 
-> "Model evaluation used spatial block cross-validation (n=5 folds, block size=15km)
-> following BORG v0.2.0 validation. Spatial autocorrelation was detected with an
-> estimated range of 12.3km (Moran's I = 0.43, p < 0.001). Random cross-validation
-> was not used as it would inflate AUC estimates by approximately 35%."
+```r
+cat(borg_methods_text(diagnosis, comparison = comparison))
+```
 
-### 4.4 What IS Implemented ⭐⭐⭐
+Generates copy-paste methods section:
+
+> "Spatial autocorrelation was detected in the data (Moran's I = 0.43, p < 0.001)
+> with an estimated autocorrelation range of 12.3 units. Model performance was
+> evaluated using spatial block cross-validation (k = 5 folds). Empirical comparison
+> showed that random cross-validation significantly inflated RMSE estimates by 23.5%
+> (paired t-test, p < 0.001, n = 10 repeats). Cross-validation strategy was determined
+> using the BORG package (version 0.2.1) for R."
+
+### 4.4 Visualization ⭐⭐⭐
 
 ✅ Visualization functions (555 lines in `borg_plot.R`):
 - `plot_split()`: Train/test distribution
@@ -261,6 +257,7 @@ Would generate copy-paste methods section:
 - `plot_temporal()`: Timeline with gap analysis
 - `plot_spatial()`: Spatial split with convex hulls
 - `plot_groups()`: Group-based visualization
+- `plot.borg_comparison()`: CV comparison plots (boxplot, density, paired)
 
 ---
 
@@ -351,7 +348,7 @@ Goal: "BORG validation recommended" in author guidelines.
 
 ---
 
-## Implementation Priority (Updated)
+## Implementation Priority (Updated v0.2.1)
 
 | Phase | Status | Priority | Next Action |
 |-------|--------|----------|-------------|
@@ -361,20 +358,18 @@ Goal: "BORG validation recommended" in author guidelines.
 | 2.1 borg_cv() | ✅ DONE | - | - |
 | 2.2 Framework output | ✅ DONE | - | - |
 | 3.1 Inflation bounds | ✅ DONE | - | Add confidence intervals |
-| **3.2 borg_compare_cv()** | ❌ TODO | **HIGH** | **Empirical smoking gun** |
-| **4.1 borg_certificate()** | ❌ TODO | **HIGH** | **Reviewer artifact** |
-| 4.2 YAML/JSON export | ❌ TODO | MEDIUM | Machine-readable output |
-| **4.3 borg_methods_text()** | ❌ TODO | **HIGH** | **Copy-paste for papers** |
+| 3.2 borg_compare_cv() | ✅ DONE | - | - |
+| 4.1 borg_certificate() | ✅ DONE | - | - |
+| 4.2 YAML/JSON export | ✅ DONE | - | - |
+| 4.3 borg_methods_text() | ✅ DONE | - | - |
 | 5.1 Function interception | ❌ TODO | LOW | Complex, may not be worth it |
 | 6.2 Teaching vignettes | ❌ TODO | MEDIUM | "Why Random CV Fails" |
 
 ### Recommended Next Steps
 
-1. **`borg_compare_cv()`** — Run random vs blocked CV, show metric inflation empirically
-2. **`borg_methods_text()`** — Generate methods section text for manuscripts
-3. **`borg_certificate()`** — PDF/HTML validation certificate
-
-These three features would dramatically increase adoption by making BORG useful for publication workflows.
+1. **Vignette: "Why Random CV Fails"** — Educational content with worked examples
+2. **Shiny app** — Interactive inflation demonstration
+3. **Journal outreach** — Get BORG mentioned in author guidelines
 
 ---
 
