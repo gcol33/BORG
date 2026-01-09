@@ -1,3 +1,32 @@
+# BORG 0.2.3
+
+## Native R Integration
+
+This release replaces custom functions with standard R S3 methods for a more idiomatic interface.
+
+### S3 methods for plotting
+* `plot(BorgRisk)`: Visualize risk assessment results
+* `plot(borg_result)`: Visualize CV fold splits
+* `plot(borg_comparison)`: Compare random vs blocked CV results
+
+### S3 methods for summaries
+* `summary(BorgDiagnosis)`: Generate methods section text for publications
+* `summary(BorgRisk)`: Summarize detected risks
+* `summary(borg_result)`: Generate methods text from borg() output
+* `summary(borg_comparison)`: Detailed comparison summary
+
+### Dedicated export functions
+* `borg_certificate()`: Create structured validation certificate
+* `borg_export()`: Write certificate to YAML/JSON file
+
+### Removed
+* `borg_plot()` - use `plot()` instead
+* `borg_report()` - use `summary()`, `borg_certificate()`, or `borg_export()`
+* Legacy plot functions (`plot_split`, `plot_risk`, etc.)
+* Legacy report functions (`borg_methods_text`)
+
+---
+
 # BORG 0.2.2
 
 ## New features

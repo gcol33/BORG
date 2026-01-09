@@ -1,35 +1,131 @@
 # ===========================================================================
-# BORG Visualization Functions
+# BORG Visualization Functions - S3 plot() methods
 # ===========================================================================
 
-#' Plot Train/Test Split Distribution
+#' Plot BORG Objects
 #'
-#' Visualizes the distribution of training and test indices, optionally
-#' highlighting temporal or group structure.
+#' S3 plot method for BORG risk assessment objects.
 #'
-#' @param train_idx Integer vector of training indices.
-#' @param test_idx Integer vector of test indices.
-#' @param n_total Total number of observations. If NULL, inferred from indices.
-#' @param temporal Optional numeric/Date vector for temporal ordering.
-#' @param groups Optional vector of group assignments.
-#' @param title Plot title.
+#' @param x A \code{BorgRisk} object from \code{borg_inspect()} or \code{borg()}.
+#' @param title Optional custom plot title.
+#' @param max_risks Maximum number of risks to display. Default: 10.
+#' @param ... Additional arguments (currently unused).
 #'
-#' @return A base R plot (invisibly returns NULL).
+#' @return Invisibly returns NULL. Called for plotting side effect.
+#'
+#' @details
+#' Displays a visual summary of detected risks:
+#' \itemize{
+#'   \item Hard violations shown in red
+#'   \item Soft inflation risks shown in yellow/orange
+#'   \item Green "OK" when no risks detected
+#' }
 #'
 #' @examples
-#' train_idx <- 1:70
-#' test_idx <- 71:100
-#' plot_split(train_idx, test_idx)
+#' # No risks
+#' data <- data.frame(x = 1:100, y = 101:200)
+#' result <- borg_inspect(data, train_idx = 1:70, test_idx = 71:100)
+#' plot(result)
 #'
-#' # With temporal structure
-#' dates <- seq(as.Date("2020-01-01"), by = "day", length.out = 100
-#' )
-#' plot_split(train_idx, test_idx, temporal = dates)
+#' # With overlap violation
+#' result_bad <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
+#' plot(result_bad)
 #'
 #' @export
-plot_split <- function(train_idx, test_idx, n_total = NULL,
-                       temporal = NULL, groups = NULL,
-                       title = "Train/Test Split") {
+plot.BorgRisk <- function(x, title = NULL, max_risks = 10, ...) {
+  plot_risk_internal(x, title = title, max_risks = max_risks, ...)
+}
+
+
+#' Plot BORG Result Objects
+#'
+#' S3 plot method for borg_result objects from \code{borg()}.
+#'
+#' @param x A \code{borg_result} object from \code{borg()}.
+#' @param type Character. Plot type: \code{"split"} (default), \code{"risk"},
+#'   \code{"temporal"}, or \code{"groups"}.
+#' @param fold Integer. Which fold to plot (for split visualization). Default: 1.
+#' @param time Column name or values for temporal plots.
+#' @param groups Column name or values for group plots.
+#' @param title Optional custom plot title.
+#' @param ... Additional arguments passed to internal plot functions.
+#'
+#' @return Invisibly returns NULL. Called for plotting side effect.
+#'
+#' @examples
+#' set.seed(42)
+#' data <- data.frame(
+#'   x = runif(100, 0, 100),
+#'   y = runif(100, 0, 100),
+#'   response = rnorm(100)
+#' )
+#' result <- borg(data, coords = c("x", "y"), target = "response")
+#' plot(result)  # Split visualization for first fold
+#'
+#' @export
+plot.borg_result <- function(x,
+                              type = c("split", "risk", "temporal", "groups"),
+                              fold = 1,
+                              time = NULL,
+                              groups = NULL,
+                              title = NULL,
+                              ...) {
+
+  type <- match.arg(type)
+
+  # Risk plot - show the inspection results if available
+  if (type == "risk") {
+    if (!is.null(x$risk) && inherits(x$risk, "BorgRisk")) {
+      return(plot_risk_internal(x$risk, title = title, ...))
+    } else {
+      stop("No risk assessment available in this borg_result. Use borg_inspect() to create one.")
+    }
+  }
+
+  # For other types, need fold data
+  if (is.null(x$folds) || length(x$folds) == 0) {
+    stop("No folds available in borg_result object")
+  }
+
+  if (fold > length(x$folds)) {
+    stop(sprintf("Fold %d not available (only %d folds)", fold, length(x$folds)))
+  }
+
+  train_idx <- x$folds[[fold]]$train
+  test_idx <- x$folds[[fold]]$test
+  n_total <- max(c(train_idx, test_idx))
+
+  switch(type,
+    "split" = plot_split_internal(train_idx, test_idx, n_total,
+                                   title = title %||% sprintf("Fold %d Split", fold), ...),
+    "temporal" = {
+      if (is.null(time)) stop("'time' required for temporal plot")
+      plot_temporal_internal(time, train_idx, test_idx,
+                              title = title %||% sprintf("Fold %d Temporal", fold), ...)
+    },
+    "groups" = {
+      if (is.null(groups)) stop("'groups' required for groups plot")
+      plot_groups_internal(groups, train_idx, test_idx,
+                            title = title %||% sprintf("Fold %d Groups", fold), ...)
+    }
+  )
+
+  invisible(NULL)
+}
+
+
+# Null-coalescing operator
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+
+# ===========================================================================
+# Internal plotting functions
+# ===========================================================================
+
+#' @noRd
+plot_split_internal <- function(train_idx, test_idx, n_total = NULL,
+                                temporal = NULL, groups = NULL,
+                                title = "Train/Test Split", ...) {
 
   if (is.null(n_total)) {
     n_total <- max(c(train_idx, test_idx))
@@ -138,23 +234,8 @@ plot_split <- function(train_idx, test_idx, n_total = NULL,
 }
 
 
-#' Plot Risk Assessment Summary
-#'
-#' Visualizes the risks detected by BORG validation.
-#'
-#' @param risk A BorgRisk object from borg_inspect, borg_validate, or borg.
-#' @param title Plot title.
-#' @param max_risks Maximum number of risks to display.
-#'
-#' @return A base R plot (invisibly returns NULL).
-#'
-#' @examples
-#' data <- data.frame(x = 1:100, y = 101:200)
-#' result <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
-#' plot_risk(result)
-#'
-#' @export
-plot_risk <- function(risk, title = "BORG Risk Assessment", max_risks = 10) {
+#' @noRd
+plot_risk_internal <- function(risk, title = NULL, max_risks = 10, ...) {
 
   if (!inherits(risk, "BorgRisk")) {
     stop("'risk' must be a BorgRisk object")
@@ -171,7 +252,7 @@ plot_risk <- function(risk, title = "BORG Risk Assessment", max_risks = 10) {
 
     plot.new()
     plot.window(xlim = c(0, 1), ylim = c(0, 1))
-    title(main = title)
+    title(main = title %||% "BORG Risk Assessment")
 
     text(0.5, 0.6, "OK", cex = 5, col = "#2E7D32", font = 2)  # Success
     text(0.5, 0.3, "No risks detected", cex = 1.5, col = "#2E7D32")
@@ -216,7 +297,7 @@ plot_risk <- function(risk, title = "BORG Risk Assessment", max_risks = 10) {
   plot(rep(1, n_risks), y_pos,
        xlim = c(0, 1.5), ylim = c(0.5, n_risks + 0.5),
        type = "n", xaxt = "n", yaxt = "n",
-       xlab = "", ylab = "", main = title)
+       xlab = "", ylab = "", main = title %||% "BORG Risk Assessment")
 
   # Draw bars
   rect(0, y_pos - 0.4, 1, y_pos + 0.4, col = colors, border = NA)
@@ -257,26 +338,9 @@ plot_risk <- function(risk, title = "BORG Risk Assessment", max_risks = 10) {
 }
 
 
-#' Plot Temporal Validation
-#'
-#' Visualizes temporal train/test split with gap analysis.
-#'
-#' @param temporal Numeric or Date vector of timestamps.
-#' @param train_idx Integer vector of training indices.
-#' @param test_idx Integer vector of test indices.
-#' @param title Plot title.
-#'
-#' @return A base R plot (invisibly returns NULL).
-#'
-#' @examples
-#' dates <- seq(as.Date("2020-01-01"), by = "day", length.out = 100)
-#' train_idx <- 1:70
-#' test_idx <- 71:100
-#' plot_temporal(dates, train_idx, test_idx)
-#'
-#' @export
-plot_temporal <- function(temporal, train_idx, test_idx,
-                          title = "Temporal Split") {
+#' @noRd
+plot_temporal_internal <- function(temporal, train_idx, test_idx,
+                                   title = "Temporal Split", ...) {
 
   n_total <- length(temporal)
   x_vals <- as.numeric(temporal)
@@ -349,29 +413,9 @@ plot_temporal <- function(temporal, train_idx, test_idx,
 }
 
 
-#' Plot Spatial Split
-#'
-#' Visualizes spatial train/test distribution.
-#'
-#' @param x Numeric vector of x-coordinates (e.g., longitude).
-#' @param y Numeric vector of y-coordinates (e.g., latitude).
-#' @param train_idx Integer vector of training indices.
-#' @param test_idx Integer vector of test indices.
-#' @param title Plot title.
-#'
-#' @return A base R plot (invisibly returns NULL).
-#'
-#' @examples
-#' set.seed(42)
-#' x <- runif(100, -10, 10)
-#' y <- runif(100, -10, 10)
-#' train_idx <- which(x < 0)
-#' test_idx <- which(x >= 0)
-#' plot_spatial(x, y, train_idx, test_idx)
-#'
-#' @export
-plot_spatial <- function(x, y, train_idx, test_idx,
-                         title = "Spatial Split") {
+#' @noRd
+plot_spatial_internal <- function(x, y, train_idx, test_idx,
+                                  title = "Spatial Split", ...) {
 
   n_total <- length(x)
 
@@ -424,35 +468,10 @@ plot_spatial <- function(x, y, train_idx, test_idx,
 }
 
 
-#' Plot Group-Based Split
-#'
-#' Visualizes group membership and train/test assignment, highlighting
-#' any groups that appear in both sets (group leakage).
-#'
-#' @param groups Vector of group assignments for each observation.
-#' @param train_idx Integer vector of training indices.
-#' @param test_idx Integer vector of test indices.
-#' @param title Plot title.
-#' @param max_groups Maximum number of groups to display (for readability).
-#'
-#' @return A base R plot (invisibly returns NULL).
-#'
-#' @examples
-#' # Create grouped data
-#' groups <- rep(paste0("Patient_", 1:10), each = 10)
-#' train_idx <- which(groups %in% paste0("Patient_", 1:7))
-#' test_idx <- which(groups %in% paste0("Patient_", 8:10))
-#' plot_groups(groups, train_idx, test_idx)
-#'
-#' # With group leakage
-#' train_idx_bad <- 1:70
-#' test_idx_bad <- 61:100  # Overlaps with Patient_7
-#' plot_groups(groups, train_idx_bad, test_idx_bad)
-#'
-#' @export
-plot_groups <- function(groups, train_idx, test_idx,
-                        title = "Group-Based Split",
-                        max_groups = 20) {
+#' @noRd
+plot_groups_internal <- function(groups, train_idx, test_idx,
+                                 title = "Group-Based Split",
+                                 max_groups = 20, ...) {
 
   n_total <- length(groups)
 

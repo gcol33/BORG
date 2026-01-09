@@ -1,24 +1,36 @@
 # BORG Evolution Plan: From Validator to Enforcer
 
-## Current Status (v0.2.2)
+## Current Status (v0.2.3)
 
-**Overall: 90/100** — Feature-complete CV enforcer.
+**Overall: 92/100** — Feature-complete CV enforcer with clean API.
 
 | Dimension | Score | Notes |
 |-----------|-------|-------|
 | Core Vision (Enforcer) | 90% | Full enforcement with framework wrappers |
 | Validation Depth | 90% | Comprehensive leakage detection across many object types |
 | Framework Integration | 85% | Guarded wrappers for rsample/caret, hook system |
-| Reporting | 75% | Certificates, methods text, YAML/JSON export |
-| API Cleanliness | 90% | Unified `borg()` entry point is clean and intuitive |
+| Reporting | 85% | Unified `borg_report()` for all output formats |
+| API Cleanliness | 95% | Unified entry points: `borg()`, `borg_plot()`, `borg_report()` |
 | Test Coverage | 90% | 400+ passing tests |
 | Documentation | 80% | Good roxygen docs, 3 vignettes |
 
-### Package Stats (v0.2.2)
-- **R code**: ~8,000 lines across 15 files
+### Package Stats (v0.2.3)
+- **R code**: ~9,000 lines across 15 files
 - **Test code**: ~5,000 lines
-- **Exported functions**: 30
+- **Exported functions**: 28 (with 3 unified entry points)
 - **R CMD check**: 0 errors, 0 warnings, 0 notes
+
+### Simplified API (v0.2.3)
+
+The recommended API is now just 5 core functions:
+
+1. `borg()` - Main entry point (diagnosis + CV generation + validation)
+2. `borg_compare_cv()` - Empirical comparison proving random CV is wrong
+3. `borg_report()` - Publication artifacts (text, certificate, YAML/JSON export)
+4. `borg_plot()` - Visualization (auto-detects appropriate plot type)
+5. `borg_options()` - Configuration
+
+All other functions remain exported for backward compatibility and power users.
 
 ---
 

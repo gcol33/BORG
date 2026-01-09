@@ -2,62 +2,47 @@
 % Please edit documentation in R/borg_report.R
 \name{borg_certificate}
 \alias{borg_certificate}
-\title{Generate Validation Certificate}
+\title{Create Validation Certificate}
 \usage{
-borg_certificate(
-  diagnosis,
-  data,
-  comparison = NULL,
-  cv = NULL,
-  workflow_hash = NULL
-)
+borg_certificate(diagnosis, data, comparison = NULL, cv = NULL)
 }
 \arguments{
-\item{diagnosis}{A \code{BorgDiagnosis} object from \code{borg_diagnose()}.}
+\item{diagnosis}{A \code{BorgDiagnosis} object.}
 
 \item{data}{The data frame that was analyzed.}
 
-\item{comparison}{Optional. A \code{borg_comparison} object from
-\code{borg_compare_cv()}.}
+\item{comparison}{Optional. A \code{borg_comparison} object with empirical
+inflation estimates.}
 
 \item{cv}{Optional. A \code{borg_cv} object with the CV folds used.}
-
-\item{workflow_hash}{Optional. SHA256 hash of the workflow for reproducibility.}
 }
 \value{
-A \code{borg_certificate} object (S3 class) containing structured
-validation information.
+A \code{borg_certificate} object containing:
+\itemize{
+\item \code{meta}: Package version, R version, timestamp
+\item \code{data}: Data characteristics and hash
+\item \code{diagnosis}: Dependency type, severity, recommended CV
+\item \code{cv_strategy}: CV type and fold count
+\item \code{inflation}: Theoretical and empirical estimates
+}
 }
 \description{
-Creates a structured validation certificate documenting the cross-validation
-approach and BORG analysis results.
-}
-\details{
-The certificate contains:
-\itemize{
-\item BORG version and timestamp
-\item Data characteristics (n observations, features)
-\item Dependency diagnosis results
-\item CV strategy and parameters
-\item Inflation estimates (theoretical and/or empirical)
-\item Reproducibility information (data hash)
-}
-
-Certificates can be exported to YAML/JSON for machine-readable validation
-or printed for human review.
+Generate a structured validation certificate documenting the BORG analysis
+for reproducibility and audit trails.
 }
 \examples{
-\dontrun{
-diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response")
+set.seed(42)
+data <- data.frame(
+  x = runif(100, 0, 100),
+  y = runif(100, 0, 100),
+  response = rnorm(100)
+)
+diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
+                           verbose = FALSE)
 cert <- borg_certificate(diagnosis, data)
 print(cert)
 
-# Export to YAML
-borg_export(cert, "validation_certificate.yaml")
-}
-
 }
 \seealso{
-\code{\link{borg_methods_text}} for manuscript text,
-\code{\link{borg_export}} for exporting certificates.
+\code{\link{borg_export}} for writing certificates to file.
 }

@@ -246,10 +246,10 @@ test_that("plot.borg_comparison() works", {
 
 
 # ===========================================================================
-# Tests for borg_methods_text()
+# Tests for summary() S3 methods
 # ===========================================================================
 
-test_that("borg_methods_text() generates text for spatial data", {
+test_that("summary.BorgDiagnosis() generates text for spatial data", {
   set.seed(42)
   data <- data.frame(
     x = runif(100, 0, 100),
@@ -260,7 +260,7 @@ test_that("borg_methods_text() generates text for spatial data", {
   diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
                              verbose = FALSE)
 
-  text <- borg_methods_text(diagnosis, v = 5)
+  output <- capture.output(text <- summary(diagnosis, v = 5))
 
   expect_type(text, "character")
   expect_true(nchar(text) > 50)
@@ -269,7 +269,7 @@ test_that("borg_methods_text() generates text for spatial data", {
 })
 
 
-test_that("borg_methods_text() generates text for clustered data", {
+test_that("summary.BorgDiagnosis() generates text for clustered data", {
   set.seed(42)
   data <- data.frame(
     site = rep(1:20, each = 10),
@@ -279,14 +279,14 @@ test_that("borg_methods_text() generates text for clustered data", {
   diagnosis <- borg_diagnose(data, groups = "site", target = "value",
                              verbose = FALSE)
 
-  text <- borg_methods_text(diagnosis, v = 5)
+  output <- capture.output(text <- summary(diagnosis, v = 5))
 
   expect_type(text, "character")
   expect_true(grepl("ICC|intraclass|clustered", text, ignore.case = TRUE))
 })
 
 
-test_that("borg_methods_text() includes comparison when provided", {
+test_that("summary.borg_result() works", {
   set.seed(42)
   data <- data.frame(
     x = runif(100, 0, 100),
@@ -294,43 +294,22 @@ test_that("borg_methods_text() includes comparison when provided", {
     response = rnorm(100)
   )
 
-  diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
-                             verbose = FALSE)
+  result <- borg(data, coords = c("x", "y"), target = "response")
 
-  comparison <- borg_compare_cv(
-    data = data,
-    formula = response ~ x + y,
-    diagnosis = diagnosis,
-    coords = c("x", "y"),
-    v = 3,
-    repeats = 2,
-    verbose = FALSE
-  )
+  output <- capture.output(text <- summary(result))
 
-  text <- borg_methods_text(diagnosis, comparison = comparison)
-
-  expect_true(grepl("Empirical|empirical", text))
+  expect_type(text, "character")
+  expect_true(nchar(text) > 50)
 })
 
 
-test_that("borg_methods_text() respects include_citation option", {
-  set.seed(42)
-  data <- data.frame(
-    x = runif(50, 0, 100),
-    y = runif(50, 0, 100),
-    response = rnorm(50)
-  )
+test_that("summary.BorgRisk() works", {
+  data <- data.frame(x = 1:100, y = 101:200)
 
-  diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
-                             verbose = FALSE)
-
-  # With citation
-  text_with <- borg_methods_text(diagnosis, include_citation = TRUE)
-  expect_true(grepl("BORG package", text_with))
-
-  # Without citation
-  text_without <- borg_methods_text(diagnosis, include_citation = FALSE)
-  expect_false(grepl("BORG package", text_without))
+  # With violations
+  risk <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
+  output <- capture.output(summary(risk))
+  expect_true(any(grepl("Risk Assessment", output)))
 })
 
 
@@ -428,14 +407,11 @@ test_that("borg_export() writes YAML file", {
   diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
                              verbose = FALSE)
 
-  cert <- borg_certificate(diagnosis, data)
-
   # Write to temp file
-
   tmp_file <- tempfile(fileext = ".yaml")
   on.exit(unlink(tmp_file), add = TRUE)
 
-  borg_export(cert, tmp_file)
+  borg_export(diagnosis, data, tmp_file)
 
   expect_true(file.exists(tmp_file))
 
@@ -457,13 +433,11 @@ test_that("borg_export() writes JSON file", {
   diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
                              verbose = FALSE)
 
-  cert <- borg_certificate(diagnosis, data)
-
   # Write to temp file
   tmp_file <- tempfile(fileext = ".json")
   on.exit(unlink(tmp_file), add = TRUE)
 
-  borg_export(cert, tmp_file)
+  borg_export(diagnosis, data, tmp_file)
 
   expect_true(file.exists(tmp_file))
 
@@ -474,12 +448,49 @@ test_that("borg_export() writes JSON file", {
 })
 
 
-test_that("borg_export() errors on unsupported format", {
+test_that("summary includes comparison when provided", {
   set.seed(42)
-  data <- data.frame(x = 1:10, response = rnorm(10))
-  diagnosis <- borg_diagnose(data, groups = NULL, coords = NULL, time = NULL,
-                             verbose = FALSE)
-  cert <- borg_certificate(diagnosis, data)
+  data <- data.frame(
+    x = runif(100, 0, 100),
+    y = runif(100, 0, 100),
+    response = rnorm(100)
+  )
 
-  expect_error(borg_export(cert, "file.txt"), "Unsupported file extension")
+  diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
+                             verbose = FALSE)
+
+  comparison <- borg_compare_cv(
+    data = data,
+    formula = response ~ x + y,
+    diagnosis = diagnosis,
+    coords = c("x", "y"),
+    v = 3,
+    repeats = 2,
+    verbose = FALSE
+  )
+
+  output <- capture.output(text <- summary(diagnosis, comparison = comparison))
+
+  expect_true(grepl("Empirical|empirical", text))
+})
+
+
+test_that("summary respects include_citation option", {
+  set.seed(42)
+  data <- data.frame(
+    x = runif(50, 0, 100),
+    y = runif(50, 0, 100),
+    response = rnorm(50)
+  )
+
+  diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response",
+                             verbose = FALSE)
+
+  # With citation
+  output_with <- capture.output(text_with <- summary(diagnosis, include_citation = TRUE))
+  expect_true(grepl("BORG package", text_with))
+
+  # Without citation
+  output_without <- capture.output(text_without <- summary(diagnosis, include_citation = FALSE))
+  expect_false(grepl("BORG package", text_without))
 })

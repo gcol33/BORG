@@ -2,27 +2,37 @@
 % Please edit documentation in R/borg_report.R
 \name{borg_export}
 \alias{borg_export}
-\title{Export Certificate to File}
+\title{Export Validation Certificate}
 \usage{
-borg_export(cert, file)
+borg_export(diagnosis, data, file, comparison = NULL, cv = NULL)
 }
 \arguments{
-\item{cert}{A \code{borg_certificate} object.}
+\item{diagnosis}{A \code{BorgDiagnosis} object.}
+
+\item{data}{The data frame that was analyzed.}
 
 \item{file}{Character. Output file path. Extension determines format
-(\code{.yaml}, \code{.yml}, or \code{.json}).}
+(.yaml/.yml for YAML, .json for JSON).}
+
+\item{comparison}{Optional. A \code{borg_comparison} object.}
+
+\item{cv}{Optional. A \code{borg_cv} object.}
 }
 \value{
-Invisible NULL. Called for side effect of writing file.
+Invisibly returns the certificate object.
 }
 \description{
-Exports a BORG certificate to YAML or JSON format.
+Write a BORG validation certificate to a YAML or JSON file for
+machine-readable documentation.
 }
 \examples{
 \dontrun{
-cert <- borg_certificate(diagnosis, data)
-borg_export(cert, "validation.yaml")
-borg_export(cert, "validation.json")
+diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response")
+borg_export(diagnosis, data, "validation.yaml")
+borg_export(diagnosis, data, "validation.json")
 }
 
+}
+\seealso{
+\code{\link{borg_certificate}} for creating certificates.
 }
