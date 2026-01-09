@@ -1,3 +1,31 @@
+# BORG 0.2.2
+
+## New features
+
+### Framework wrappers
+BORG-guarded versions of common CV functions that block random CV when dependencies detected:
+
+* `borg_vfold_cv()`: Wraps `rsample::vfold_cv()` with dependency checking
+  - Blocks random CV when spatial/temporal/clustered dependencies detected
+  - `auto_block = TRUE` automatically switches to appropriate blocked CV
+  - `allow_override = TRUE` allows proceeding with warning
+
+* `borg_group_vfold_cv()`: Wraps `rsample::group_vfold_cv()` with additional checks
+  - Warns about dependencies not handled by grouping alone
+
+* `borg_initial_split()`: Wraps `rsample::initial_split()`
+  - Enforces chronological splits when `time` specified
+  - Warns about spatial dependencies
+
+* `borg_trainControl()`: Wraps `caret::trainControl()`
+  - Blocks random resampling methods with detected dependencies
+
+### Hook system (experimental)
+* `borg_register_hooks()`: Register validation hooks on framework functions
+* `borg_unregister_hooks()`: Remove registered hooks
+
+---
+
 # BORG 0.2.1
 
 ## New features
