@@ -86,6 +86,9 @@ reference:
       - audit_predictions
       - audit_importance
       - cv_leakage_report
+      - borg_cv
+      - borg_diagnose
+      - BorgDiagnosis
 
   - title: "Configuration"
     desc: "Options and settings"

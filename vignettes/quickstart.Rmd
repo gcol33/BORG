@@ -98,8 +98,8 @@ compute metrics.
 Pass any of these to `borg()`:
 
 ```r
-# Data frame - checks split validity
-borg(data, train_idx, test_idx)
+# Data frame - checks split validity and target leakage
+borg(data, train_idx, test_idx, target_col = "y")
 
 # Preprocessing object - checks for leakage
 borg(my_recipe, train_idx, test_idx, data = data)
@@ -128,23 +128,55 @@ borg(data, train_idx, test_idx, group_col = "patient_id")
 borg(data, train_idx, test_idx, temporal_col = "date")
 ```
 
-These checks run immediately - no object inspection needed.
+## Target Leakage Detection
+
+Check if any feature is suspiciously correlated with the target:
+
+```r
+# Detect features derived from outcome
+borg(data, train_idx, test_idx, target_col = "outcome")
+# Error: BORG HARD VIOLATION: Feature 'days_since_event' has correlation 0.998
+#   with target 'outcome'. Likely derived from outcome.
+```
+
+Features with |correlation| > 0.99 are flagged as hard violations (likely
+derived from the target). Features with correlation 0.95-0.99 produce warnings
+(may be legitimate strong predictors, but worth checking).
+
+## Spatial Validation
+
+For spatial data, check that train and test regions are properly separated:
+
+```r
+# Check spatial separation
+borg(geo_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"))
+# Warning: 85% of test points fall within the training region convex hull.
+#   Consider spatial blocking.
+```
+
+BORG checks two things:
+1. Whether test points are very close to training points (< 1% of spatial spread)
+2. Whether test points fall inside the training region's convex hull
 
 ## Risk Classification
 
 **Hard Violations** - Evaluation is invalid. Blocked.
 
 - Index overlap between train and test
+- Duplicate rows between train and test
 - Preprocessing fitted on full data
-- Target leakage (feature derived from outcome)
-- Temporal look-ahead
+- PCA computed on full data
+- CV folds containing test indices
+- Model trained on wrong data scope
+- Target leakage (|correlation| > 0.99 with target)
 - Group membership in both splits
+- Temporal ordering violated
 
 **Soft Inflation** - Results biased but bounded. Warning.
 
-- Spatial block size below autocorrelation range
-- Post-hoc subgroup discovery
-- Proxy leakage (high correlation with target)
+- Proxy leakage (correlation 0.95-0.99 with target)
+- Spatial proximity (test points close to train)
+- Spatial overlap (test inside train convex hull)
 
 ## Other Functions
 

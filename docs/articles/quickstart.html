@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -169,8 +169,8 @@ create them, <em>before</em> you compute metrics.</p>
 </h2>
 <p>Pass any of these to <code><a href="../reference/borg.html">borg()</a></code>:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Data frame - checks split validity</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Data frame - checks split validity and target leakage</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Preprocessing object - checks for leakage</span></span>
 <span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_recipe</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
@@ -196,7 +196,34 @@ create them, <em>before</em> you compute metrics.</p>
 <span></span>
 <span><span class="co"># Temporal leakage (test data predates training)</span></span>
 <span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, temporal_col <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span></code></pre></div>
-<p>These checks run immediately - no object inspection needed.</p>
+</div>
+<div class="section level2">
+<h2 id="target-leakage-detection">Target Leakage Detection<a class="anchor" aria-label="anchor" href="#target-leakage-detection"></a>
+</h2>
+<p>Check if any feature is suspiciously correlated with the target:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Detect features derived from outcome</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
+<span><span class="co"># Error: BORG HARD VIOLATION: Feature 'days_since_event' has correlation 0.998</span></span>
+<span><span class="co">#   with target 'outcome'. Likely derived from outcome.</span></span></code></pre></div>
+<p>Features with |correlation| &gt; 0.99 are flagged as hard violations
+(likely derived from the target). Features with correlation 0.95-0.99
+produce warnings (may be legitimate strong predictors, but worth
+checking).</p>
+</div>
+<div class="section level2">
+<h2 id="spatial-validation">Spatial Validation<a class="anchor" aria-label="anchor" href="#spatial-validation"></a>
+</h2>
+<p>For spatial data, check that train and test regions are properly
+separated:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check spatial separation</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">geo_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, spatial_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"longitude"</span>, <span class="st">"latitude"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Warning: 85% of test points fall within the training region convex hull.</span></span>
+<span><span class="co">#   Consider spatial blocking.</span></span></code></pre></div>
+<p>BORG checks two things: 1. Whether test points are very close to
+training points (&lt; 1% of spatial spread) 2. Whether test points fall
+inside the training region’s convex hull</p>
 </div>
 <div class="section level2">
 <h2 id="risk-classification">Risk Classification<a class="anchor" aria-label="anchor" href="#risk-classification"></a>
@@ -205,17 +232,21 @@ create them, <em>before</em> you compute metrics.</p>
 Blocked.</p>
 <ul>
 <li>Index overlap between train and test</li>
+<li>Duplicate rows between train and test</li>
 <li>Preprocessing fitted on full data</li>
-<li>Target leakage (feature derived from outcome)</li>
-<li>Temporal look-ahead</li>
+<li>PCA computed on full data</li>
+<li>CV folds containing test indices</li>
+<li>Model trained on wrong data scope</li>
+<li>Target leakage (|correlation| &gt; 0.99 with target)</li>
 <li>Group membership in both splits</li>
+<li>Temporal ordering violated</li>
 </ul>
 <p><strong>Soft Inflation</strong> - Results biased but bounded.
 Warning.</p>
 <ul>
-<li>Spatial block size below autocorrelation range</li>
-<li>Post-hoc subgroup discovery</li>
-<li>Proxy leakage (high correlation with target)</li>
+<li>Proxy leakage (correlation 0.95-0.99 with target)</li>
+<li>Spatial proximity (test points close to train)</li>
+<li>Spatial overlap (test inside train convex hull)</li>
 </ul>
 </div>
 <div class="section level2">

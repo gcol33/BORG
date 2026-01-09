@@ -6,6 +6,7 @@
 <url><loc>https://gillescolling.com/BORG/articles/risk-taxonomy.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/authors.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/ENFORCEMENT_SURFACE.html</loc></url>
+<url><loc>https://gillescolling.com/BORG/EVOLUTION.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/index.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/LICENSE-text.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/LICENSE.html</loc></url>
@@ -14,8 +15,11 @@
 <url><loc>https://gillescolling.com/BORG/reference/audit_importance.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/audit_predictions.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/BORG-package.html</loc></url>
+<url><loc>https://gillescolling.com/BORG/reference/BorgDiagnosis.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/BorgRisk.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/borg_auto_check.html</loc></url>
+<url><loc>https://gillescolling.com/BORG/reference/borg_cv.html</loc></url>
+<url><loc>https://gillescolling.com/BORG/reference/borg_diagnose.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/borg_guard.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/borg_inspect.html</loc></url>
 <url><loc>https://gillescolling.com/BORG/reference/borg_options.html</loc></url>

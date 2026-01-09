@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -114,7 +114,8 @@ test sets.</p>
 </h3>
 <p><strong>What</strong>: Test set contains rows identical to training
 rows.</p>
-<p><strong>Detection</strong>: Row hashing and comparison.</p>
+<p><strong>Detection</strong>: Row hashing and comparison (C++ backend
+for numeric data).</p>
 <p><strong>Why it matters</strong>: Model may have memorized these exact
 patterns.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
@@ -126,16 +127,22 @@ patterns.</p>
 </h3>
 <p><strong>What</strong>: Normalization, imputation, or PCA fitted on
 full data before splitting.</p>
-<p><strong>Detection</strong>: Compare preprocessing parameters to
-train-only statistics.</p>
-<p><strong>Observable signals</strong>:</p>
+<p><strong>Detection</strong>: Recompute statistics on train-only data
+and compare to stored parameters. If they differ, preprocessing used
+test data.</p>
+<p><strong>Supported objects</strong>:</p>
 <ul>
 <li>
-<code>preProcess$mean</code> includes test statistics</li>
+<code>caret::preProcess</code> - checks <code>$mean</code> and
+<code>$std</code>
+</li>
 <li>
-<code>recipe$template</code> has more rows than training set</li>
+<code>recipes::recipe</code> - checks step parameters after
+<code>prep()</code>
+</li>
 <li>
-<code>prcomp$center</code> computed on full data</li>
+<code>prcomp</code> - checks <code>$center</code>,
+<code>$scale</code>, and rotation matrix</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check a preprocessing object</span></span>
@@ -144,90 +151,109 @@ train-only statistics.</p>
 <div class="section level3">
 <h3 id="target-leakage-direct">4. Target Leakage (Direct)<a class="anchor" aria-label="anchor" href="#target-leakage-direct"></a>
 </h3>
-<p><strong>What</strong>: Feature has correlation &gt; 0.99 with
+<p><strong>What</strong>: Feature has |correlation| &gt; 0.99 with
 target.</p>
-<p><strong>Detection</strong>: Correlation matrix inspection.</p>
+<p><strong>Detection</strong>: Compute correlation of each numeric
+feature with target column on training data.</p>
 <p><strong>Why it matters</strong>: Feature is likely derived from the
 outcome (e.g., “days_since_diagnosis” to predict “has_disease”).</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
+<span><span class="co"># Error: Feature 'days_since_event' has correlation 0.998 with target.</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="temporal-look-ahead">5. Temporal Look-Ahead<a class="anchor" aria-label="anchor" href="#temporal-look-ahead"></a>
+<h3 id="temporal-ordering">5. Temporal Ordering<a class="anchor" aria-label="anchor" href="#temporal-ordering"></a>
 </h3>
-<p><strong>What</strong>: Features at time t contain information from
-time t+k.</p>
-<p><strong>Detection</strong>: Compare feature timestamps to prediction
-timestamps.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Validate temporal ordering</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ts_data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span></code></pre></div>
+<p><strong>What</strong>: Test observations predate training
+observations.</p>
+<p><strong>Detection</strong>: Compare max training timestamp to min
+test timestamp.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ts_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, temporal_col <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span>
+<span><span class="co"># Error: BORG HARD VIOLATION: Temporal ordering violated. 50 test observations</span></span>
+<span><span class="co">#   predate training data.</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="group-overlap">6. Group Overlap<a class="anchor" aria-label="anchor" href="#group-overlap"></a>
 </h3>
 <p><strong>What</strong>: Same group (patient, site, etc.) appears in
 both train and test.</p>
-<p><strong>Detection</strong>: Group column value comparison.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Validate group isolation</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">patient_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, group_col <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
-<span><span class="co"># Errors if any patient_id in both sets</span></span></code></pre></div>
+<p><strong>Detection</strong>: Set intersection of group values.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">patient_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, group_col <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
+<span><span class="co"># Error: BORG HARD VIOLATION: Groups appear in both train and test (3 overlapping)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="global-feature-engineering">7. Global Feature Engineering<a class="anchor" aria-label="anchor" href="#global-feature-engineering"></a>
+<h3 id="cv-fold-contamination">7. CV Fold Contamination<a class="anchor" aria-label="anchor" href="#cv-fold-contamination"></a>
 </h3>
-<p><strong>What</strong>: Target encoding, embeddings, or derived
-features computed on full data.</p>
-<p><strong>Detection</strong>: Trace encoding objects to their training
-data.</p>
+<p><strong>What</strong>: Cross-validation folds contain test
+indices.</p>
+<p><strong>Detection</strong>: Check if any fold’s training indices
+intersect with held-out test set.</p>
+<p><strong>Supported objects</strong>:</p>
+<ul>
+<li>
+<code>caret::trainControl</code> - checks <code>$index</code> and
+<code>$indexOut</code>
+</li>
+<li>
+<code>rsample::vfold_cv</code> and other <code>rset</code>
+objects</li>
+<li>
+<code>rsample::rsplit</code> objects</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="model-scope">8. Model Scope<a class="anchor" aria-label="anchor" href="#model-scope"></a>
+</h3>
+<p><strong>What</strong>: Model was trained on more rows than the
+training set.</p>
+<p><strong>Detection</strong>: Compare <code>nrow(trainingData)</code>
+or <code>length(fitted.values)</code> to
+<code>length(train_idx)</code>.</p>
+<p><strong>Supported objects</strong>: <code>lm</code>,
+<code>glm</code>, <code>ranger</code>, <code>caret::train</code>,
+parsnip models, workflows.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="soft-inflation">Soft Inflation<a class="anchor" aria-label="anchor" href="#soft-inflation"></a>
+<h2 id="soft-warnings">Soft Warnings<a class="anchor" aria-label="anchor" href="#soft-warnings"></a>
 </h2>
-<p>These bias results but model ranking may be preserved. BORG
-warns.</p>
+<p>These bias results but model ranking may be preserved. BORG warns but
+continues.</p>
 <div class="section level3">
-<h3 id="spatial-autocorrelation">1. Spatial Autocorrelation<a class="anchor" aria-label="anchor" href="#spatial-autocorrelation"></a>
-</h3>
-<p><strong>What</strong>: Spatial block size smaller than
-autocorrelation range.</p>
-<p><strong>Detection</strong>: Compare block size parameter to variogram
-estimates.</p>
-<p><strong>Impact</strong>: Nearby test locations leak information from
-training.</p>
-</div>
-<div class="section level3">
-<h3 id="insufficient-embargo">2. Insufficient Embargo<a class="anchor" aria-label="anchor" href="#insufficient-embargo"></a>
-</h3>
-<p><strong>What</strong>: Temporal purge/embargo period shorter than
-autocorrelation decay.</p>
-<p><strong>Detection</strong>: Compare embargo to measured serial
-correlation.</p>
-</div>
-<div class="section level3">
-<h3 id="target-leakage-proxy">3. Target Leakage (Proxy)<a class="anchor" aria-label="anchor" href="#target-leakage-proxy"></a>
+<h3 id="target-leakage-proxy">1. Target Leakage (Proxy)<a class="anchor" aria-label="anchor" href="#target-leakage-proxy"></a>
 </h3>
 <p><strong>What</strong>: Feature has correlation 0.95-0.99 with
 target.</p>
-<p><strong>Detection</strong>: Correlation screening with domain
-flagging.</p>
+<p><strong>Detection</strong>: Same as direct leakage, different
+threshold.</p>
 <p><strong>Why warning not error</strong>: May be legitimate strong
 predictor, requires domain review.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
+<span><span class="co"># Warning: Feature 'x2' has correlation 0.96 with target. May be a proxy.</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="post-hoc-subgroup-analysis">4. Post-hoc Subgroup Analysis<a class="anchor" aria-label="anchor" href="#post-hoc-subgroup-analysis"></a>
+<h3 id="spatial-proximity">2. Spatial Proximity<a class="anchor" aria-label="anchor" href="#spatial-proximity"></a>
 </h3>
-<p><strong>What</strong>: Subgroups discovered or defined after seeing
-test results.</p>
-<p><strong>Detection</strong>: Check if subgroup definitions predate
-evaluation.</p>
+<p><strong>What</strong>: Test points are very close to training
+points.</p>
+<p><strong>Detection</strong>: Compute minimum distance from each test
+point to nearest training point. Flag if &lt; 1% of spatial spread.</p>
+<p><strong>Impact</strong>: Spatial autocorrelation may inflate apparent
+performance.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">geo_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, spatial_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="external-validation-overlap">5. External Validation Overlap<a class="anchor" aria-label="anchor" href="#external-validation-overlap"></a>
+<h3 id="spatial-overlap">3. Spatial Overlap<a class="anchor" aria-label="anchor" href="#spatial-overlap"></a>
 </h3>
-<p><strong>What</strong>: “External” dataset shares
-time/geography/institution with training.</p>
-<p><strong>Detection</strong>: Metadata and distribution comparison.</p>
+<p><strong>What</strong>: Test region falls inside training region.</p>
+<p><strong>Detection</strong>: Compute convex hull of training points,
+count how many test points fall inside.</p>
+<p><strong>Threshold</strong>: Warning if &gt; 50% of test points inside
+training hull.</p>
 </div>
 </div>
 <div class="section level2">
@@ -238,80 +264,57 @@ time/geography/institution with training.</p>
 <th>Risk Type</th>
 <th>Severity</th>
 <th>Detection Method</th>
-<th>Action</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td><code>index_overlap</code></td>
 <td>hard</td>
 <td>Index intersection</td>
-<td>Block</td>
 </tr>
 <tr class="even">
 <td><code>duplicate_rows</code></td>
 <td>hard</td>
 <td>Row hashing</td>
-<td>Block</td>
 </tr>
 <tr class="odd">
 <td><code>preprocessing_leak</code></td>
 <td>hard</td>
 <td>Parameter comparison</td>
-<td>Block</td>
 </tr>
 <tr class="even">
 <td><code>target_leakage_direct</code></td>
 <td>hard</td>
 <td>Correlation &gt; 0.99</td>
-<td>Block</td>
 </tr>
 <tr class="odd">
-<td><code>temporal_lookahead</code></td>
-<td>hard</td>
-<td>Timestamp comparison</td>
-<td>Block</td>
-</tr>
-<tr class="even">
 <td><code>group_overlap</code></td>
 <td>hard</td>
 <td>Group intersection</td>
-<td>Block</td>
+</tr>
+<tr class="even">
+<td><code>cv_leak</code></td>
+<td>hard</td>
+<td>Fold index check</td>
 </tr>
 <tr class="odd">
-<td><code>encoding_leak</code></td>
+<td><code>model_scope</code></td>
 <td>hard</td>
-<td>Training data trace</td>
-<td>Block</td>
+<td>Row count comparison</td>
 </tr>
 <tr class="even">
 <td><code>target_leakage_proxy</code></td>
 <td>soft</td>
 <td>Correlation 0.95-0.99</td>
-<td>Warn</td>
 </tr>
 <tr class="odd">
-<td><code>spatial_autocorrelation</code></td>
+<td><code>spatial_proximity</code></td>
 <td>soft</td>
-<td>Block vs variogram</td>
-<td>Warn</td>
+<td>Distance check</td>
 </tr>
 <tr class="even">
-<td><code>insufficient_embargo</code></td>
+<td><code>spatial_overlap</code></td>
 <td>soft</td>
-<td>Embargo vs ACF</td>
-<td>Warn</td>
-</tr>
-<tr class="odd">
-<td><code>subgroup_posthoc</code></td>
-<td>soft</td>
-<td>Timestamp check</td>
-<td>Warn</td>
-</tr>
-<tr class="even">
-<td><code>external_overlap</code></td>
-<td>soft</td>
-<td>Distribution comparison</td>
-<td>Warn</td>
+<td>Convex hull test</td>
 </tr>
 </tbody>
 </table>
@@ -319,8 +322,8 @@ time/geography/institution with training.</p>
 <div class="section level2">
 <h2 id="accessing-risk-details">Accessing Risk Details<a class="anchor" aria-label="anchor" href="#accessing-risk-details"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Summary</span></span>
 <span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span></span>

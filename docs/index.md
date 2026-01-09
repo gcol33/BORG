@@ -67,14 +67,23 @@ BORG fails closed. No metrics get computed.
 # Validate a train/test split
 borg(data, train_idx = 1:800, test_idx = 801:1000)
 
+# Check for target leakage
+borg(data, train_idx, test_idx, target_col = "outcome")
+
 # Check a preprocessing object
 borg(my_recipe, train_idx, test_idx, data = data)
 
 # Check a fitted model
 borg(my_model, train_idx, test_idx, data = data)
 
-# Check a CV object
-borg(my_folds, train_idx, test_idx)
+# Validate grouped data (e.g., patients)
+borg(data, train_idx, test_idx, group_col = "patient_id")
+
+# Validate temporal split
+borg(data, train_idx, test_idx, temporal_col = "date")
+
+# Validate spatial separation
+borg(geo_data, train_idx, test_idx, spatial_cols = c("lon", "lat"))
 ```
 
 ## Functions
@@ -86,21 +95,25 @@ borg(my_folds, train_idx, test_idx)
 | [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md) | Validate complete workflow |
 | [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md) | Attempt automatic repair |
 
-## Risk Classification
+## What BORG Detects
 
-**Hard Violation**: Evaluation is invalid. Blocked.
+**Hard Violations** (blocks evaluation):
 
 - Train-test index overlap
-- Preprocessing fitted on full data
-- Target leakage (feature derived from outcome)
-- Temporal look-ahead
+- Duplicate rows between train and test
+- Preprocessing fitted on full data (preProcess, recipe, prcomp)
+- PCA loadings computed on full data
+- CV folds containing test indices
+- Model trained on wrong data scope
+- Target leakage (\|correlation\| \> 0.99 with target)
 - Group membership in both splits
+- Temporal ordering violated (test predates training)
 
-**Soft Inflation**: Results biased but bounded. Constrained.
+**Soft Warnings** (flags but continues):
 
-- Spatial block size below autocorrelation range
-- Embargo period below serial dependence
-- Post-hoc subgroup discovery
+- Proxy leakage (correlation 0.95-0.99 with target)
+- Spatial proximity (test points close to training)
+- Spatial overlap (test inside training convex hull)
 
 ## Design Principles
 

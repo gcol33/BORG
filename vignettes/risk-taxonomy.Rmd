@@ -40,7 +40,7 @@ borg(data, train_idx, test_idx)
 
 **What**: Test set contains rows identical to training rows.
 
-**Detection**: Row hashing and comparison.
+**Detection**: Row hashing and comparison (C++ backend for numeric data).
 
 **Why it matters**: Model may have memorized these exact patterns.
 
@@ -53,13 +53,14 @@ result <- borg(data, train_idx, test_idx)
 
 **What**: Normalization, imputation, or PCA fitted on full data before splitting.
 
-**Detection**: Compare preprocessing parameters to train-only statistics.
+**Detection**: Recompute statistics on train-only data and compare to stored
+parameters. If they differ, preprocessing used test data.
 
-**Observable signals**:
+**Supported objects**:
 
-- `preProcess$mean` includes test statistics
-- `recipe$template` has more rows than training set
-- `prcomp$center` computed on full data
+- `caret::preProcess` - checks `$mean` and `$std`
+- `recipes::recipe` - checks step parameters after `prep()`
+- `prcomp` - checks `$center`, `$scale`, and rotation matrix
 
 ```r
 # Check a preprocessing object
@@ -68,102 +69,124 @@ borg(my_recipe, train_idx, test_idx, data = data)
 
 ### 4. Target Leakage (Direct)
 
-**What**: Feature has correlation > 0.99 with target.
+**What**: Feature has |correlation| > 0.99 with target.
 
-**Detection**: Correlation matrix inspection.
+**Detection**: Compute correlation of each numeric feature with target column
+on training data.
 
 **Why it matters**: Feature is likely derived from the outcome (e.g.,
 "days_since_diagnosis" to predict "has_disease").
 
-### 5. Temporal Look-Ahead
+```r
+borg(data, train_idx, test_idx, target_col = "outcome")
+# Error: Feature 'days_since_event' has correlation 0.998 with target.
+```
 
-**What**: Features at time t contain information from time t+k.
+### 5. Temporal Ordering
 
-**Detection**: Compare feature timestamps to prediction timestamps.
+**What**: Test observations predate training observations.
+
+**Detection**: Compare max training timestamp to min test timestamp.
 
 ```r
-# Validate temporal ordering
-borg(ts_data, train_idx = 1:800, test_idx = 801:1000)
+borg(ts_data, train_idx, test_idx, temporal_col = "date")
+# Error: BORG HARD VIOLATION: Temporal ordering violated. 50 test observations
+#   predate training data.
 ```
 
 ### 6. Group Overlap
 
 **What**: Same group (patient, site, etc.) appears in both train and test.
 
-**Detection**: Group column value comparison.
+**Detection**: Set intersection of group values.
 
 ```r
-# Validate group isolation
 borg(patient_data, train_idx, test_idx, group_col = "patient_id")
-# Errors if any patient_id in both sets
+# Error: BORG HARD VIOLATION: Groups appear in both train and test (3 overlapping)
 ```
 
-### 7. Global Feature Engineering
+### 7. CV Fold Contamination
 
-**What**: Target encoding, embeddings, or derived features computed on full data.
+**What**: Cross-validation folds contain test indices.
 
-**Detection**: Trace encoding objects to their training data.
+**Detection**: Check if any fold's training indices intersect with held-out
+test set.
 
-## Soft Inflation
+**Supported objects**:
 
-These bias results but model ranking may be preserved. BORG warns.
+- `caret::trainControl` - checks `$index` and `$indexOut`
+- `rsample::vfold_cv` and other `rset` objects
+- `rsample::rsplit` objects
 
-### 1. Spatial Autocorrelation
+### 8. Model Scope
 
-**What**: Spatial block size smaller than autocorrelation range.
+**What**: Model was trained on more rows than the training set.
 
-**Detection**: Compare block size parameter to variogram estimates.
+**Detection**: Compare `nrow(trainingData)` or `length(fitted.values)` to
+`length(train_idx)`.
 
-**Impact**: Nearby test locations leak information from training.
+**Supported objects**: `lm`, `glm`, `ranger`, `caret::train`, parsnip models,
+workflows.
 
-### 2. Insufficient Embargo
+## Soft Warnings
 
-**What**: Temporal purge/embargo period shorter than autocorrelation decay.
+These bias results but model ranking may be preserved. BORG warns but continues.
 
-**Detection**: Compare embargo to measured serial correlation.
-
-### 3. Target Leakage (Proxy)
+### 1. Target Leakage (Proxy)
 
 **What**: Feature has correlation 0.95-0.99 with target.
 
-**Detection**: Correlation screening with domain flagging.
+**Detection**: Same as direct leakage, different threshold.
 
 **Why warning not error**: May be legitimate strong predictor, requires
 domain review.
 
-### 4. Post-hoc Subgroup Analysis
+```r
+result <- borg(data, train_idx, test_idx, target_col = "y")
+# Warning: Feature 'x2' has correlation 0.96 with target. May be a proxy.
+```
 
-**What**: Subgroups discovered or defined after seeing test results.
+### 2. Spatial Proximity
 
-**Detection**: Check if subgroup definitions predate evaluation.
+**What**: Test points are very close to training points.
 
-### 5. External Validation Overlap
+**Detection**: Compute minimum distance from each test point to nearest
+training point. Flag if < 1% of spatial spread.
 
-**What**: "External" dataset shares time/geography/institution with training.
+**Impact**: Spatial autocorrelation may inflate apparent performance.
 
-**Detection**: Metadata and distribution comparison.
+```r
+borg(geo_data, train_idx, test_idx, spatial_cols = c("lon", "lat"))
+```
+
+### 3. Spatial Overlap
+
+**What**: Test region falls inside training region.
+
+**Detection**: Compute convex hull of training points, count how many test
+points fall inside.
+
+**Threshold**: Warning if > 50% of test points inside training hull.
 
 ## Risk Type Reference
 
-| Risk Type | Severity | Detection Method | Action |
-|-----------|----------|------------------|--------|
-| `index_overlap` | hard | Index intersection | Block |
-| `duplicate_rows` | hard | Row hashing | Block |
-| `preprocessing_leak` | hard | Parameter comparison | Block |
-| `target_leakage_direct` | hard | Correlation > 0.99 | Block |
-| `temporal_lookahead` | hard | Timestamp comparison | Block |
-| `group_overlap` | hard | Group intersection | Block |
-| `encoding_leak` | hard | Training data trace | Block |
-| `target_leakage_proxy` | soft | Correlation 0.95-0.99 | Warn |
-| `spatial_autocorrelation` | soft | Block vs variogram | Warn |
-| `insufficient_embargo` | soft | Embargo vs ACF | Warn |
-| `subgroup_posthoc` | soft | Timestamp check | Warn |
-| `external_overlap` | soft | Distribution comparison | Warn |
+| Risk Type | Severity | Detection Method |
+|-----------|----------|------------------|
+| `index_overlap` | hard | Index intersection |
+| `duplicate_rows` | hard | Row hashing |
+| `preprocessing_leak` | hard | Parameter comparison |
+| `target_leakage_direct` | hard | Correlation > 0.99 |
+| `group_overlap` | hard | Group intersection |
+| `cv_leak` | hard | Fold index check |
+| `model_scope` | hard | Row count comparison |
+| `target_leakage_proxy` | soft | Correlation 0.95-0.99 |
+| `spatial_proximity` | soft | Distance check |
+| `spatial_overlap` | soft | Convex hull test |
 
 ## Accessing Risk Details
 
 ```r
-result <- borg(object, train_idx, test_idx, data = data)
+result <- borg(data, train_idx, test_idx, target_col = "y")
 
 # Summary
 result@is_valid

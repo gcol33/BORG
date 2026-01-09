@@ -1,6 +1,49 @@
 # Changelog
 
-## BORG 0.2.0 (development)
+## BORG 0.2.0
+
+### Major changes: From Validator to Enforcer
+
+BORG now detects data dependency structure and enforces appropriate
+cross-validation strategies. Random CV is blocked when dependencies are
+detected.
+
+#### Dependency diagnosis
+
+- [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md):
+  Automatically detects data dependency structure
+  - **Spatial autocorrelation**: Moran’s I test, variogram-based range
+    estimation
+  - **Temporal autocorrelation**: ACF/Ljung-Box test, decorrelation lag
+    detection
+  - **Clustered structure**: ICC computation, design effect estimation
+  - Returns severity assessment and recommended CV strategy
+  - Estimates metric inflation from using random CV
+- `BorgDiagnosis` S4 class: Structured diagnosis results with slots for:
+  - `dependency_type`: “none”, “spatial”, “temporal”, “clustered”,
+    “mixed”
+  - `severity`: “none”, “moderate”, “severe”
+  - `recommended_cv`: appropriate CV strategy
+  - `inflation_estimate`: estimated AUC/RMSE bias from random CV
+
+#### Enforced CV generation
+
+- [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md):
+  Generates valid CV schemes based on diagnosis
+  - **Spatial blocking**: k-means clustering with block size \>
+    autocorrelation range
+
+  - **Temporal blocking**: chronological splits with embargo periods
+
+  - **Group CV**: leave-group-out with balanced fold assignment
+
+  - **Mixed strategies**: spatial-temporal, spatial-group,
+    temporal-group
+
+  - Random CV disabled when dependencies detected (requires explicit
+    `allow_random = TRUE`)
+
+  - Output formats: list, rsample, caret, mlr3
 
 ### New features
 

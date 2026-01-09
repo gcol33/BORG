@@ -16,7 +16,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,7 +55,48 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.0" id="borg-020-development">BORG 0.2.0 (development)<a class="anchor" aria-label="anchor" href="#borg-020-development"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="borg-020">BORG 0.2.0<a class="anchor" aria-label="anchor" href="#borg-020"></a></h2>
+<div class="section level3">
+<h3 id="major-changes-from-validator-to-enforcer-0-2-0">Major changes: From Validator to Enforcer<a class="anchor" aria-label="anchor" href="#major-changes-from-validator-to-enforcer-0-2-0"></a></h3>
+<p>BORG now detects data dependency structure and enforces appropriate cross-validation strategies. Random CV is blocked when dependencies are detected.</p>
+<div class="section level4">
+<h4 id="dependency-diagnosis-0-2-0">Dependency diagnosis<a class="anchor" aria-label="anchor" href="#dependency-diagnosis-0-2-0"></a></h4>
+<ul><li>
+<code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code>: Automatically detects data dependency structure
+<ul><li>
+<strong>Spatial autocorrelation</strong>: Moran’s I test, variogram-based range estimation</li>
+<li>
+<strong>Temporal autocorrelation</strong>: ACF/Ljung-Box test, decorrelation lag detection</li>
+<li>
+<strong>Clustered structure</strong>: ICC computation, design effect estimation</li>
+<li>Returns severity assessment and recommended CV strategy</li>
+<li>Estimates metric inflation from using random CV</li>
+</ul></li>
+<li>
+<code>BorgDiagnosis</code> S4 class: Structured diagnosis results with slots for:
+<ul><li>
+<code>dependency_type</code>: “none”, “spatial”, “temporal”, “clustered”, “mixed”</li>
+<li>
+<code>severity</code>: “none”, “moderate”, “severe”</li>
+<li>
+<code>recommended_cv</code>: appropriate CV strategy</li>
+<li>
+<code>inflation_estimate</code>: estimated AUC/RMSE bias from random CV</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="enforced-cv-generation-0-2-0">Enforced CV generation<a class="anchor" aria-label="anchor" href="#enforced-cv-generation-0-2-0"></a></h4>
+<ul><li>
+<code><a href="../reference/borg_cv.html">borg_cv()</a></code>: Generates valid CV schemes based on diagnosis
+<ul><li><p><strong>Spatial blocking</strong>: k-means clustering with block size &gt; autocorrelation range</p></li>
+<li><p><strong>Temporal blocking</strong>: chronological splits with embargo periods</p></li>
+<li><p><strong>Group CV</strong>: leave-group-out with balanced fold assignment</p></li>
+<li><p><strong>Mixed strategies</strong>: spatial-temporal, spatial-group, temporal-group</p></li>
+<li><p>Random CV disabled when dependencies detected (requires explicit <code>allow_random = TRUE</code>)</p></li>
+<li><p>Output formats: list, rsample, caret, mlr3</p></li>
+</ul></li>
+</ul></div>
+</div>
 <div class="section level3">
 <h3 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
 <div class="section level4">

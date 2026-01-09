@@ -19,7 +19,7 @@ train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
 # Quick validation
-borg(data, train_idx, test_idx)
+borg(data, train_idx = train_idx, test_idx = test_idx)
 #> BorgRisk Assessment
 #> ===================
 #> 
@@ -28,7 +28,7 @@ borg(data, train_idx, test_idx)
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-09 10:52:07
+#>   Inspected at:     2026-01-09 14:04:13
 #> 
 #> No risks detected.
 
@@ -56,12 +56,12 @@ test_idx <- 26:32
 
 # BAD: preProcess on full data
 pp_bad <- preProcess(mtcars[, -1], method = c("center", "scale"))
-borg(pp_bad, train_idx, test_idx, data = mtcars)
+borg_inspect(pp_bad, train_idx, test_idx, data = mtcars)
 # Detects preprocessing leak
 
 # GOOD: preProcess on train only
 pp_good <- preProcess(mtcars[train_idx, -1], method = c("center", "scale"))
-borg(pp_good, train_idx, test_idx, data = mtcars)
+borg_inspect(pp_good, train_idx, test_idx, data = mtcars)
 # No violations
 
 # Check trainControl
@@ -70,7 +70,7 @@ ctrl <- trainControl(
   number = 5,
   index = createFolds(mtcars$mpg[train_idx], k = 5)
 )
-borg(ctrl, train_idx, test_idx)
+borg_inspect(ctrl, train_idx, test_idx)
 ```
 
 ## tidymodels / recipes
@@ -97,7 +97,7 @@ rec_bad <- recipe(mpg ~ ., data = mtcars) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()  # Uses full mtcars data!
 
-borg(rec_bad, train_idx, test_idx, data = mtcars)
+borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
 # Detects leak
 
 # GOOD: recipe prepped on training only
@@ -105,7 +105,7 @@ rec_good <- recipe(mpg ~ ., data = training(split)) %>%
   step_normalize(all_numeric_predictors()) %>%
   prep()
 
-borg(rec_good, train_idx, test_idx, data = mtcars)
+borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
 # Clean
 ```
 
@@ -117,7 +117,7 @@ Inspect resampling schemes:
 
 # Validate v-fold CV (using split from previous chunk)
 folds <- vfold_cv(training(split), v = 5)
-borg(folds, train_idx, test_idx)
+borg_inspect(folds, train_idx, test_idx)
 ```
 
 Additional rsample patterns (requires appropriate data):
@@ -126,11 +126,11 @@ Additional rsample patterns (requires appropriate data):
 
 # Validate grouped CV
 group_folds <- group_vfold_cv(data, group = patient_id, v = 5)
-borg(group_folds, train_idx, test_idx)
+borg_inspect(group_folds, train_idx, test_idx)
 
 # Validate temporal splits
 rolling <- sliding_window(ts_data, lookback = 100, assess_stop = 50)
-borg(rolling, train_idx, test_idx)
+borg_inspect(rolling, train_idx, test_idx)
 ```
 
 ## mlr3
@@ -152,7 +152,7 @@ resampling$instantiate(task)
 # Inspect
 train_idx <- resampling$train_set(1)
 test_idx <- resampling$test_set(1)
-borg(task, train_idx, test_idx)
+borg_inspect(task, train_idx, test_idx)
 ```
 
 ## Temporal Data
@@ -174,7 +174,7 @@ train_idx <- 1:252
 test_idx <- 253:365
 
 # Validate with temporal ordering check
-borg(ts_data, train_idx, test_idx, temporal_col = "date")
+borg(ts_data, train_idx = train_idx, test_idx = test_idx, time = "date")
 #> BorgRisk Assessment
 #> ===================
 #> 
@@ -183,7 +183,7 @@ borg(ts_data, train_idx, test_idx, temporal_col = "date")
 #>   Soft inflations:  0
 #>   Train indices:    252 rows
 #>   Test indices:     113 rows
-#>   Inspected at:     2026-01-09 10:52:07
+#>   Inspected at:     2026-01-09 14:04:13
 #> 
 #> No risks detected.
 ```
@@ -198,7 +198,7 @@ rolling <- rolling_origin(
   assess = 30,
   cumulative = FALSE
 )
-borg(rolling, train_idx = NULL, test_idx = NULL)
+borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
 ```
 
 ## Spatial Data
@@ -222,7 +222,8 @@ train_idx <- which(spatial_data$longitude < 0)
 test_idx <- which(spatial_data$longitude >= 0)
 
 # Validate with spatial columns
-borg(spatial_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"))
+borg(spatial_data, train_idx = train_idx, test_idx = test_idx,
+     coords = c("longitude", "latitude"))
 #> BorgRisk Assessment
 #> ===================
 #> 
@@ -231,7 +232,7 @@ borg(spatial_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"
 #>   Soft inflations:  0
 #>   Train indices:    46 rows
 #>   Test indices:     54 rows
-#>   Inspected at:     2026-01-09 10:52:07
+#>   Inspected at:     2026-01-09 14:04:13
 #> 
 #> No risks detected.
 ```
@@ -249,12 +250,11 @@ n <- nrow(data)
 train_idx <- sample(n, 0.7 * n)
 test_idx <- setdiff(1:n, train_idx)
 
-# Pass a workflow list to borg()
-result <- borg(list(
+# Pass a workflow list to borg_validate()
+result <- borg_validate(list(
   data = data,
   train_idx = train_idx,
-  test_idx = test_idx,
-  target_col = "Species"
+  test_idx = test_idx
 ))
 
 if (!result@is_valid) {
@@ -269,7 +269,7 @@ if (!result@is_valid) {
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-09 10:52:07
+#>   Inspected at:     2026-01-09 14:04:13
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 

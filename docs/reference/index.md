@@ -5,7 +5,7 @@
 Start here
 
 - [`borg()`](https://gillescolling.com/BORG/reference/borg.md) : BORG:
-  Validate Model Evaluation
+  Guard Your Model Evaluation
 
 ## Core Functions
 
@@ -48,6 +48,12 @@ Prediction and CV auditing
   : Audit Feature Importance Calculations
 - [`cv_leakage_report()`](https://gillescolling.com/BORG/reference/cv_leakage_report.md)
   : Generate CV Leakage Report
+- [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) :
+  Generate Valid Cross-Validation Scheme
+- [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+  : Diagnose Data Dependency Structure
+- [`show(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/BorgDiagnosis.md)
+  : BorgDiagnosis S4 Class
 
 ## Configuration
 

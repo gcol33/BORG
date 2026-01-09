@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -104,7 +104,7 @@ shows how to validate workflows in each ecosystem.</p>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="va">train_idx</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Quick validation</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span><span class="op">)</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -113,7 +113,7 @@ shows how to validate workflows in each ecosystem.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    105 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     45 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-01-09 10:52:07</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-09 14:04:13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span>
 <span></span>
@@ -140,12 +140,12 @@ objects:</p>
 <span></span>
 <span><span class="co"># BAD: preProcess on full data</span></span>
 <span><span class="va">pp_bad</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">pp_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># Detects preprocessing leak</span></span>
 <span></span>
 <span><span class="co"># GOOD: preProcess on train only</span></span>
 <span><span class="va">pp_good</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">pp_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># No violations</span></span>
 <span></span>
 <span><span class="co"># Check trainControl</span></span>
@@ -154,7 +154,7 @@ objects:</p>
 <span>  number <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  index <span class="op">=</span> <span class="fu">createFolds</span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">mpg</span><span class="op">[</span><span class="va">train_idx</span><span class="op">]</span>, k <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ctrl</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">ctrl</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="tidymodels-recipes">tidymodels / recipes<a class="anchor" aria-label="anchor" href="#tidymodels-recipes"></a>
@@ -179,7 +179,7 @@ objects:</p>
 <span>  <span class="fu">step_normalize</span><span class="op">(</span><span class="fu">all_numeric_predictors</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">prep</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Uses full mtcars data!</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">rec_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># Detects leak</span></span>
 <span></span>
 <span><span class="co"># GOOD: recipe prepped on training only</span></span>
@@ -187,7 +187,7 @@ objects:</p>
 <span>  <span class="fu">step_normalize</span><span class="op">(</span><span class="fu">all_numeric_predictors</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">prep</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">rec_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rec_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="co"># Clean</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="rsample-objects">rsample Objects<a class="anchor" aria-label="anchor" href="#rsample-objects"></a>
@@ -196,16 +196,16 @@ objects:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Validate v-fold CV (using split from previous chunk)</span></span>
 <span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu">vfold_cv</span><span class="op">(</span><span class="fu">training</span><span class="op">(</span><span class="va">split</span><span class="op">)</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 <p>Additional rsample patterns (requires appropriate data):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Validate grouped CV</span></span>
 <span><span class="va">group_folds</span> <span class="op">&lt;-</span> <span class="fu">group_vfold_cv</span><span class="op">(</span><span class="va">data</span>, group <span class="op">=</span> <span class="va">patient_id</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">group_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">group_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Validate temporal splits</span></span>
 <span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu">sliding_window</span><span class="op">(</span><span class="va">ts_data</span>, lookback <span class="op">=</span> <span class="fl">100</span>, assess_stop <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">rolling</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rolling</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -226,7 +226,7 @@ objects:</p>
 <span><span class="co"># Inspect</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="va">resampling</span><span class="op">$</span><span class="fu">train_set</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="va">resampling</span><span class="op">$</span><span class="fu">test_set</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">task</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">task</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="temporal-data">Temporal Data<a class="anchor" aria-label="anchor" href="#temporal-data"></a>
@@ -246,7 +246,7 @@ objects:</p>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">253</span><span class="op">:</span><span class="fl">365</span></span>
 <span></span>
 <span><span class="co"># Validate with temporal ordering check</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ts_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, temporal_col <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">ts_data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>, time <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -255,7 +255,7 @@ objects:</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    252 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     113 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-01-09 10:52:07</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-09 14:04:13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 <p>Rolling origin validation with rsample:</p>
@@ -266,7 +266,7 @@ objects:</p>
 <span>  assess <span class="op">=</span> <span class="fl">30</span>,</span>
 <span>  cumulative <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">rolling</span>, train_idx <span class="op">=</span> <span class="cn">NULL</span>, test_idx <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">rolling</span>, train_idx <span class="op">=</span> <span class="cn">NULL</span>, test_idx <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="spatial-data">Spatial Data<a class="anchor" aria-label="anchor" href="#spatial-data"></a>
@@ -288,7 +288,8 @@ objects:</p>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">spatial_data</span><span class="op">$</span><span class="va">longitude</span> <span class="op">&gt;=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Validate with spatial columns</span></span>
-<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, spatial_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"longitude"</span>, <span class="st">"latitude"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
+<span>     coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"longitude"</span>, <span class="st">"latitude"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -297,7 +298,7 @@ objects:</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    46 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     54 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-01-09 10:52:07</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-09 14:04:13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -313,12 +314,11 @@ objects:</p>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0.7</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="va">train_idx</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Pass a workflow list to borg()</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span><span class="co"># Pass a workflow list to borg_validate()</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_validate.html">borg_validate</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">data</span>,</span>
 <span>  train_idx <span class="op">=</span> <span class="va">train_idx</span>,</span>
-<span>  test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>  target_col <span class="op">=</span> <span class="st">"Species"</span></span>
+<span>  test_idx <span class="op">=</span> <span class="va">test_idx</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">result</span><span class="op">@</span><span class="va">is_valid</span><span class="op">)</span> <span class="op">{</span></span>
@@ -333,7 +333,7 @@ objects:</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    105 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     45 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-01-09 10:52:07</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-01-09 14:04:13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>

@@ -12,7 +12,7 @@ plot_risk(risk, title = "BORG Risk Assessment", max_risks = 10)
 
 - risk:
 
-  A BorgRisk object from borg_inspect, borg_validate, or borg_guard.
+  A BorgRisk object from borg_inspect, borg_validate, or borg.
 
 - title:
 

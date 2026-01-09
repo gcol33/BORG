@@ -71,7 +71,8 @@ object containing a comprehensive assessment of the workflow.
 
 ## See also
 
-`borg_guard` for proactive enforcement,
+[`borg`](https://gillescolling.com/BORG/reference/borg.md) for proactive
+enforcement,
 [`borg_inspect`](https://gillescolling.com/BORG/reference/borg_inspect.md)
 for single-object inspection.
 

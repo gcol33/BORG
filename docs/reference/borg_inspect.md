@@ -106,8 +106,9 @@ patterns:
 ## See also
 
 [`borg_validate`](https://gillescolling.com/BORG/reference/borg_validate.md)
-for complete workflow validation, `borg_guard` for automated enforcement
-during evaluation.
+for complete workflow validation,
+[`borg`](https://gillescolling.com/BORG/reference/borg.md) for automated
+enforcement during evaluation.
 
 ## Examples
 

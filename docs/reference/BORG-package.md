@@ -22,9 +22,17 @@ guards against:
 
 ## Main Functions
 
-- `borg_guard`:
+- [`borg`](https://gillescolling.com/BORG/reference/borg.md):
 
   Primary interface for guarding evaluation pipelines
+
+- [`borg_diagnose`](https://gillescolling.com/BORG/reference/borg_diagnose.md):
+
+  Diagnose data dependency structure
+
+- [`borg_cv`](https://gillescolling.com/BORG/reference/borg_cv.md):
+
+  Generate valid CV schemes based on diagnosis
 
 - [`borg_inspect`](https://gillescolling.com/BORG/reference/borg_inspect.md):
 

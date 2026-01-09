@@ -35,7 +35,7 @@
 
     <a class="navbar-brand me-2" href="index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -126,14 +126,23 @@
 <code class="sourceCode R"><span><span class="co"># Validate a train/test split</span></span>
 <span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">800</span>, test_idx <span class="op">=</span> <span class="fl">801</span><span class="op">:</span><span class="fl">1000</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># Check for target leakage</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, target_col <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># Check a preprocessing object</span></span>
 <span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_recipe</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check a fitted model</span></span>
 <span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_model</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Check a CV object</span></span>
-<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">my_folds</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Validate grouped data (e.g., patients)</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, group_col <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Validate temporal split</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, temporal_col <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Validate spatial separation</span></span>
+<span><span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">geo_data</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, spatial_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a>
@@ -164,21 +173,25 @@
 </table>
 </div>
 <div class="section level2">
-<h2 id="risk-classification">Risk Classification<a class="anchor" aria-label="anchor" href="#risk-classification"></a>
+<h2 id="what-borg-detects">What BORG Detects<a class="anchor" aria-label="anchor" href="#what-borg-detects"></a>
 </h2>
-<p><strong>Hard Violation</strong>: Evaluation is invalid. Blocked.</p>
+<p><strong>Hard Violations</strong> (blocks evaluation):</p>
 <ul>
 <li>Train-test index overlap</li>
-<li>Preprocessing fitted on full data</li>
-<li>Target leakage (feature derived from outcome)</li>
-<li>Temporal look-ahead</li>
+<li>Duplicate rows between train and test</li>
+<li>Preprocessing fitted on full data (preProcess, recipe, prcomp)</li>
+<li>PCA loadings computed on full data</li>
+<li>CV folds containing test indices</li>
+<li>Model trained on wrong data scope</li>
+<li>Target leakage (|correlation| &gt; 0.99 with target)</li>
 <li>Group membership in both splits</li>
+<li>Temporal ordering violated (test predates training)</li>
 </ul>
-<p><strong>Soft Inflation</strong>: Results biased but bounded. Constrained.</p>
+<p><strong>Soft Warnings</strong> (flags but continues):</p>
 <ul>
-<li>Spatial block size below autocorrelation range</li>
-<li>Embargo period below serial dependence</li>
-<li>Post-hoc subgroup discovery</li>
+<li>Proxy leakage (correlation 0.95-0.99 with target)</li>
+<li>Spatial proximity (test points close to training)</li>
+<li>Spatial overlap (test inside training convex hull)</li>
 </ul>
 </div>
 <div class="section level2">
