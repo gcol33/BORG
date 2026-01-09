@@ -397,22 +397,17 @@ test_that("borg_inspect handles NULL indices gracefully", {
   expect_true(result@is_valid)  # No violations without indices
 })
 
-test_that("borg_inspect handles print.borg_context output", {
+test_that("borg_inspect returns printable BorgRisk", {
   data <- data.frame(x = 1:100, y = 101:200)
   train_idx <- 1:70
   test_idx <- 71:100
 
-  ctx <- borg_guard(
-    data = data,
-    train_idx = train_idx,
-    test_idx = test_idx,
-    mode = "warn"
-  )
+  result <- borg_inspect(data, train_idx, test_idx)
 
-  # Test print method produces output
-  output <- capture.output(print(ctx))
+  # Test show method produces output
+  output <- capture.output(show(result))
   expect_true(length(output) > 0)
-  expect_true(any(grepl("BORG", output)))
+  expect_true(any(grepl("BorgRisk", output)))
 })
 
 test_that("borg_inspect handles preProcess with multiple methods", {

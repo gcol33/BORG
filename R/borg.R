@@ -21,6 +21,9 @@
 #' @param spatial_cols Optional character vector of coordinate column names
 #'   (e.g., \code{c("longitude", "latitude")}). If provided, checks spatial
 #'   separation between train and test.
+#' @param target_col Optional name of the target/outcome column. If provided,
+#'   checks for target leakage (features with suspiciously high correlation
+#'   with the target).
 #' @param ... Additional arguments passed to underlying functions.
 #'
 #' @return A \code{\link{BorgRisk}} object containing the risk assessment.
@@ -68,7 +71,7 @@
 #' @export
 borg <- function(x, train_idx = NULL, test_idx = NULL, data = NULL,
                  temporal_col = NULL, group_col = NULL, spatial_cols = NULL,
-                 ...) {
+                 target_col = NULL, ...) {
 
   # Dispatch based on input type
 
@@ -159,7 +162,15 @@ borg <- function(x, train_idx = NULL, test_idx = NULL, data = NULL,
                      paste(missing_cols, collapse = ", ")))
       }
     }
+
+    # Validate target column exists if specified
+    if (!is.null(target_col)) {
+      if (!target_col %in% names(x)) {
+        stop(sprintf("'target_col' = '%s' not found in data", target_col))
+      }
+    }
   }
 
-  borg_inspect(x, train_idx, test_idx, data = data, ...)
+  borg_inspect(x, train_idx, test_idx, data = data,
+               target_col = target_col, spatial_cols = spatial_cols, ...)
 }

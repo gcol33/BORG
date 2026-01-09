@@ -12,6 +12,7 @@ borg(
   temporal_col = NULL,
   group_col = NULL,
   spatial_cols = NULL,
+  target_col = NULL,
   ...
 )
 }
@@ -40,6 +41,10 @@ If provided, validates that no group appears in both train and test.}
 \item{spatial_cols}{Optional character vector of coordinate column names
 (e.g., \code{c("longitude", "latitude")}). If provided, checks spatial
 separation between train and test.}
+
+\item{target_col}{Optional name of the target/outcome column. If provided,
+checks for target leakage (features with suspiciously high correlation
+with the target).}
 
 \item{...}{Additional arguments passed to underlying functions.}
 }

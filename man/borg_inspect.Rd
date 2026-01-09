@@ -4,7 +4,15 @@
 \alias{borg_inspect}
 \title{Inspect R Objects for Evaluation Risks}
 \usage{
-borg_inspect(object, train_idx = NULL, test_idx = NULL, data = NULL, ...)
+borg_inspect(
+  object,
+  train_idx = NULL,
+  test_idx = NULL,
+  data = NULL,
+  target_col = NULL,
+  spatial_cols = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{An R object to inspect. Supported types include:
@@ -23,6 +31,12 @@ data-level inspection.}
 
 \item{data}{Optional data frame. Required when inspecting preprocessing
 objects to compare parameters against train-only statistics.}
+
+\item{target_col}{Optional name of the target/outcome column. If provided,
+checks for target leakage (features highly correlated with target).}
+
+\item{spatial_cols}{Optional character vector of coordinate column names.
+If provided, checks spatial separation between train and test.}
 
 \item{...}{Additional arguments passed to type-specific inspectors.}
 }

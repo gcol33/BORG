@@ -17,6 +17,10 @@
 #'   data-level inspection.
 #' @param data Optional data frame. Required when inspecting preprocessing
 #'   objects to compare parameters against train-only statistics.
+#' @param target_col Optional name of the target/outcome column. If provided,
+#'   checks for target leakage (features highly correlated with target).
+#' @param spatial_cols Optional character vector of coordinate column names.
+#'   If provided, checks spatial separation between train and test.
 #' @param ... Additional arguments passed to type-specific inspectors.
 #'
 #' @return A \code{\link{BorgRisk}} object containing:
@@ -57,7 +61,8 @@
 #' pp_good <- scale(mtcars[train_idx, -1])
 #'
 #' @export
-borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL, ...) {
+borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
+                         target_col = NULL, spatial_cols = NULL, ...) {
 
  # ===========================================================================
  # Input validation
@@ -160,7 +165,8 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
  } else if (inherits(object, "tune_results")) {
    .inspect_tune_results(object, train_idx, test_idx, data, ...)
  } else if (is.data.frame(object)) {
-   .inspect_data_frame(object, train_idx, test_idx, ...)
+   .inspect_data_frame(object, train_idx, test_idx,
+                       target_col = target_col, spatial_cols = spatial_cols, ...)
  } else if (.is_trainControl(object)) {
    # caret::trainControl returns a list, detect by structure
    .inspect_trainControl(object, train_idx, test_idx, ...)
@@ -913,7 +919,8 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
 }
 
 #' @noRd
-.inspect_data_frame <- function(object, train_idx, test_idx, ...) {
+.inspect_data_frame <- function(object, train_idx, test_idx,
+                                target_col = NULL, spatial_cols = NULL, ...) {
   risks <- list()
 
   # Check for duplicate rows between train and test
@@ -983,7 +990,188 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
     }
   }
 
+  # =========================================================================
+  # Target leakage detection
+  # =========================================================================
+
+  if (!is.null(target_col) && target_col %in% names(object)) {
+    target <- object[[target_col]]
+
+    # Only check numeric targets
+    if (is.numeric(target)) {
+      # Get numeric feature columns (exclude target)
+      feature_cols <- setdiff(names(object), target_col)
+      numeric_features <- feature_cols[vapply(object[feature_cols], is.numeric, logical(1))]
+
+      if (length(numeric_features) > 0) {
+        # Compute correlations with target (use training data only to avoid bias)
+        if (!is.null(train_idx)) {
+          train_target <- target[train_idx]
+          train_features <- object[train_idx, numeric_features, drop = FALSE]
+        } else {
+          train_target <- target
+          train_features <- object[, numeric_features, drop = FALSE]
+        }
+
+        # Compute correlations, handling NAs
+        correlations <- vapply(train_features, function(feat) {
+          if (sd(feat, na.rm = TRUE) == 0 || sd(train_target, na.rm = TRUE) == 0) {
+            return(NA_real_)
+          }
+          cor(feat, train_target, use = "pairwise.complete.obs")
+        }, numeric(1))
+
+        # Check for target leakage (|cor| > 0.99)
+        abs_cor <- abs(correlations)
+        direct_leakage <- which(abs_cor > 0.99 & !is.na(abs_cor))
+
+        if (length(direct_leakage) > 0) {
+          leaked_features <- numeric_features[direct_leakage]
+          leaked_cors <- correlations[direct_leakage]
+
+          for (i in seq_along(leaked_features)) {
+            risks <- c(risks, list(list(
+              type = "target_leakage_direct",
+              severity = "hard_violation",
+              description = sprintf(
+                "Feature '%s' has correlation %.3f with target '%s'. Likely derived from outcome.",
+                leaked_features[i], leaked_cors[i], target_col
+              ),
+              affected_indices = integer(0),
+              source_object = sprintf("data.frame$%s", leaked_features[i])
+            )))
+          }
+        }
+
+        # Check for proxy leakage (|cor| 0.95-0.99)
+        proxy_leakage <- which(abs_cor >= 0.95 & abs_cor <= 0.99 & !is.na(abs_cor))
+
+        if (length(proxy_leakage) > 0) {
+          proxy_features <- numeric_features[proxy_leakage]
+          proxy_cors <- correlations[proxy_leakage]
+
+          for (i in seq_along(proxy_features)) {
+            risks <- c(risks, list(list(
+              type = "target_leakage_proxy",
+              severity = "soft_inflation",
+              description = sprintf(
+                "Feature '%s' has correlation %.3f with target '%s'. May be a proxy for outcome.",
+                proxy_features[i], proxy_cors[i], target_col
+              ),
+              affected_indices = integer(0),
+              source_object = sprintf("data.frame$%s", proxy_features[i])
+            )))
+          }
+        }
+      }
+    }
+  }
+
+  # =========================================================================
+  # Spatial separation check
+  # =========================================================================
+
+  if (!is.null(spatial_cols) && length(spatial_cols) >= 2 &&
+      !is.null(train_idx) && !is.null(test_idx)) {
+
+    # Check that spatial columns exist and are numeric
+    spatial_cols_valid <- spatial_cols[spatial_cols %in% names(object)]
+    spatial_cols_valid <- spatial_cols_valid[
+      vapply(object[spatial_cols_valid], is.numeric, logical(1))
+    ]
+
+    if (length(spatial_cols_valid) >= 2) {
+      # Use first two columns as coordinates
+      coord_cols <- spatial_cols_valid[1:2]
+
+      train_coords <- as.matrix(object[train_idx, coord_cols, drop = FALSE])
+      test_coords <- as.matrix(object[test_idx, coord_cols, drop = FALSE])
+
+      # Compute minimum distance from each test point to any train point
+      # This is O(n*m) but acceptable for moderate dataset sizes
+      min_distances <- vapply(seq_len(nrow(test_coords)), function(i) {
+        test_point <- test_coords[i, ]
+        dists <- sqrt(rowSums((train_coords - matrix(test_point, nrow = nrow(train_coords),
+                                                      ncol = 2, byrow = TRUE))^2))
+        min(dists, na.rm = TRUE)
+      }, numeric(1))
+
+      # Estimate spatial scale from training data spread
+      train_spread <- sqrt(sum(apply(train_coords, 2, var, na.rm = TRUE)))
+
+      # Flag if test points are very close to train points (< 1% of spread)
+      close_threshold <- train_spread * 0.01
+      very_close <- which(min_distances < close_threshold)
+
+      if (length(very_close) > 0) {
+        risks <- c(risks, list(list(
+          type = "spatial_proximity",
+          severity = "soft_inflation",
+          description = sprintf(
+            "%d test points are very close to training points (< 1%% of spatial spread). Spatial autocorrelation may inflate performance.",
+            length(very_close)
+          ),
+          affected_indices = test_idx[very_close],
+          source_object = "data.frame"
+        )))
+      }
+
+      # Also check if train and test regions overlap substantially
+      # Use convex hull overlap as a proxy
+      train_hull <- tryCatch(chull(train_coords), error = function(e) NULL)
+      test_hull <- tryCatch(chull(test_coords), error = function(e) NULL)
+
+      if (!is.null(train_hull) && !is.null(test_hull)) {
+        # Check how many test points fall inside training hull
+        # Simple point-in-polygon check
+        n_test_in_train <- sum(vapply(seq_len(nrow(test_coords)), function(i) {
+          .point_in_polygon(test_coords[i, ], train_coords[train_hull, ])
+        }, logical(1)))
+
+        overlap_pct <- n_test_in_train / nrow(test_coords) * 100
+
+        if (overlap_pct > 50) {
+          risks <- c(risks, list(list(
+            type = "spatial_overlap",
+            severity = "soft_inflation",
+            description = sprintf(
+              "%.0f%% of test points fall within the training region convex hull. Consider spatial blocking.",
+              overlap_pct
+            ),
+            affected_indices = test_idx,
+            source_object = "data.frame"
+          )))
+        }
+      }
+    }
+  }
+
   risks
+}
+
+#' Point in polygon test (ray casting)
+#' @noRd
+.point_in_polygon <- function(point, polygon) {
+  x <- point[1]
+  y <- point[2]
+  n <- nrow(polygon)
+  inside <- FALSE
+
+  j <- n
+  for (i in seq_len(n)) {
+    xi <- polygon[i, 1]
+    yi <- polygon[i, 2]
+    xj <- polygon[j, 1]
+    yj <- polygon[j, 2]
+
+    if (((yi > y) != (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside <- !inside
+    }
+    j <- i
+  }
+
+  inside
 }
 
 # ===========================================================================

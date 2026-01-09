@@ -28,7 +28,7 @@ borg(data, train_idx, test_idx)
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-09 10:26:31
+#>   Inspected at:     2026-01-09 10:52:07
 #> 
 #> No risks detected.
 
@@ -183,7 +183,7 @@ borg(ts_data, train_idx, test_idx, temporal_col = "date")
 #>   Soft inflations:  0
 #>   Train indices:    252 rows
 #>   Test indices:     113 rows
-#>   Inspected at:     2026-01-09 10:26:31
+#>   Inspected at:     2026-01-09 10:52:07
 #> 
 #> No risks detected.
 ```
@@ -231,7 +231,7 @@ borg(spatial_data, train_idx, test_idx, spatial_cols = c("longitude", "latitude"
 #>   Soft inflations:  0
 #>   Train indices:    46 rows
 #>   Test indices:     54 rows
-#>   Inspected at:     2026-01-09 10:26:31
+#>   Inspected at:     2026-01-09 10:52:07
 #> 
 #> No risks detected.
 ```
@@ -269,7 +269,7 @@ if (!result@is_valid) {
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-01-09 10:26:31
+#>   Inspected at:     2026-01-09 10:52:07
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
