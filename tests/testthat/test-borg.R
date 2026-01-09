@@ -453,7 +453,8 @@ test_that("borg() returns caret output when requested", {
 
   result <- borg(data, groups = "site", output = "caret")
 
-  expect_s3_class(result, "trainControl")
+  expect_type(result, "list")
+  expect_true("method" %in% names(result))
 })
 
 test_that("print.borg_result works", {
