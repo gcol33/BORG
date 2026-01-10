@@ -2,12 +2,15 @@ Package: BORG
 Title: Bounded Outcome Risk Guard for Model Evaluation
 Version: 0.2.3
 Authors@R:
-    person("Gilles", "Colling", email = "gilles.colling051@gmail.com", role = c("aut", "cre"))
+    person("Gilles", "Colling", email = "gilles.colling051@gmail.com",
+           role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0003-3070-6066"))
 Description: Automatically detects and enforces valid model evaluation by identifying
     information reuse between training and evaluation data. Guards against data leakage,
     look-ahead bias, and invalid cross-validation schemes that inflate performance estimates.
     Supports temporal, spatial, and grouped evaluation structures.
 License: MIT + file LICENSE
+Language: en-US
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
