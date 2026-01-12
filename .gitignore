@@ -4,7 +4,6 @@
 src/*.o
 src/*.so
 src/*.dll
-src/RcppExports.cpp
 
 # RStudio
 .Rproj.user/
