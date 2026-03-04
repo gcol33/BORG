@@ -2,9 +2,7 @@
 
 ## Completed
 
-Add
-[`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md)
-visualization function
+Add `plot_groups()` visualization function
 
 Update NEWS.md with v0.1.0 features
 

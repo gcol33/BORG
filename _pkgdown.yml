@@ -1,41 +1,32 @@
 url: https://gillescolling.com/BORG
-
 template:
   bootstrap: 5
   bootswatch: sandstone
-  light-switch: true
+  light-switch: yes
   includes:
-    in_header: |
-      <script>
-      // Redirect any case variation of /borg to /BORG
-      (function() {
-        var path = window.location.pathname;
-        if (/^\/borg\b/i.test(path) && !/^\/BORG/.test(path)) {
-          var newPath = path.replace(/^\/borg/i, '/BORG');
-          window.location.replace(newPath + window.location.search + window.location.hash);
-        }
-      })();
-      </script>
-
+    in_header: pkgdown/mathjax-config.html
 figures:
   dev: svg
   fig.ext: svg
-  bg: "#F5F6F8"
-
+  bg: '#F5F6F8'
 home:
-  title: "BORG: Bounded Outcome Risk Guard for Model Evaluation"
-  description: >
-    Automatically detects and enforces valid model evaluation by identifying
-    information reuse between training and evaluation data.
-
+  title: 'BORG: Bounded Outcome Risk Guard for Model Evaluation'
+  description: |
+    Automatically detects and enforces valid model evaluation by identifying information reuse between training and evaluation data.
 authors:
   Gilles Colling:
     href: https://github.com/gcol33
-
 navbar:
   structure:
-    left:  [intro, reference, articles, news]
-    right: [search, lightswitch, github]
+    left:
+    - intro
+    - reference
+    - articles
+    - news
+    right:
+    - search
+    - lightswitch
+    - github
   components:
     intro:
       text: Get Started
@@ -43,78 +34,79 @@ navbar:
     articles:
       text: Articles
       menu:
-        - text: "Quick Start"
-          href: articles/quickstart.html
-        - text: "Risk Taxonomy"
-          href: articles/risk-taxonomy.html
-        - text: "Framework Integration"
-          href: articles/frameworks.html
+      - text: Quick Start
+        href: articles/quickstart.html
+      - text: Risk Taxonomy
+        href: articles/risk-taxonomy.html
+      - text: Framework Integration
+        href: articles/frameworks.html
     github:
       icon: fab fa-github
       href: https://github.com/gcol33/BORG
       aria-label: GitHub
-
 reference:
-  - title: "Main Entry Point"
-    desc: "Start here"
-    contents:
-      - borg
-
-  - title: "Core Functions"
-    desc: "Detailed validation functions"
-    contents:
-      - borg_inspect
-      - borg_validate
-
-  - title: "Remediation"
-    desc: "Automatic pipeline correction"
-    contents:
-      - borg_rewrite
-
-  - title: "Visualization"
-    desc: "Plot functions for split analysis"
-    contents:
-      - plot_split
-      - plot_risk
-      - plot_temporal
-      - plot_spatial
-      - plot_groups
-
-  - title: "Audit Functions"
-    desc: "Prediction and CV auditing"
-    contents:
-      - audit_predictions
-      - audit_importance
-      - cv_leakage_report
-      - borg_cv
-      - borg_diagnose
-      - BorgDiagnosis
-
-  - title: "Configuration"
-    desc: "Options and settings"
-    contents:
-      - borg_auto_check
-      - borg_options
-
-  - title: "Classes"
-    desc: "Result objects"
-    contents:
-      - BorgRisk-class
-      - as.data.frame.BorgRisk
-      - print.borg_cv_report
-
+- title: Main Entry Point
+  desc: Start here
+  contents: borg
+- title: Core Functions
+  desc: Detailed validation functions
+  contents:
+  - borg_inspect
+  - borg_validate
+  - borg_certificate
+  - borg_export
+- title: Remediation
+  desc: Automatic pipeline correction
+  contents: borg_rewrite
+- title: Visualization
+  desc: Plot and summary methods for BORG objects
+  contents:
+  - plot.BorgRisk
+  - plot.borg_result
+  - plot.borg_comparison
+  - summary.BorgRisk
+  - summary.BorgDiagnosis
+  - summary.borg_result
+- title: Audit Functions
+  desc: Prediction and CV auditing
+  contents:
+  - audit_predictions
+  - audit_importance
+  - cv_leakage_report
+  - borg_cv
+  - borg_diagnose
+  - borg_compare_cv
+  - BorgDiagnosis
+- title: Framework Integration
+  desc: Wrappers for ML frameworks
+  contents:
+  - borg-wrappers
+  - borg_initial_split
+  - borg_vfold_cv
+  - borg_group_vfold_cv
+  - borg_trainControl
+  - borg_register_hooks
+  - borg_unregister_hooks
+- title: Configuration
+  desc: Options and settings
+  contents:
+  - borg_auto_check
+  - borg_options
+- title: Classes
+  desc: Result objects
+  contents:
+  - BorgRisk-class
+  - as.data.frame.BorgRisk
+  - print.borg_cv_report
 articles:
-  - title: "Getting Started"
-    navbar: ~
-    contents:
-      - quickstart
-
-  - title: "Deep Dives"
-    navbar: ~
-    contents:
-      - risk-taxonomy
-      - frameworks
-
+- title: Getting Started
+  navbar: ~
+  contents: quickstart
+- title: Deep Dives
+  navbar: ~
+  contents:
+  - risk-taxonomy
+  - frameworks
 footer:
   structure:
     left: developed_by

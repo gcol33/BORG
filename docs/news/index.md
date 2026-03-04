@@ -1,5 +1,133 @@
 # Changelog
 
+## BORG 0.2.3
+
+### Native R Integration
+
+This release replaces custom functions with standard R S3 methods for a
+more idiomatic interface.
+
+#### S3 methods for plotting
+
+- `plot(BorgRisk)`: Visualize risk assessment results
+- `plot(borg_result)`: Visualize CV fold splits
+- `plot(borg_comparison)`: Compare random vs blocked CV results
+
+#### S3 methods for summaries
+
+- `summary(BorgDiagnosis)`: Generate methods section text for
+  publications
+- `summary(BorgRisk)`: Summarize detected risks
+- `summary(borg_result)`: Generate methods text from borg() output
+- `summary(borg_comparison)`: Detailed comparison summary
+
+#### Dedicated export functions
+
+- [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md):
+  Create structured validation certificate
+- [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md):
+  Write certificate to YAML/JSON file
+
+#### Removed
+
+- `borg_plot()` - use
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) instead
+- `borg_report()` - use
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md),
+  or
+  [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
+- Legacy plot functions (`plot_split`, `plot_risk`, etc.)
+- Legacy report functions (`borg_methods_text`)
+
+------------------------------------------------------------------------
+
+## BORG 0.2.2
+
+### New features
+
+#### Framework wrappers
+
+BORG-guarded versions of common CV functions that block random CV when
+dependencies detected:
+
+- [`borg_vfold_cv()`](https://gillescolling.com/BORG/reference/borg_vfold_cv.md):
+  Wraps
+  [`rsample::vfold_cv()`](https://rsample.tidymodels.org/reference/vfold_cv.html)
+  with dependency checking
+  - Blocks random CV when spatial/temporal/clustered dependencies
+    detected
+  - `auto_block = TRUE` automatically switches to appropriate blocked CV
+  - `allow_override = TRUE` allows proceeding with warning
+- [`borg_group_vfold_cv()`](https://gillescolling.com/BORG/reference/borg_group_vfold_cv.md):
+  Wraps
+  [`rsample::group_vfold_cv()`](https://rsample.tidymodels.org/reference/group_vfold_cv.html)
+  with additional checks
+  - Warns about dependencies not handled by grouping alone
+- [`borg_initial_split()`](https://gillescolling.com/BORG/reference/borg_initial_split.md):
+  Wraps
+  [`rsample::initial_split()`](https://rsample.tidymodels.org/reference/initial_split.html)
+  - Enforces chronological splits when `time` specified
+  - Warns about spatial dependencies
+- [`borg_trainControl()`](https://gillescolling.com/BORG/reference/borg_trainControl.md):
+  Wraps
+  [`caret::trainControl()`](https://rdrr.io/pkg/caret/man/trainControl.html)
+  - Blocks random resampling methods with detected dependencies
+
+#### Hook system (experimental)
+
+- [`borg_register_hooks()`](https://gillescolling.com/BORG/reference/borg_register_hooks.md):
+  Register validation hooks on framework functions
+- [`borg_unregister_hooks()`](https://gillescolling.com/BORG/reference/borg_unregister_hooks.md):
+  Remove registered hooks
+
+------------------------------------------------------------------------
+
+## BORG 0.2.1
+
+### New features
+
+#### Empirical CV comparison
+
+- [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md):
+  Run random vs blocked CV on the same data to empirically demonstrate
+  metric inflation
+  - Supports spatial, temporal, and clustered data
+  - Custom model and predict functions
+  - Multiple metrics: RMSE, MAE, R², AUC, accuracy
+  - Paired t-test for statistical significance
+  - Plot methods: boxplot, density, paired comparison
+
+#### Publication-ready reporting
+
+- `borg_methods_text()`: Generate copy-paste methods section text for
+  manuscripts
+  - Includes dependency diagnosis details
+  - Cites quantitative metrics (Moran’s I, ICC, etc.)
+  - Optional empirical comparison results
+  - BORG package citation
+- [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md):
+  Create structured validation certificates
+  - Machine-readable format
+  - Includes data characteristics, diagnosis, and inflation estimates
+  - Timestamps and version tracking
+- [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md):
+  Export certificates to YAML or JSON format
+
+#### API improvements
+
+- Unified [`borg()`](https://gillescolling.com/BORG/reference/borg.md)
+  entry point with two modes:
+  - Diagnosis mode: `borg(data, coords=, time=, groups=)` returns
+    diagnosis + CV folds
+
+  - Validation mode: `borg(data, train_idx=, test_idx=)` validates
+    existing splits
+- Renamed parameters for consistency: `temporal_col` → `time`,
+  `group_col` → `groups`, `spatial_cols` → `coords`
+
+------------------------------------------------------------------------
+
 ## BORG 0.2.0
 
 ### Major changes: From Validator to Enforcer
@@ -49,17 +177,14 @@ detected.
 
 #### Visualization functions
 
-- [`plot_split()`](https://gillescolling.com/BORG/reference/plot_split.md):
-  Visualize train/test split distribution with temporal or group
-  structure
-- [`plot_risk()`](https://gillescolling.com/BORG/reference/plot_risk.md):
-  Display risk assessment results as horizontal bar chart
-- [`plot_temporal()`](https://gillescolling.com/BORG/reference/plot_temporal.md):
-  Timeline visualization with gap analysis and look-ahead detection
-- [`plot_spatial()`](https://gillescolling.com/BORG/reference/plot_spatial.md):
-  Spatial split visualization with convex hulls
-- [`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md):
-  Group-based split visualization with leakage highlighting
+- `plot_split()`: Visualize train/test split distribution with temporal
+  or group structure
+- `plot_risk()`: Display risk assessment results as horizontal bar chart
+- `plot_temporal()`: Timeline visualization with gap analysis and
+  look-ahead detection
+- `plot_spatial()`: Spatial split visualization with convex hulls
+- `plot_groups()`: Group-based split visualization with leakage
+  highlighting
 
 #### Model inspection
 

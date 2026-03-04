@@ -15,6 +15,10 @@ Detailed validation functions
   : Inspect R Objects for Evaluation Risks
 - [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md)
   : Validate Complete Evaluation Workflow
+- [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md)
+  : Create Validation Certificate
+- [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
+  : Export Validation Certificate
 
 ## Remediation
 
@@ -25,18 +29,20 @@ Automatic pipeline correction
 
 ## Visualization
 
-Plot functions for split analysis
+Plot and summary methods for BORG objects
 
-- [`plot_split()`](https://gillescolling.com/BORG/reference/plot_split.md)
-  : Plot Train/Test Split Distribution
-- [`plot_risk()`](https://gillescolling.com/BORG/reference/plot_risk.md)
-  : Plot Risk Assessment Summary
-- [`plot_temporal()`](https://gillescolling.com/BORG/reference/plot_temporal.md)
-  : Plot Temporal Validation
-- [`plot_spatial()`](https://gillescolling.com/BORG/reference/plot_spatial.md)
-  : Plot Spatial Split
-- [`plot_groups()`](https://gillescolling.com/BORG/reference/plot_groups.md)
-  : Plot Group-Based Split
+- [`plot(`*`<BorgRisk>`*`)`](https://gillescolling.com/BORG/reference/plot.BorgRisk.md)
+  : Plot BORG Objects
+- [`plot(`*`<borg_result>`*`)`](https://gillescolling.com/BORG/reference/plot.borg_result.md)
+  : Plot BORG Result Objects
+- [`plot(`*`<borg_comparison>`*`)`](https://gillescolling.com/BORG/reference/plot.borg_comparison.md)
+  : Plot CV Comparison Results
+- [`summary(`*`<BorgRisk>`*`)`](https://gillescolling.com/BORG/reference/summary.BorgRisk.md)
+  : Summarize BORG Risk Assessment
+- [`summary(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/summary.BorgDiagnosis.md)
+  : Summarize BORG Diagnosis
+- [`summary(`*`<borg_result>`*`)`](https://gillescolling.com/BORG/reference/summary.borg_result.md)
+  : Summarize BORG Result
 
 ## Audit Functions
 
@@ -52,8 +58,29 @@ Prediction and CV auditing
   Generate Valid Cross-Validation Scheme
 - [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
   : Diagnose Data Dependency Structure
+- [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md)
+  : Compare Random vs Blocked Cross-Validation
 - [`show(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/BorgDiagnosis.md)
   : BorgDiagnosis S4 Class
+
+## Framework Integration
+
+Wrappers for ML frameworks
+
+- [`borg-wrappers`](https://gillescolling.com/BORG/reference/borg-wrappers.md)
+  : BORG-Guarded Cross-Validation Functions
+- [`borg_initial_split()`](https://gillescolling.com/BORG/reference/borg_initial_split.md)
+  : BORG-Guarded initial_split
+- [`borg_vfold_cv()`](https://gillescolling.com/BORG/reference/borg_vfold_cv.md)
+  : BORG-Guarded vfold_cv
+- [`borg_group_vfold_cv()`](https://gillescolling.com/BORG/reference/borg_group_vfold_cv.md)
+  : BORG-Guarded group_vfold_cv
+- [`borg_trainControl()`](https://gillescolling.com/BORG/reference/borg_trainControl.md)
+  : BORG-Guarded trainControl
+- [`borg_register_hooks()`](https://gillescolling.com/BORG/reference/borg_register_hooks.md)
+  : Register BORG Hooks
+- [`borg_unregister_hooks()`](https://gillescolling.com/BORG/reference/borg_unregister_hooks.md)
+  : Unregister BORG Hooks
 
 ## Configuration
 
