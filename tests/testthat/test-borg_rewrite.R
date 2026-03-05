@@ -150,9 +150,114 @@ test_that("borg_rewrite fix parameter filters risk types", {
   # With fix = "thresholds", skip preprocessing fix
   result_thresholds <- borg_rewrite(workflow, fix = "thresholds")
 
-  # Both should still have the same report since stubs return success = FALSE
   expect_s4_class(result_all$report, "BorgRisk")
   expect_s4_class(result_thresholds$report, "BorgRisk")
+
+  # fix = "all" should actually fix the preprocessing leak
+  expect_true("preprocessing_leak" %in% result_all$fixed)
+})
+
+
+test_that("borg_rewrite fixes caret preProcess leak", {
+  skip_if_not_installed("caret")
+
+  set.seed(42)
+  data <- data.frame(
+    x1 = rnorm(100, mean = 10, sd = 5),
+    x2 = rnorm(100, mean = 50, sd = 20)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Leaky: preProcess fitted on full data
+  pp_bad <- caret::preProcess(data, method = c("center", "scale"))
+
+  workflow <- list(
+    data = data,
+    train_idx = train_idx,
+    test_idx = test_idx,
+    preprocess = pp_bad
+  )
+
+  result <- borg_rewrite(workflow)
+
+  # Should be fixed
+
+  expect_true("preprocessing_leak" %in% result$fixed)
+  expect_false("preprocessing_leak" %in% result$unfixable)
+
+  # The rewritten preProcess should be different from the original
+  new_pp <- result$workflow$preprocess
+  expect_s3_class(new_pp, "preProcess")
+
+  # New preProcess should be based on train data stats
+  train_data <- data[train_idx, ]
+  expect_equal(new_pp$mean[["x1"]], mean(train_data$x1), tolerance = 1e-10)
+  expect_equal(new_pp$mean[["x2"]], mean(train_data$x2), tolerance = 1e-10)
+})
+
+
+test_that("borg_rewrite fixes PCA leak (base R prcomp)", {
+  set.seed(42)
+  data <- data.frame(
+    x1 = rnorm(100),
+    x2 = rnorm(100),
+    x3 = rnorm(100)
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  # Leaky: PCA on full data
+  pca_bad <- prcomp(data, center = TRUE, scale. = TRUE)
+
+  workflow <- list(
+    data = data,
+    train_idx = train_idx,
+    test_idx = test_idx,
+    preprocess = pca_bad
+  )
+
+  result <- borg_rewrite(workflow)
+
+  expect_true("preprocessing_leak" %in% result$fixed)
+
+  # New PCA should use train-only stats
+  new_pca <- result$workflow$preprocess
+  expect_s3_class(new_pca, "prcomp")
+  expect_equal(new_pca$center[["x1"]], mean(data$x1[train_idx]), tolerance = 1e-10)
+})
+
+
+test_that("borg_rewrite fixes threshold on test data", {
+  set.seed(42)
+  n <- 100
+  data <- data.frame(
+    x = rnorm(n),
+    y = factor(sample(c("A", "B"), n, replace = TRUE))
+  )
+  train_idx <- 1:70
+  test_idx <- 71:100
+
+  model <- glm(y ~ x, data = data[train_idx, ], family = binomial())
+
+  workflow <- list(
+    data = data,
+    train_idx = train_idx,
+    test_idx = test_idx,
+    model = model,
+    target_col = "y",
+    thresholds = list(
+      value = 0.5,
+      optimized_on = "test",
+      used_test_predictions = TRUE
+    )
+  )
+
+  result <- borg_rewrite(workflow)
+
+  expect_true("threshold_leak" %in% result$fixed)
+  expect_equal(result$workflow$thresholds$optimized_on, "train")
+  expect_false(result$workflow$thresholds$used_test_predictions)
 })
 
 

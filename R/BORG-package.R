@@ -62,7 +62,7 @@
 #' @useDynLib BORG, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom methods is new
-#' @importFrom stats complete.cases cor median model.frame sd var
+#' @importFrom stats complete.cases cor median model.frame prcomp predict quantile sd var
 #' @importFrom utils head
 #' @importFrom grDevices chull rgb
 #' @importFrom graphics abline axis barplot legend lines mtext par plot plot.new plot.window rect text
