@@ -50,7 +50,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
 
   # Check 1: Prediction count matches test set
   if (n_pred != n_test) {
-    risks <- c(risks, list(list(
+    risks <- c(risks, list(.new_risk(
       type = "prediction_count_mismatch",
       severity = "hard_violation",
       description = sprintf(
@@ -76,7 +76,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
         )
 
         if (!is.na(cor_val) && abs(cor_val) > 0.999) {
-          risks <- c(risks, list(list(
+          risks <- c(risks, list(.new_risk(
             type = "perfect_prediction",
             severity = "hard_violation",
             description = sprintf(
@@ -92,7 +92,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
       # Check for exact matches (suspicious for continuous data)
       exact_matches <- sum(abs(predictions - actual) < 1e-10, na.rm = TRUE)
       if (exact_matches == n_pred && n_pred > 5) {
-        risks <- c(risks, list(list(
+        risks <- c(risks, list(.new_risk(
           type = "exact_predictions",
           severity = "hard_violation",
           description = sprintf(
@@ -110,7 +110,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
 
       accuracy <- mean(pred_char == actual_char, na.rm = TRUE)
       if (accuracy > 0.99 && n_pred > 20) {
-        risks <- c(risks, list(list(
+        risks <- c(risks, list(.new_risk(
           type = "suspiciously_high_accuracy",
           severity = "soft_inflation",
           description = sprintf(
@@ -133,7 +133,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
     model_risks <- borg_inspect(model, train_idx, test_idx, data = data)
 
     if (model_risks@n_hard > 0) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "model_leakage",
         severity = "hard_violation",
         description = sprintf(
@@ -157,7 +157,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
 
     # If predictions match training size instead of test size
     if (n_pred == length(train_idx) && n_pred != n_test) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "wrong_prediction_set",
         severity = "hard_violation",
         description = sprintf(
@@ -171,7 +171,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
 
     # If predictions match full data size
     if (n_pred == n_total && n_pred != n_test) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "full_data_prediction",
         severity = "hard_violation",
         description = sprintf(
@@ -188,19 +188,7 @@ audit_predictions <- function(predictions, train_idx, test_idx,
   # Build result
   # ===========================================================================
 
-  n_hard <- sum(vapply(risks, function(r) r$severity == "hard_violation", logical(1)))
-  n_soft <- sum(vapply(risks, function(r) r$severity == "soft_inflation", logical(1)))
-
-  new("BorgRisk",
-      risks = risks,
-      n_hard = as.integer(n_hard),
-      n_soft = as.integer(n_soft),
-      is_valid = n_hard == 0L,
-      train_indices = train_idx,
-      test_indices = test_idx,
-      timestamp = Sys.time(),
-      call = match.call()
-  )
+  .make_borg_risk(risks, train_idx, test_idx, call = match.call())
 }
 
 
@@ -402,7 +390,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
 
   # If data size matches full dataset (train + test), likely includes test
   if (n_data == n_total || n_data == (n_train + n_test)) {
-    risks <- c(risks, list(list(
+    risks <- c(risks, list(.new_risk(
       type = "importance_on_full_data",
       severity = "hard_violation",
       description = sprintf(
@@ -416,7 +404,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
 
   # If data size is larger than train but not full, something is off
   if (n_data > n_train && n_data < n_total) {
-    risks <- c(risks, list(list(
+    risks <- c(risks, list(.new_risk(
       type = "importance_data_size_mismatch",
       severity = "soft_inflation",
       description = sprintf(
@@ -438,7 +426,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
     # SHAP values should be computed on training data only for model explanation
     # If computing on test data, it's using test information for feature selection
     if (n_data == n_test) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "shap_on_test_data",
         severity = "hard_violation",
         description = sprintf(
@@ -454,7 +442,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
   if (method %in% c("permutation", "auto")) {
     # Permutation importance requires labels - using test labels is leakage
     if (n_data == n_test) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "permutation_on_test_data",
         severity = "hard_violation",
         description = "Permutation importance computed on test data uses test labels, causing information leakage.",
@@ -472,7 +460,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
     # Validate model was trained correctly
     model_risk <- borg_inspect(model, train_idx, test_idx)
     if (model_risk@n_hard > 0) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "importance_from_leaked_model",
         severity = "hard_violation",
         description = sprintf(
@@ -507,7 +495,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
       imp_range <- diff(range(imp_vals))
 
       if (imp_range > 0 && imp_sd / imp_range < 0.05) {
-        risks <- c(risks, list(list(
+        risks <- c(risks, list(.new_risk(
           type = "uniform_importance",
           severity = "soft_inflation",
           description = "Feature importance values are nearly uniform. May indicate incorrect calculation or uninformative features.",
@@ -519,7 +507,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
 
     # Check for negative importance (valid for some methods, suspicious for others)
     if (any(imp_vals < 0) && method %in% c("gain", "impurity")) {
-      risks <- c(risks, list(list(
+      risks <- c(risks, list(.new_risk(
         type = "negative_importance",
         severity = "soft_inflation",
         description = "Negative importance values detected for gain/impurity method. This is unusual.",
@@ -533,19 +521,7 @@ audit_importance <- function(importance, data, train_idx, test_idx,
   # Build result
   # ===========================================================================
 
-  n_hard <- sum(vapply(risks, function(r) r$severity == "hard_violation", logical(1)))
-  n_soft <- sum(vapply(risks, function(r) r$severity == "soft_inflation", logical(1)))
-
-  new("BorgRisk",
-      risks = risks,
-      n_hard = as.integer(n_hard),
-      n_soft = as.integer(n_soft),
-      is_valid = n_hard == 0L,
-      train_indices = train_idx,
-      test_indices = test_idx,
-      timestamp = Sys.time(),
-      call = match.call()
-  )
+  .make_borg_risk(risks, train_idx, test_idx, call = match.call())
 }
 
 

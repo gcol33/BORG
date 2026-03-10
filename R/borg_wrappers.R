@@ -100,7 +100,7 @@ borg_vfold_cv <- function(data,
     if (getOption("borg.verbose", FALSE)) {
       message("BORG: No structure hints provided, using standard vfold_cv()")
     }
-    return(rsample::vfold_cv(data, v = v, repeats = repeats, strata = strata, ...))
+    return(.rsample_vfold_cv(data, v = v, repeats = repeats, strata = strata, ...))
   }
 
   # Diagnose dependencies
@@ -124,7 +124,7 @@ borg_vfold_cv <- function(data,
         diagnosis@severity,
         diagnosis@inflation_estimate$auc_inflation * 100
       ))
-      return(rsample::vfold_cv(data, v = v, repeats = repeats, strata = strata, ...))
+      return(.rsample_vfold_cv(data, v = v, repeats = repeats, strata = strata, ...))
     }
 
     if (auto_block) {
@@ -171,7 +171,7 @@ borg_vfold_cv <- function(data,
   }
 
   # No significant dependencies - proceed with standard vfold_cv
-  rsample::vfold_cv(data, v = v, repeats = repeats, strata = strata, ...)
+  .rsample_vfold_cv(data, v = v, repeats = repeats, strata = strata, ...)
 }
 
 
@@ -354,7 +354,7 @@ borg_initial_split <- function(data,
   }
 
   # Standard split
- rsample::initial_split(data, prop = prop, strata = strata, ...)
+ .rsample_initial_split(data, prop = prop, strata = strata, ...)
 }
 
 
@@ -582,3 +582,29 @@ borg_unregister_hooks <- function() {
 
 # Environment for storing hook state
 .borg_env <- new.env(parent = emptyenv())
+
+
+# ===========================================================================
+# rsample wrappers (use modern tidyselect API for strata)
+# ===========================================================================
+
+#' Resolve strata for rsample functions
+#'
+#' rsample's strata argument uses tidyselect. Passing a bare string triggers
+#' a deprecation warning. Use \code{all_of()} for string values.
+#' @noRd
+.resolve_strata <- function(strata) {
+  if (is.null(strata)) NULL else tidyselect::all_of(strata)
+}
+
+#' @noRd
+.rsample_vfold_cv <- function(data, v, repeats, strata, ...) {
+  rsample::vfold_cv(data, v = v, repeats = repeats,
+                    strata = .resolve_strata(strata), ...)
+}
+
+#' @noRd
+.rsample_initial_split <- function(data, prop, strata, ...) {
+  rsample::initial_split(data, prop = prop,
+                         strata = .resolve_strata(strata), ...)
+}

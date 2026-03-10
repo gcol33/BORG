@@ -395,4 +395,5 @@ Note: Index overlap cannot be automatically fixed - it requires choosing a new s
 ## See Also
 
 - `vignette("quickstart")` - Basic usage and concepts
+
 - `vignette("risk-taxonomy")` - Complete catalog of detectable risks

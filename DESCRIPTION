@@ -18,10 +18,12 @@ LinkingTo: Rcpp
 Imports:
     Rcpp,
     methods,
-    stats
+    stats,
+    utils
 Suggests:
     caret,
     rsample,
+    tidyselect,
     recipes,
     mlr3,
     sf,

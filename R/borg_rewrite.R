@@ -233,7 +233,9 @@ borg_rewrite <- function(
   }
 
   # Extract the method used and refit on train data only
+  # Filter out "ignore" entries - caret::preProcess warns about them
   method <- old_pp$method
+  method <- method[names(method) != "ignore"]
   numeric_cols <- names(train_data)[vapply(train_data, is.numeric, logical(1))]
   if (length(numeric_cols) == 0) {
     return(list(workflow = workflow, success = FALSE))

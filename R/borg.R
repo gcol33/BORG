@@ -352,5 +352,5 @@ validate_existing_split <- function(data, train_idx, test_idx,
 
   # Run full inspection
   borg_inspect(data, train_idx, test_idx,
-               target_col = target, spatial_cols = coords, ...)
+               target = target, coords = coords, ...)
 }

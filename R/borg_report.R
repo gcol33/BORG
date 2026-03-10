@@ -158,6 +158,122 @@ summary.BorgRisk <- function(object, ...) {
 }
 
 
+#' Summarize BORG Cross-Validation
+#'
+#' @param object A \code{borg_cv} object from \code{\link{borg_cv}}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list with strategy, fold count, and fold size statistics (invisibly).
+#'
+#' @export
+summary.borg_cv <- function(object, ...) {
+  train_sizes <- vapply(object$folds, function(f) length(f$train), integer(1))
+  test_sizes <- vapply(object$folds, function(f) length(f$test), integer(1))
+
+  result <- list(
+    strategy = object$strategy,
+    n_folds = length(object$folds),
+    n_obs = object$params$n,
+    train_size = c(min = min(train_sizes), max = max(train_sizes),
+                   mean = mean(train_sizes)),
+    test_size = c(min = min(test_sizes), max = max(test_sizes),
+                  mean = mean(test_sizes))
+  )
+
+  cat("BORG Cross-Validation Summary\n")
+  cat("=============================\n\n")
+  cat(sprintf("Strategy:     %s\n", result$strategy))
+  cat(sprintf("Folds:        %d\n", result$n_folds))
+  cat(sprintf("Observations: %d\n", result$n_obs))
+  cat(sprintf("Train sizes:  %d - %d (mean: %.0f)\n",
+              result$train_size["min"], result$train_size["max"],
+              result$train_size["mean"]))
+  cat(sprintf("Test sizes:   %d - %d (mean: %.0f)\n",
+              result$test_size["min"], result$test_size["max"],
+              result$test_size["mean"]))
+
+  invisible(result)
+}
+
+
+#' Summarize BORG Pipeline Validation
+#'
+#' @param object A \code{borg_pipeline} object from \code{\link{borg_pipeline}}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list with per-stage risk counts (invisibly).
+#'
+#' @export
+summary.borg_pipeline <- function(object, ...) {
+  stage_summary <- lapply(names(object$stages), function(nm) {
+    stage <- object$stages[[nm]]
+    if (inherits(stage, "BorgRisk")) {
+      list(stage = nm, n_hard = stage@n_hard, n_soft = stage@n_soft,
+           valid = stage@is_valid)
+    } else {
+      list(stage = nm, n_hard = NA_integer_, n_soft = NA_integer_, valid = NA)
+    }
+  })
+
+  cat("BORG Pipeline Validation Summary\n")
+  cat("================================\n\n")
+  cat(sprintf("Stages:  %d\n", object$n_stages))
+  cat(sprintf("Status:  %s\n", if (object$overall@is_valid) "VALID" else "INVALID"))
+
+  if (length(object$leaking_stages) > 0) {
+    cat(sprintf("Leaking: %s\n", paste(object$leaking_stages, collapse = ", ")))
+  }
+
+  cat("\nPer-stage breakdown:\n")
+  for (s in stage_summary) {
+    if (!is.na(s$valid)) {
+      status <- if (s$valid) "OK" else "LEAK"
+      cat(sprintf("  %-20s [%s] %d hard, %d soft\n",
+                  s$stage, status, s$n_hard, s$n_soft))
+    }
+  }
+
+  invisible(stage_summary)
+}
+
+
+#' Summarize BORG Power Analysis
+#'
+#' @param object A \code{borg_power} object from \code{\link{borg_power}}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list with key power metrics (invisibly).
+#'
+#' @export
+summary.borg_power <- function(object, ...) {
+  result <- list(
+    n_actual = object$n_actual,
+    n_effective = object$n_effective,
+    design_effect = object$design_effect,
+    power_random = object$power_random,
+    power_blocked = object$power_blocked,
+    power_loss = object$power_loss,
+    sufficient = object$sufficient
+  )
+
+  cat("BORG Power Analysis Summary\n")
+  cat("===========================\n\n")
+  cat(sprintf("N actual:     %d\n", result$n_actual))
+  cat(sprintf("N effective:  %.0f\n", result$n_effective))
+  cat(sprintf("Design effect: %.2f\n", result$design_effect))
+
+  if (!is.na(result$power_loss)) {
+    cat(sprintf("\nPower (random):  %.1f%%\n", result$power_random * 100))
+    cat(sprintf("Power (blocked): %.1f%%\n", result$power_blocked * 100))
+    cat(sprintf("Power loss:      %.1f%%\n", result$power_loss * 100))
+  }
+
+  cat(sprintf("\nSufficient: %s\n", if (result$sufficient) "YES" else "NO"))
+
+  invisible(result)
+}
+
+
 # ===========================================================================
 # Exported functions
 # ===========================================================================

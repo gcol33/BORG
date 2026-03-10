@@ -23,6 +23,10 @@
 #'   the autocorrelation range.
 #' @param embargo Integer. For temporal blocking, minimum gap between train and test.
 #'   If NULL, automatically determined from diagnosis.
+#' @param strategy Character. Override the auto-detected CV strategy. Use
+#'   \code{"temporal_expanding"} for expanding window (forward-chaining) or
+#'   \code{"temporal_sliding"} for fixed-size sliding window.
+#'   Default: NULL (auto-detect from diagnosis).
 #' @param output Character. Output format: "list" (default), "rsample", "caret", "mlr3".
 #' @param allow_random Logical. If TRUE, allows random CV even when dependencies detected.
 #'   Default: FALSE. Setting to TRUE requires explicit acknowledgment.
@@ -107,6 +111,7 @@ borg_cv <- function(data,
                     target = NULL,
                     block_size = NULL,
                     embargo = NULL,
+                    strategy = NULL,
                     output = c("list", "rsample", "caret", "mlr3"),
                     allow_random = FALSE,
                     verbose = FALSE) {
@@ -150,10 +155,21 @@ borg_cv <- function(data,
   }
 
   # Select CV strategy
-  strategy <- if (allow_random && diagnosis@severity != "none") {
-    "random_override"
+  if (!is.null(strategy)) {
+    valid_strategies <- c("random", "spatial_block", "temporal_block",
+                          "temporal_expanding", "temporal_sliding",
+                          "group_fold", "spatial_temporal", "spatial_group",
+                          "temporal_group")
+    if (!strategy %in% valid_strategies) {
+      stop(sprintf("Unknown strategy '%s'. Must be one of: %s",
+                   strategy, paste(valid_strategies, collapse = ", ")))
+    }
   } else {
-    diagnosis@recommended_cv
+    strategy <- if (allow_random && diagnosis@severity != "none") {
+      "random_override"
+    } else {
+      diagnosis@recommended_cv
+    }
   }
 
   # Generate folds based on strategy
@@ -162,6 +178,8 @@ borg_cv <- function(data,
     "random_override" = generate_random_folds(data, v),
     "spatial_block" = generate_spatial_block_folds(data, v, diagnosis, coords, block_size, verbose),
     "temporal_block" = generate_temporal_block_folds(data, v, diagnosis, time, embargo, verbose),
+    "temporal_expanding" = generate_temporal_expanding_folds(data, v, diagnosis, time, embargo, verbose),
+    "temporal_sliding" = generate_temporal_sliding_folds(data, v, diagnosis, time, embargo, verbose),
     "group_fold" = generate_group_folds(data, v, diagnosis, groups, verbose),
     "spatial_temporal" = generate_spatial_temporal_folds(data, v, diagnosis, coords, time, verbose),
     "spatial_group" = generate_spatial_group_folds(data, v, diagnosis, coords, groups, verbose),
@@ -564,6 +582,135 @@ generate_temporal_group_folds <- function(data, v, diagnosis, time_col, group_co
     train_idx <- which(!groups %in% test_groups)
     list(train = train_idx, test = test_idx)
   })
+}
+
+
+#' Generate Temporal Expanding Window Folds (Internal)
+#'
+#' Forward-chaining: training window grows, test window slides forward.
+#' @noRd
+generate_temporal_expanding_folds <- function(data, v, diagnosis, time_col, embargo, verbose) {
+  if (is.null(time_col)) time_col <- diagnosis@temporal$time_col
+  if (is.null(time_col)) {
+    stop("Expanding window CV requires time column. Provide 'time' argument.")
+  }
+
+  time_vals <- data[[time_col]]
+  n <- nrow(data)
+  time_numeric <- as.numeric(time_vals)
+  ord <- order(time_numeric)
+
+  if (is.null(embargo)) {
+    if (!is.na(diagnosis@temporal$embargo_minimum)) {
+      embargo <- diagnosis@temporal$embargo_minimum
+    } else {
+      embargo <- 0
+    }
+  }
+
+  # Minimum initial training size: 2x test size
+  test_size <- floor(n / (v + 1))
+  initial_train_size <- max(test_size * 2, floor(n / (v + 1)))
+
+  if (verbose) {
+    message(sprintf("Expanding window: initial train = %d, test size = %d, embargo = %s",
+                    initial_train_size, test_size, embargo))
+  }
+
+  folds <- list()
+  for (i in seq_len(v)) {
+    train_end <- initial_train_size + (i - 1) * test_size
+    test_start <- train_end + 1
+    test_end <- min(test_start + test_size - 1, n)
+
+    if (test_start > n || train_end > n) break
+
+    train_idx <- ord[1:train_end]
+    test_idx <- ord[test_start:test_end]
+
+    # Apply embargo: remove training points too close in time to test
+    if (embargo > 0 && length(test_idx) > 0 && length(train_idx) > 0) {
+      test_min_time <- min(time_numeric[test_idx], na.rm = TRUE)
+      keep <- time_numeric[train_idx] < (test_min_time - embargo)
+      train_idx <- train_idx[keep]
+    }
+
+    if (length(train_idx) >= 10 && length(test_idx) >= 1) {
+      folds <- c(folds, list(list(train = train_idx, test = test_idx)))
+    }
+  }
+
+  if (length(folds) < 2) {
+    warning("Expanding window produced < 2 valid folds. Consider fewer folds or smaller embargo.")
+  }
+
+  folds
+}
+
+
+#' Generate Temporal Sliding Window Folds (Internal)
+#'
+#' Fixed-size training window slides forward with the test window.
+#' @noRd
+generate_temporal_sliding_folds <- function(data, v, diagnosis, time_col, embargo, verbose) {
+  if (is.null(time_col)) time_col <- diagnosis@temporal$time_col
+  if (is.null(time_col)) {
+    stop("Sliding window CV requires time column. Provide 'time' argument.")
+  }
+
+  time_vals <- data[[time_col]]
+  n <- nrow(data)
+  time_numeric <- as.numeric(time_vals)
+  ord <- order(time_numeric)
+
+  if (is.null(embargo)) {
+    if (!is.na(diagnosis@temporal$embargo_minimum)) {
+      embargo <- diagnosis@temporal$embargo_minimum
+    } else {
+      embargo <- 0
+    }
+  }
+
+  # Fixed window size: enough for each fold to have train + test
+  test_size <- floor(n / (v + 1))
+  window_size <- test_size * 3  # Training window = 3x test size
+  step_size <- floor((n - window_size - test_size) / max(v - 1, 1))
+  step_size <- max(step_size, 1)
+
+  if (verbose) {
+    message(sprintf("Sliding window: window = %d, test = %d, step = %d, embargo = %s",
+                    window_size, test_size, step_size, embargo))
+  }
+
+  folds <- list()
+  for (i in seq_len(v)) {
+    train_start <- 1 + (i - 1) * step_size
+    train_end <- min(train_start + window_size - 1, n)
+    test_start <- train_end + 1
+    test_end <- min(test_start + test_size - 1, n)
+
+    if (test_start > n || train_end > n) break
+
+    train_idx <- ord[train_start:train_end]
+    test_idx <- ord[test_start:test_end]
+
+    # Apply embargo
+    if (embargo > 0 && length(test_idx) > 0 && length(train_idx) > 0) {
+      test_min_time <- min(time_numeric[test_idx], na.rm = TRUE)
+      keep <- time_numeric[train_idx] < (test_min_time - embargo)
+      train_idx <- train_idx[keep]
+    }
+
+    if (length(train_idx) >= 10 && length(test_idx) >= 1) {
+      folds <- c(folds, list(list(train = train_idx, test = test_idx)))
+    }
+  }
+
+  if (length(folds) < 2) {
+    warning("Sliding window produced < 2 valid folds. Consider fewer folds or smaller window.")
+  }
+
+  folds
 }
 
 

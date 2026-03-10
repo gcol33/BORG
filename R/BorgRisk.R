@@ -217,6 +217,3 @@ as.data.frame.BorgRisk <- function(x, row.names = NULL, optional = FALSE, ...) {
 
  df
 }
-
-# Null-coalescing operator (internal)
-`%||%` <- function(x, y) if (is.null(x)) y else x

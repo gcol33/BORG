@@ -14,6 +14,7 @@ borg_cv(
   target = NULL,
   block_size = NULL,
   embargo = NULL,
+  strategy = NULL,
   output = c("list", "rsample", "caret", "mlr3"),
   allow_random = FALSE,
   verbose = FALSE
@@ -44,6 +45,11 @@ the autocorrelation range.}
 
 \item{embargo}{Integer. For temporal blocking, minimum gap between train and test.
 If NULL, automatically determined from diagnosis.}
+
+\item{strategy}{Character. Override the auto-detected CV strategy. Use
+\code{"temporal_expanding"} for expanding window (forward-chaining) or
+\code{"temporal_sliding"} for fixed-size sliding window.
+Default: NULL (auto-detect from diagnosis).}
 
 \item{output}{Character. Output format: "list" (default), "rsample", "caret", "mlr3".}
 

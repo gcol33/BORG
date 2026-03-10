@@ -26,8 +26,11 @@ A model shows 95% accuracy on test data, then drops to 60% in production. The us
 Leakage happens when information from your test set contaminates training. Common causes:
 
 - Preprocessing (scaling, PCA) fitted on all data before splitting
+
 - Features derived from the outcome variable
+
 - Same patient/site appearing in both train and test
+
 - Random CV on spatially autocorrelated data
 
 BORG checks for these problems before you compute metrics.
@@ -270,4 +273,5 @@ borg_export(result$diagnosis, spatial_data, "validation.json")
 ## See Also
 
 - `vignette("risk-taxonomy")` - Complete catalog of detectable risks
+
 - `vignette("frameworks")` - Integration with caret, tidymodels, mlr3

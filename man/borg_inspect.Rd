@@ -9,8 +9,8 @@ borg_inspect(
   train_idx = NULL,
   test_idx = NULL,
   data = NULL,
-  target_col = NULL,
-  spatial_cols = NULL,
+  target = NULL,
+  coords = NULL,
   ...
 )
 }
@@ -32,10 +32,10 @@ data-level inspection.}
 \item{data}{Optional data frame. Required when inspecting preprocessing
 objects to compare parameters against train-only statistics.}
 
-\item{target_col}{Optional name of the target/outcome column. If provided,
+\item{target}{Optional name of the target/outcome column. If provided,
 checks for target leakage (features highly correlated with target).}
 
-\item{spatial_cols}{Optional character vector of coordinate column names.
+\item{coords}{Optional character vector of coordinate column names.
 If provided, checks spatial separation between train and test.}
 
 \item{...}{Additional arguments passed to type-specific inspectors.}

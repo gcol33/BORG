@@ -121,7 +121,9 @@ test_scaled <- scale(test_data, center = means, scale = sds)
 
 **Why it matters**: Feature is almost certainly derived from the outcome. Examples:
 - `days_since_diagnosis` when predicting `has_disease`
+
 - `total_spent` when predicting `is_customer`
+
 - Aggregated future values leaked into current features
 
 **Detection**: Compute Pearson correlation of each numeric feature with target on training data.
@@ -219,7 +221,9 @@ test_idx <- 71:100
 **Supported objects**:
 
 - `caret::trainControl` - checks `$index` and `$indexOut`
+
 - `rsample::vfold_cv` and other `rset` objects
+
 - `rsample::rsplit` objects
 
 ## 8. Model Scope
@@ -369,4 +373,5 @@ as.data.frame(result)
 ## See Also
 
 - `vignette("quickstart")` - Basic usage
+
 - `vignette("frameworks")` - Framework integration

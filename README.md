@@ -6,26 +6,28 @@
 
 **Bounded Outcome Risk Guard for Model Evaluation**
 
-BORG detects data leakage and invalid cross-validation setups before you compute performance metrics. It checks for information reuse between training and test data, and blocks evaluation when problems are found.
+BORG catches data leakage that inflates your model's performance — before you report the wrong number.
 
 ## Quick Start
 
 ```r
 library(BORG)
 
-# Validate a train/test split
-data <- iris
+# You scaled the data, then split it. Looks fine?
+data_scaled <- scale(iris[, 1:4])
 train_idx <- 1:100
 test_idx <- 101:150
 
-borg(data, train_idx = train_idx, test_idx = test_idx)
-
-# Detect overlapping indices
-borg(data, train_idx = 1:100, test_idx = 51:150)
-#> Error: index_overlap - Train and test indices overlap (50 shared indices)
+borg_inspect(data_scaled, train_idx = train_idx, test_idx = test_idx)
+#> INVALID — Hard violation: preprocessing_leak
+#> "Normalization parameters were computed on data beyond training set"
 ```
 
-## Statement of Need
+The test set means leaked into the scaler. Your reported accuracy is wrong.
+BORG finds this automatically — for scaling, PCA, recipes, caret pipelines,
+and more.
+
+## Why This Matters
 
 A model shows 95% accuracy on test data, then drops to 60% in production. The usual cause: data leakage. Information from the test set contaminated training, and the reported metrics were wrong.
 
@@ -86,26 +88,32 @@ pak::pak("gcol33/BORG")
 
 ## Usage Examples
 
-### Basic Validation
+### Validate a Train/Test Split
 
 ```r
 library(BORG)
-data <- iris
-train_idx <- 1:100
-test_idx <- 101:150
 
-# Returns BorgRisk object with validation results
-result <- borg(data, train_idx = train_idx, test_idx = test_idx)
+# Clean split — passes validation
+result <- borg(iris, train_idx = 1:100, test_idx = 101:150)
 result
+#> Status: VALID
+#>   Hard violations: 0
+#>   Soft inflations: 0
+
+# Overlapping indices — caught immediately
+borg(iris, train_idx = 1:100, test_idx = 51:150)
+#> INVALID — index_overlap: Train and test indices overlap (50 shared indices)
 ```
 
-### Detecting Preprocessing Leakage
+### Catch Leaky Preprocessing Pipelines
 
 ```r
-# BAD: scale() fitted on all data before splitting
-data_scaled <- scale(iris[, 1:4])
-borg_inspect(data_scaled, train_idx = 1:100, test_idx = 101:150)
+# caret preProcess fitted on ALL data (common mistake)
+library(caret)
+pp <- preProcess(mtcars, method = c("center", "scale"))
+borg_inspect(pp, train_idx = 1:25, test_idx = 26:32, data = mtcars)
 #> Hard violation: preprocessing_leak
+#> "preProcess centering parameters were computed on data beyond training set"
 ```
 
 ### Target Leakage Detection
