@@ -127,7 +127,7 @@ cv <- borg_cv(clustered_data, groups = "site", target = "value")
 cv$strategy  # "group_fold"
 
 # Get rsample-compatible output for tidymodels
-\dontrun{
+\donttest{
 cv_rsample <- borg_cv(spatial_data, coords = c("x", "y"), output = "rsample")
 }
 

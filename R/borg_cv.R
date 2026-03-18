@@ -95,7 +95,7 @@
 #' cv$strategy  # "group_fold"
 #'
 #' # Get rsample-compatible output for tidymodels
-#' \dontrun{
+#' \donttest{
 #' cv_rsample <- borg_cv(spatial_data, coords = c("x", "y"), output = "rsample")
 #' }
 #'
@@ -118,9 +118,19 @@ borg_cv <- function(data,
 
   output <- match.arg(output)
 
+  # Handle sf / SpatVector inputs
+  if (inherits(data, "SpatVector") || inherits(data, "sf")) {
+    spatial_meta <- extract_coords(data)
+    df <- extract_data_frame(data)
+    df$.borg_x <- spatial_meta$x
+    df$.borg_y <- spatial_meta$y
+    data <- df
+    if (is.null(coords)) coords <- c(".borg_x", ".borg_y")
+  }
+
   # Input validation
   if (!is.data.frame(data)) {
-    stop("'data' must be a data frame")
+    stop("'data' must be a data frame, sf object, or SpatVector")
   }
   n <- nrow(data)
   if (n < v * 2) {
@@ -278,8 +288,9 @@ generate_spatial_block_folds <- function(data, v, diagnosis, coords, block_size,
     stop("Spatial blocking requires coordinates. Provide 'coords' argument.")
   }
 
-  x_coord <- data[[coords[1]]]
-  y_coord <- data[[coords[2]]]
+  coord_info <- extract_coords(data, coords)
+  x_coord <- coord_info$x
+  y_coord <- coord_info$y
   n <- nrow(data)
 
   # Determine block size

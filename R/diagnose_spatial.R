@@ -2,7 +2,7 @@
 
 #' Diagnose Spatial Autocorrelation (Internal)
 #' @noRd
-diagnose_spatial <- function(data, coords, y, alpha, verbose) {
+diagnose_spatial <- function(data, coords, y, alpha, verbose, crs = NULL) {
   x_coord <- data[[coords[1]]]
   y_coord <- data[[coords[2]]]
   n <- nrow(data)
@@ -34,8 +34,8 @@ diagnose_spatial <- function(data, coords, y, alpha, verbose) {
     y_sub_val <- y
   }
 
-  # Compute pairwise distances
-  dist_mat <- compute_distance_matrix(x_sub, y_sub)
+  # Compute pairwise distances (Haversine for geographic CRS, Euclidean otherwise)
+  dist_mat <- compute_distance_matrix_geo(x_sub, y_sub, crs = crs)
 
   # If no target, use coordinates to test for clustering
   if (is.null(y_sub_val)) {

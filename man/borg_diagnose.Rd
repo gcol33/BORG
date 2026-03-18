@@ -15,7 +15,9 @@ borg_diagnose(
 )
 }
 \arguments{
-\item{data}{A data frame to diagnose.}
+\item{data}{A data frame, \code{sf} object, or \code{terra::SpatVector}
+to diagnose. For \code{sf} and \code{SpatVector} inputs, coordinates
+are extracted automatically and the \code{coords} argument is not needed.}
 
 \item{coords}{Character vector of length 2 specifying coordinate column names
 (e.g., \code{c("lon", "lat")} or \code{c("x", "y")}). If NULL, spatial

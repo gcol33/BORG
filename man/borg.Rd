@@ -18,7 +18,10 @@ borg(
 )
 }
 \arguments{
-\item{data}{A data frame to diagnose and create CV folds for.}
+\item{data}{A data frame, \code{sf} object, or \code{terra::SpatVector}
+to diagnose and create CV folds for. For \code{sf} and \code{SpatVector}
+inputs, coordinates are extracted automatically from the geometry and
+the \code{coords} argument is not needed.}
 
 \item{coords}{Character vector of length 2 specifying coordinate column names
 (e.g., \code{c("lon", "lat")}). Triggers spatial autocorrelation detection.}
@@ -125,7 +128,7 @@ temporal_data <- data.frame(
 
 result <- borg(temporal_data, time = "date", target = "value")
 
-\dontrun{
+\donttest{
 # Get rsample-compatible output for tidymodels (requires rsample package)
 result <- borg(spatial_data, coords = c("x", "y"), output = "rsample")
 }

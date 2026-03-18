@@ -1,6 +1,6 @@
 Package: BORG
 Title: Bounded Outcome Risk Guard for Model Evaluation
-Version: 0.2.3
+Version: 0.2.6
 Authors@R:
     person("Gilles", "Colling", email = "gilles.colling051@gmail.com",
            role = c("aut", "cre", "cph"),
@@ -9,6 +9,10 @@ Description: Automatically detects and enforces valid model evaluation by identi
     information reuse between training and evaluation data. Guards against data leakage,
     look-ahead bias, and invalid cross-validation schemes that inflate performance estimates.
     Supports temporal, spatial, and grouped evaluation structures.
+    Based on evaluation principles described in
+    Roberts et al. (2017) <doi:10.1111/ecog.02881>,
+    Kaufman et al. (2012) <doi:10.1145/2382577.2382579>, and
+    Kapoor & Narayanan (2023) <doi:10.1016/j.patter.2023.100804>.
 License: MIT + file LICENSE
 Language: en-US
 Encoding: UTF-8
@@ -22,11 +26,13 @@ Imports:
     utils
 Suggests:
     caret,
+    ggplot2 (>= 3.4.0),
     rsample,
     tidyselect,
     recipes,
     mlr3,
     sf,
+    terra,
     ranger,
     parsnip,
     workflows,
@@ -36,7 +42,7 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-URL: https://github.com/gcol33/BORG
+URL: https://github.com/gcol33/BORG, https://gillescolling.com/BORG/
 BugReports: https://github.com/gcol33/BORG/issues
 Depends:
     R (>= 3.5)

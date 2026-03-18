@@ -3,7 +3,10 @@
 #' The main entry point for BORG. Diagnoses data dependencies, generates
 #' valid cross-validation schemes, and validates evaluation workflows.
 #'
-#' @param data A data frame to diagnose and create CV folds for.
+#' @param data A data frame, \code{sf} object, or \code{terra::SpatVector}
+#'   to diagnose and create CV folds for. For \code{sf} and \code{SpatVector}
+#'   inputs, coordinates are extracted automatically from the geometry and
+#'   the \code{coords} argument is not needed.
 #' @param coords Character vector of length 2 specifying coordinate column names
 #'   (e.g., \code{c("lon", "lat")}). Triggers spatial autocorrelation detection.
 #' @param time Character string specifying the time column name. Triggers
@@ -96,7 +99,7 @@
 #'
 #' result <- borg(temporal_data, time = "date", target = "value")
 #'
-#' \dontrun{
+#' \donttest{
 #' # Get rsample-compatible output for tidymodels (requires rsample package)
 #' result <- borg(spatial_data, coords = c("x", "y"), output = "rsample")
 #' }
@@ -129,6 +132,39 @@ borg <- function(data,
                  ...) {
 
   output <- match.arg(output)
+
+  # =========================================================================
+  # Handle sf / SpatVector inputs
+  # =========================================================================
+
+  spatial_crs <- NULL
+
+  if (inherits(data, "SpatVector")) {
+    if (!requireNamespace("terra", quietly = TRUE)) {
+      stop("Package 'terra' required for SpatVector inputs. ",
+           "Install with: install.packages('terra')")
+    }
+    spatial_meta <- extract_coords(data)
+    spatial_crs <- spatial_meta$crs
+    # Inject coordinate columns into the data.frame so downstream works
+    df <- extract_data_frame(data)
+    df$.borg_x <- spatial_meta$x
+    df$.borg_y <- spatial_meta$y
+    data <- df
+    if (is.null(coords)) coords <- c(".borg_x", ".borg_y")
+  } else if (inherits(data, "sf")) {
+    if (!requireNamespace("sf", quietly = TRUE)) {
+      stop("Package 'sf' required for sf inputs. ",
+           "Install with: install.packages('sf')")
+    }
+    spatial_meta <- extract_coords(data)
+    spatial_crs <- spatial_meta$crs
+    df <- extract_data_frame(data)
+    df$.borg_x <- spatial_meta$x
+    df$.borg_y <- spatial_meta$y
+    data <- df
+    if (is.null(coords)) coords <- c(".borg_x", ".borg_y")
+  }
 
   # =========================================================================
   # Handle non-data.frame inputs (backward compatibility)

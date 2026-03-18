@@ -88,6 +88,8 @@ setClass(
 #' @importMethodsFrom methods show
 #' @exportMethod show
 #' @param object A \code{BorgDiagnosis} object to be printed.
+#' @return The \code{BorgDiagnosis} object, returned invisibly.
+#'   Called for the side effect of printing a diagnostic summary to the console.
 setMethod("show", "BorgDiagnosis", function(object) {
   cat("BORG Dependency Diagnosis\n")
   cat("=========================\n\n")
@@ -208,7 +210,9 @@ as.data.frame.BorgDiagnosis <- function(x, row.names = NULL, optional = FALSE, .
 #' and clustered structure in data. Returns a diagnosis object that specifies
 #' appropriate cross-validation strategies.
 #'
-#' @param data A data frame to diagnose.
+#' @param data A data frame, \code{sf} object, or \code{terra::SpatVector}
+#'   to diagnose. For \code{sf} and \code{SpatVector} inputs, coordinates
+#'   are extracted automatically and the \code{coords} argument is not needed.
 #' @param coords Character vector of length 2 specifying coordinate column names
 #'   (e.g., \code{c("lon", "lat")} or \code{c("x", "y")}). If NULL, spatial
 #'   autocorrelation is not tested.
@@ -291,9 +295,21 @@ borg_diagnose <- function(data,
                           verbose = FALSE) {
   call <- match.call()
 
+  # Handle sf / SpatVector inputs
+  spatial_crs <- NULL
+  if (inherits(data, "SpatVector") || inherits(data, "sf")) {
+    spatial_meta <- extract_coords(data)
+    spatial_crs <- spatial_meta$crs
+    df <- extract_data_frame(data)
+    df$.borg_x <- spatial_meta$x
+    df$.borg_y <- spatial_meta$y
+    data <- df
+    if (is.null(coords)) coords <- c(".borg_x", ".borg_y")
+  }
+
   # Input validation
   if (!is.data.frame(data)) {
-    stop("'data' must be a data frame")
+    stop("'data' must be a data frame, sf object, or SpatVector")
   }
   n <- nrow(data)
   if (n < 10) {
@@ -350,7 +366,8 @@ borg_diagnose <- function(data,
   # ===== SPATIAL AUTOCORRELATION =====
   if (!is.null(coords)) {
     if (verbose) message("Testing spatial autocorrelation...")
-    spatial_result <- diagnose_spatial(data, coords, y, alpha, verbose)
+    spatial_result <- diagnose_spatial(data, coords, y, alpha, verbose,
+                                      crs = spatial_crs)
   }
 
   # ===== TEMPORAL AUTOCORRELATION =====
