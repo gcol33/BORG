@@ -37,16 +37,13 @@
 #' \code{\link{borg_inspect}} for single-object inspection.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Validate an existing workflow
+#' data <- data.frame(x = rnorm(100), y = rnorm(100))
 #' result <- borg_validate(list(
-#'   data = my_data,
-#'   train_idx = train_idx,
-#'   test_idx = test_idx,
-#'   preprocess = my_recipe,
-#'   model = my_model,
-#'   predictions = preds,
-#'   metrics = list(rmse = 0.5, mae = 0.3)
+#'   data = data,
+#'   train_idx = 1:70,
+#'   test_idx = 71:100
 #' ))
 #'
 #' # Check validity

@@ -26,10 +26,13 @@ Write a BORG validation certificate to a YAML or JSON file for
 machine-readable documentation.
 }
 \examples{
-\dontrun{
-diagnosis <- borg_diagnose(data, coords = c("x", "y"), target = "response")
-borg_export(diagnosis, data, "validation.yaml")
-borg_export(diagnosis, data, "validation.json")
+\donttest{
+spatial_data <- data.frame(
+  x = runif(100), y = runif(100), response = rnorm(100)
+)
+diagnosis <- borg_diagnose(spatial_data, coords = c("x", "y"), target = "response")
+borg_export(diagnosis, spatial_data, file.path(tempdir(), "validation.yaml"))
+borg_export(diagnosis, spatial_data, file.path(tempdir(), "validation.json"))
 }
 
 }

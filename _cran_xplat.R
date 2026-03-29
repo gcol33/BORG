@@ -1,0 +1,6 @@
+setwd("C:/Users/Gilles Colling/Documents/dev/BORG")
+cat("Submitting to win-builder (R-devel)...\n")
+devtools::check_win_devel()
+cat("\nSubmitting to mac-builder...\n")
+devtools::check_mac_release()
+cat("\nDone. Results will be emailed to gilles.colling051@gmail.com\n")

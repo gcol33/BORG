@@ -528,6 +528,9 @@ audit_importance <- function(importance, data, train_idx, test_idx,
 #' Print CV Leakage Report
 #' @param x A borg_cv_report object.
 #' @param ... Additional arguments (ignored).
+#' @return The \code{borg_cv_report} object \code{x}, returned invisibly.
+#'   Called for the side effect of printing a human-readable leakage summary
+#'   to the console.
 #' @export
 print.borg_cv_report <- function(x, ...) {
   cat("BORG CV Leakage Report\n")

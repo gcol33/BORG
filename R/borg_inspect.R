@@ -182,6 +182,17 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
    risks <- c(risks, nested_risks)
  }
 
+ # Feature engineering leakage check (if data is available)
+ if (is.data.frame(object) || !is.null(data)) {
+   fe_data <- if (is.data.frame(object)) object else data
+   fe_risks <- .inspect_feature_engineering(
+     fe_data, train_idx, test_idx,
+     time_col = if (!is.null(list(...)$time)) list(...)$time else NULL,
+     coords = if (!is.null(list(...)$coords)) list(...)$coords else NULL
+   )
+   risks <- c(risks, fe_risks)
+ }
+
  # ===========================================================================
  # Build result object
  # ===========================================================================

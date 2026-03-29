@@ -22,6 +22,17 @@
 #'   is provided.
 #' @param output Character. CV output format: "list" (default), "rsample",
 #'   "caret", "mlr3". Ignored when validating an existing split.
+#' @param formula A model formula (e.g. \code{y ~ x1 + x2}). If supplied,
+#'   the response variable is extracted as \code{target} (unless \code{target}
+#'   is also provided).
+#' @param buffer Numeric. Spatial buffer distance (in coordinate units) applied
+#'   around test-fold observations. Training points within this buffer are
+#'   removed to reduce spatial autocorrelation leakage. Default: NULL (no buffer).
+#' @param env Environmental covariates used for environmental blocking.
+#'   A \code{SpatRaster}, data frame, or matrix with one row per observation.
+#'   Passed to \code{\link{borg_cv}}.
+#' @param repeats Integer. Number of times to repeat the CV fold generation
+#'   with different random seeds. Default: 1 (no repetition).
 #' @param ... Additional arguments passed to underlying functions.
 #'
 #' @return Depends on usage mode:
@@ -125,13 +136,100 @@ borg <- function(data,
                  time = NULL,
                  groups = NULL,
                  target = NULL,
+                 formula = NULL,
                  v = 5,
                  train_idx = NULL,
                  test_idx = NULL,
+                 buffer = NULL,
+                 env = NULL,
+                 repeats = 1L,
                  output = c("list", "rsample", "caret", "mlr3"),
                  ...) {
 
   output <- match.arg(output)
+
+  # =========================================================================
+  # Formula interface: borg(d, formula = z ~ x + y)
+  # =========================================================================
+  if (!is.null(formula) && inherits(formula, "formula")) {
+    if (is.null(target)) target <- all.vars(formula)[1]
+  }
+
+  # =========================================================================
+  # Auto-detect structure columns from common naming conventions
+  # =========================================================================
+
+  if (is.data.frame(data)) {
+    col_lower <- tolower(names(data))
+
+    # Auto-detect coords
+    if (is.null(coords) && !is.null(attr(data, "borg_coords"))) {
+      coords <- attr(data, "borg_coords")
+    }
+    if (is.null(coords)) {
+      coord_pairs <- list(
+        c("lon", "lat"), c("longitude", "latitude"),
+        c("x", "y"), c("lng", "lat"),
+        c("decimallon", "decimallat"),
+        c("decimallongitude", "decimallatitude")
+      )
+      for (pair in coord_pairs) {
+        matches <- match(pair, col_lower)
+        if (!anyNA(matches)) {
+          coords <- names(data)[matches]
+          break
+        }
+      }
+    }
+
+    # Auto-detect time
+    if (is.null(time)) {
+      time_candidates <- c("date", "time", "datetime", "timestamp",
+                            "year", "day", "t", "date_time")
+      for (tc in time_candidates) {
+        idx <- match(tc, col_lower)
+        if (!is.na(idx)) {
+          col <- data[[idx]]
+          if (inherits(col, "Date") || inherits(col, "POSIXt") ||
+              (is.numeric(col) && tc %in% c("year", "time", "t", "day"))) {
+            time <- names(data)[idx]
+            break
+          }
+        }
+      }
+    }
+
+    # Auto-detect groups
+    if (is.null(groups)) {
+      group_candidates <- c("site", "site_id", "group", "group_id",
+                              "patient", "patient_id", "subject",
+                              "subject_id", "cluster", "block", "id")
+      for (gc in group_candidates) {
+        idx <- match(gc, col_lower)
+        if (!is.na(idx)) {
+          col <- data[[idx]]
+          # Must be a grouping variable (few unique values relative to n)
+          n_unique <- length(unique(col))
+          if (n_unique >= 2 && n_unique <= nrow(data) / 2) {
+            groups <- names(data)[idx]
+            break
+          }
+        }
+      }
+    }
+
+    # Auto-detect target: first numeric column not used as coords/time/groups
+    if (is.null(target)) {
+      structure_cols <- c(coords, time, groups)
+      candidates <- setdiff(names(data), structure_cols)
+      for (cand in candidates) {
+        if (is.numeric(data[[cand]])) {
+          target <- cand
+          break
+        }
+      }
+    }
+  }
 
   # =========================================================================
   # Handle sf / SpatVector inputs
@@ -243,6 +341,9 @@ borg <- function(data,
     time = time,
     groups = groups,
     target = target,
+    env = env,
+    buffer = buffer,
+    repeats = repeats,
     output = output,
     verbose = FALSE
   )

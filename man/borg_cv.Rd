@@ -12,9 +12,14 @@ borg_cv(
   time = NULL,
   groups = NULL,
   target = NULL,
+  env = NULL,
+  dist_mat = NULL,
+  prediction_points = NULL,
   block_size = NULL,
   embargo = NULL,
+  buffer = NULL,
   strategy = NULL,
+  repeats = 1L,
   output = c("list", "rsample", "caret", "mlr3"),
   allow_random = FALSE,
   verbose = FALSE
@@ -39,6 +44,19 @@ Required for group CV if diagnosis is NULL.}
 
 \item{target}{Character string specifying the response variable column name.}
 
+\item{env}{Environmental covariates for environmental blocking.
+A \code{SpatRaster}, data frame, or matrix with one row per observation.
+Required when \code{strategy = "environmental_block"} or
+\code{"spatial_plus"}.}
+
+\item{dist_mat}{A distance matrix or \code{dist} object for custom blocking.
+Must be an \code{n x n} matrix matching \code{nrow(data)}. Required when
+\code{strategy = "custom_block"}.}
+
+\item{prediction_points}{Data frame, matrix, \code{SpatVector}, or \code{sf}
+object with coordinates of prediction locations. Required when
+\code{strategy = "knndm"}.}
+
 \item{block_size}{Numeric. For spatial blocking, the minimum block size.
 If NULL, automatically determined from diagnosis. Should be larger than
 the autocorrelation range.}
@@ -46,10 +64,17 @@ the autocorrelation range.}
 \item{embargo}{Integer. For temporal blocking, minimum gap between train and test.
 If NULL, automatically determined from diagnosis.}
 
+\item{buffer}{Numeric. Spatial buffer distance (in coordinate units).
+Training points within this distance of any test-fold point are removed
+to reduce autocorrelation leakage. Default: NULL (no buffer).}
+
 \item{strategy}{Character. Override the auto-detected CV strategy. Use
 \code{"temporal_expanding"} for expanding window (forward-chaining) or
 \code{"temporal_sliding"} for fixed-size sliding window.
 Default: NULL (auto-detect from diagnosis).}
+
+\item{repeats}{Integer. Number of times to repeat CV fold generation with
+different random seeds. Default: 1 (no repetition).}
 
 \item{output}{Character. Output format: "list" (default), "rsample", "caret", "mlr3".}
 

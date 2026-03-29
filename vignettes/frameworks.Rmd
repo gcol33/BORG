@@ -356,11 +356,11 @@ result
 
 ---
 
-## Automatic Repair with borg_rewrite()
+## Automatic Repair with borg_assimilate()
 
-BORG can attempt to fix some issues automatically:
+BORG can automatically fix certain types of leakage:
 
-```{r rewrite}
+```{r assimilate}
 # Workflow with fixable issues
 workflow <- list(
   data = iris,
@@ -368,17 +368,18 @@ workflow <- list(
   test_idx = 51:150  # Overlap
 )
 
-# Attempt fixes
-fixed <- borg_rewrite(workflow)
+# Attempt automatic repair
+fixed <- borg_assimilate(workflow)
 
 if (length(fixed$unfixable) > 0) {
-  cat("Could not fix:", paste(fixed$unfixable, collapse = ", "), "\n")
+  cat("Partial assimilation:", length(fixed$unfixable), "risk(s) require manual fix:",
+      paste(fixed$unfixable, collapse = ", "), "\n")
 } else {
-  cat("Workflow repaired successfully\n")
+  cat("Assimilation complete:", length(fixed$fixed), "risk(s) corrected\n")
 }
 ```
 
-Note: Index overlap cannot be automatically fixed - it requires choosing a new split strategy.
+Note: Index overlap requires choosing a new split strategy and cannot be fixed automatically.
 
 ---
 

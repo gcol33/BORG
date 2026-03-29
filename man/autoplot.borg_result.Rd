@@ -10,6 +10,9 @@
   fold = 1,
   data = NULL,
   coords = NULL,
+  raster = NULL,
+  time = NULL,
+  groups = NULL,
   ...
 )
 }
@@ -26,6 +29,16 @@ Required for \code{type = "spatial"} to obtain coordinates.}
 
 \item{coords}{Character vector of coordinate column names. Required for
 \code{type = "spatial"} when \code{data} is a plain data.frame.}
+
+\item{raster}{Optional \code{terra::SpatRaster}. When provided with
+\code{type = "spatial"}, the first layer is rendered as a background
+map behind the fold points. Requires the \pkg{tidyterra} package.}
+
+\item{time}{Character name of the time column in \code{data}, or a vector of
+time values (length = \code{nrow(data)}). Required for \code{type = "temporal"}.}
+
+\item{groups}{Character name of the grouping column in \code{data}, or a
+vector of group labels. Required for \code{type = "groups"}.}
 
 \item{...}{Additional arguments (currently unused).}
 }

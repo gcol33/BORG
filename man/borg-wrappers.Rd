@@ -3,6 +3,10 @@
 \name{borg-wrappers}
 \alias{borg-wrappers}
 \title{BORG-Guarded Cross-Validation Functions}
+\value{
+No return value. This page documents the family of guarded CV
+wrapper functions; see individual functions for their return values.
+}
 \description{
 These functions wrap common cross-validation functions from popular ML
 frameworks, adding automatic BORG validation. They block random CV when

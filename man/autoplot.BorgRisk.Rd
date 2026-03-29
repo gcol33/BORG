@@ -4,13 +4,17 @@
 \alias{autoplot.BorgRisk}
 \title{Autoplot Method for BorgRisk Objects}
 \usage{
-\method{autoplot}{BorgRisk}(object, max_risks = 10, ...)
+\method{autoplot}{BorgRisk}(object, max_risks = 10, show_fixes = TRUE, ...)
 }
 \arguments{
 \item{object}{A \code{\link{BorgRisk}} object from \code{borg_inspect()} or
 \code{borg()} in validation mode.}
 
 \item{max_risks}{Integer. Maximum number of risks to display. Default: 10.}
+
+\item{show_fixes}{Logical. If TRUE (default), annotate each risk with a
+suggested fix from \code{borg_assimilate()} or manual action. If FALSE,
+show the risk description instead.}
 
 \item{...}{Additional arguments (currently unused).}
 }

@@ -29,3 +29,5 @@
 ^IMPLEMENTATION\.md$
 ^Rplots\.pdf$
 ^EVOLUTION\.md$
+^_cran_.*\.R$
+^_regen_docs\.R$

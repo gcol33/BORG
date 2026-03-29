@@ -1,3 +1,28 @@
+# BORG 0.2.7
+
+## Suggested fixes in risk reports
+
+* `show(BorgRisk)` now prints actionable suggested fixes for each detected risk
+* `as.data.frame(BorgRisk)` includes a `suggested_fix` column
+* Risks fixable by `borg_assimilate()` are labeled with the auto-fix call
+* Manual-intervention risks provide specific guidance (e.g., "use spatial block CV")
+
+## Improved ggplot2 autoplot methods
+
+* `autoplot(BorgRisk)`: Lollipop chart with fix annotations, point size encodes affected indices
+* `autoplot(borg_result, type = "temporal")`: New temporal split visualization with look-ahead violation detection
+* `autoplot(borg_result, type = "groups")`: New group assignment bar chart with overlap highlighting
+* `autoplot(BorgDiagnosis)`: Richer panel with detection threshold gauge bars
+
+## Better terra/sf spatial integration
+
+* Spatial autoplot now uses `tidyterra::geom_spatvector()` for native SpatVector rendering when available
+* `sf` objects preserve geometry directly (no coordinate extraction + reconstruction round-trip)
+* Faceted spatial CV plots work natively with both sf and SpatVector inputs
+* Added `tidyterra` to Suggests
+
+---
+
 # BORG 0.2.3
 
 ## Native R Integration
@@ -180,7 +205,7 @@ Initial release.
 
   - `prcomp` PCA objects
   - rsample resampling objects
-* `borg_rewrite()`: Attempts automatic fixes for detected violations
+* `borg_assimilate()`: Assimilates leaky pipelines into compliance (auto-fix)
 * `BorgRisk` S4 class for structured risk assessment reports
 
 ## Performance

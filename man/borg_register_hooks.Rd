@@ -30,19 +30,21 @@ functions. The hooks are session-specific and do not persist.
 To remove hooks, use \code{borg_unregister_hooks()}.
 }
 \examples{
-\dontrun{
-# Register hooks for rsample
-borg_register_hooks("rsample")
+\donttest{
+if (requireNamespace("rsample", quietly = TRUE)) {
+  # Register hooks for rsample
+  borg_register_hooks("rsample")
 
-# Now vfold_cv() will check for dependencies
-# (requires borg.check_data to be set)
-options(borg.check_data = my_spatial_data)
-options(borg.check_coords = c("lon", "lat"))
+  # Now vfold_cv() will check for dependencies
+  spatial_data <- data.frame(
+    lon = runif(50), lat = runif(50), response = rnorm(50)
+  )
+  options(borg.check_data = spatial_data)
+  options(borg.check_coords = c("lon", "lat"))
 
-rsample::vfold_cv(my_spatial_data)  # Will warn/error
-
-# Remove hooks
-borg_unregister_hooks()
+  # Remove hooks
+  borg_unregister_hooks()
+}
 }
 
 }

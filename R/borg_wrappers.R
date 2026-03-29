@@ -23,6 +23,9 @@
 #'   \item Automatically switch to an appropriate blocked CV strategy
 #' }
 #'
+#' @return No return value. This page documents the family of guarded CV
+#'   wrapper functions; see individual functions for their return values.
+#'
 #' @name borg-wrappers
 NULL
 
@@ -52,25 +55,21 @@ NULL
 #'   \code{auto_block = TRUE}, returns BORG-generated blocked CV folds.
 #'
 #' @examples
-#' \dontrun{
-#' library(rsample)
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   # Safe: no dependencies
+#'   data <- data.frame(x = rnorm(100), y = rnorm(100))
+#'   folds <- borg_vfold_cv(data, v = 5)
 #'
-#' # Safe: no dependencies
-#' data <- data.frame(x = rnorm(100), y = rnorm(100))
-#' folds <- borg_vfold_cv(data, v = 5)
-#'
-#' # Blocked: spatial dependencies detected
-#' spatial_data <- data.frame(
-#'   lon = runif(100, -10, 10),
-#'   lat = runif(100, -10, 10),
-#'   response = rnorm(100)
-#' )
-#' # This will error:
-#' # borg_vfold_cv(spatial_data, coords = c("lon", "lat"))
-#'
-#' # Use auto_block to automatically switch to spatial CV:
-#' folds <- borg_vfold_cv(spatial_data, coords = c("lon", "lat"),
-#'                        target = "response", auto_block = TRUE)
+#'   # Use auto_block to automatically switch to spatial CV:
+#'   spatial_data <- data.frame(
+#'     lon = runif(100, -10, 10),
+#'     lat = runif(100, -10, 10),
+#'     response = rnorm(100)
+#'   )
+#'   folds <- borg_vfold_cv(spatial_data, coords = c("lon", "lat"),
+#'                          target = "response", auto_block = TRUE)
+#' }
 #' }
 #'
 #' @seealso \code{\link{borg_cv}} for direct blocked CV generation.
@@ -192,14 +191,16 @@ borg_vfold_cv <- function(data,
 #' @return An \code{rset} object from rsample.
 #'
 #' @examples
-#' \dontrun{
-#' # Clustered data - group CV is appropriate
-#' data <- data.frame(
-#'   site = rep(1:20, each = 5),
-#'   x = rnorm(100),
-#'   y = rnorm(100)
-#' )
-#' folds <- borg_group_vfold_cv(data, group = "site", v = 5)
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   # Clustered data - group CV is appropriate
+#'   data <- data.frame(
+#'     site = rep(1:20, each = 5),
+#'     x = rnorm(100),
+#'     y = rnorm(100)
+#'   )
+#'   folds <- borg_group_vfold_cv(data, group = "site", v = 5)
+#' }
 #' }
 #'
 #' @export
@@ -281,13 +282,15 @@ borg_group_vfold_cv <- function(data,
 #' it warns if random splitting may cause issues.
 #'
 #' @examples
-#' \dontrun{
-#' # Temporal data - ensures chronological split
-#' ts_data <- data.frame(
-#'   date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
-#'   value = cumsum(rnorm(100))
-#' )
-#' split <- borg_initial_split(ts_data, prop = 0.8, time = "date")
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   # Temporal data - ensures chronological split
+#'   ts_data <- data.frame(
+#'     date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
+#'     value = cumsum(rnorm(100))
+#'   )
+#'   split <- borg_initial_split(ts_data, prop = 0.8, time = "date")
+#' }
 #' }
 #'
 #' @export
@@ -380,16 +383,18 @@ borg_initial_split <- function(data,
 #' @return A \code{trainControl} object, potentially modified for blocked CV.
 #'
 #' @examples
-#' \dontrun{
-#' library(caret)
-#'
-#' # This will warn/error if dependencies detected
-#' ctrl <- borg_trainControl(
-#'   data = spatial_data,
-#'   method = "cv",
-#'   number = 5,
-#'   coords = c("lon", "lat")
-#' )
+#' \donttest{
+#' if (requireNamespace("caret", quietly = TRUE)) {
+#'   spatial_data <- data.frame(
+#'     lon = runif(50), lat = runif(50), response = rnorm(50)
+#'   )
+#'   ctrl <- borg_trainControl(
+#'     data = spatial_data,
+#'     method = "cv",
+#'     number = 5,
+#'     coords = c("lon", "lat")
+#'   )
+#' }
 #' }
 #'
 #' @export
@@ -453,6 +458,98 @@ borg_trainControl <- function(data,
 
 
 # ===========================================================================
+# rsample-style constructors
+# ===========================================================================
+
+#' Spatial Block Cross-Validation (rsample-compatible)
+#'
+#' Creates spatial block CV folds that plug directly into
+#' \code{tune::tune_grid()} and \code{tune::fit_resamples()}.
+#'
+#' @param data A data frame, \code{sf} object, or \code{terra::SpatVector}.
+#' @param coords Character vector of length 2. Coordinate column names.
+#' @param target Character. Target variable for autocorrelation diagnosis.
+#' @param v Integer. Number of folds. Default: 5.
+#' @param buffer Numeric. Optional spatial buffer distance for exclusion.
+#' @param repeats Integer. Number of repeated fold sets. Default: 1.
+#' @param ... Additional arguments passed to \code{\link{borg_cv}()}.
+#'
+#' @return A \code{borg_rset} object (subclass of \code{rset}) compatible
+#'   with tidymodels.
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   set.seed(42)
+#'   d <- data.frame(x = runif(100), y = runif(100), z = rnorm(100))
+#'   folds <- borg_spatial_cv(d, coords = c("x", "y"), target = "z")
+#' }
+#' }
+#'
+#' @export
+borg_spatial_cv <- function(data, coords, target = NULL, v = 5,
+                             buffer = NULL, repeats = 1L, ...) {
+  borg_cv(data, coords = coords, target = target, v = v,
+          strategy = "spatial_block", buffer = buffer,
+          repeats = repeats, output = "rsample", ...)
+}
+
+
+#' Temporal Block Cross-Validation (rsample-compatible)
+#'
+#' Creates temporal block CV folds that plug directly into
+#' \code{tune::tune_grid()} and \code{tune::fit_resamples()}.
+#'
+#' @param data A data frame.
+#' @param time Character. Time column name.
+#' @param target Character. Target variable.
+#' @param v Integer. Number of folds. Default: 5.
+#' @param embargo Numeric. Time gap between train and test sets.
+#' @param ... Additional arguments passed to \code{\link{borg_cv}()}.
+#'
+#' @return A \code{borg_rset} object (subclass of \code{rset}) compatible
+#'   with tidymodels.
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   d <- data.frame(time = 1:100, x = rnorm(100), y = cumsum(rnorm(100)))
+#'   folds <- borg_temporal_cv(d, time = "time", target = "y")
+#' }
+#' }
+#'
+#' @export
+borg_temporal_cv <- function(data, time, target = NULL, v = 5,
+                              embargo = NULL, ...) {
+  borg_cv(data, time = time, target = target, v = v,
+          strategy = "temporal_block", embargo = embargo,
+          output = "rsample", ...)
+}
+
+
+#' @export
+print.borg_rset <- function(x, ...) {
+  strategy <- attr(x, "borg_strategy") %||% "unknown"
+  params <- attr(x, "borg_params")
+  n_folds <- nrow(x)
+  repeats <- params$repeats %||% 1L
+
+  cat(sprintf("BORG %s cross-validation\n", strategy))
+  if (repeats > 1L) {
+    cat(sprintf("  %d folds x %d repeats = %d resamples\n",
+                params$v, repeats, n_folds))
+  } else {
+    cat(sprintf("  %d folds, %d observations\n", n_folds, params$n))
+  }
+  if (!is.null(params$buffer)) {
+    cat(sprintf("  Buffer: %.1f\n", params$buffer))
+  }
+  cat("\n")
+  NextMethod()
+}
+
+
+# ===========================================================================
 # Hook registration for automatic interception
 # ===========================================================================
 
@@ -475,19 +572,21 @@ borg_trainControl <- function(data,
 #' To remove hooks, use \code{borg_unregister_hooks()}.
 #'
 #' @examples
-#' \dontrun{
-#' # Register hooks for rsample
-#' borg_register_hooks("rsample")
+#' \donttest{
+#' if (requireNamespace("rsample", quietly = TRUE)) {
+#'   # Register hooks for rsample
+#'   borg_register_hooks("rsample")
 #'
-#' # Now vfold_cv() will check for dependencies
-#' # (requires borg.check_data to be set)
-#' options(borg.check_data = my_spatial_data)
-#' options(borg.check_coords = c("lon", "lat"))
+#'   # Now vfold_cv() will check for dependencies
+#'   spatial_data <- data.frame(
+#'     lon = runif(50), lat = runif(50), response = rnorm(50)
+#'   )
+#'   options(borg.check_data = spatial_data)
+#'   options(borg.check_coords = c("lon", "lat"))
 #'
-#' rsample::vfold_cv(my_spatial_data)  # Will warn/error
-#'
-#' # Remove hooks
-#' borg_unregister_hooks()
+#'   # Remove hooks
+#'   borg_unregister_hooks()
+#' }
 #' }
 #'
 #' @export

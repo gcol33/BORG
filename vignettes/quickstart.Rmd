@@ -258,15 +258,85 @@ borg_export(result$diagnosis, spatial_data, "validation.yaml")
 borg_export(result$diagnosis, spatial_data, "validation.json")
 ```
 
+## Writing Methods Sections
+
+`summary()` generates publication-ready methods paragraphs that include the
+statistical tests BORG ran, the dependency type detected, and the CV strategy
+chosen. Three citation styles are supported:
+
+```{r methods-text}
+# Default APA style
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
+methods_text <- summary(result)
+```
+
+```{r methods-nature, eval=FALSE}
+# Nature style
+summary(result, style = "nature")
+
+# Ecology style
+summary(result, style = "ecology")
+```
+
+The returned text is a character string you can paste directly into a manuscript.
+If you also ran `borg_compare_cv()`, pass the comparison object to include
+empirical inflation estimates:
+
+```{r methods-with-comparison, eval=FALSE}
+comparison <- borg_compare_cv(spatial_data, response ~ lon + lat,
+                              coords = c("lon", "lat"))
+summary(result, comparison = comparison)
+```
+
+## Empirical CV Comparison
+
+When reviewers ask "does it really matter?", `borg_compare_cv()` runs both
+random and blocked CV on the same data and model, then tests whether the
+difference is statistically significant:
+
+```{r compare-cv}
+comparison <- borg_compare_cv(
+  spatial_data,
+  formula = response ~ lon + lat,
+  coords = c("lon", "lat"),
+  v = 5,
+  repeats = 5  # Use more repeats in practice
+)
+print(comparison)
+```
+
+```{r compare-cv-plot, fig.width=7, fig.height=5}
+plot(comparison)
+```
+
+## Power Analysis After Blocking
+
+Switching from random to blocked CV reduces effective sample size. Before
+committing to blocked CV, check whether your dataset is large enough:
+
+```{r power-analysis}
+# Clustered data: 20 sites, 10 observations each
+clustered_data <- data.frame(
+  site = rep(1:20, each = 10),
+  value = rep(rnorm(20, sd = 2), each = 10) + rnorm(200, sd = 0.5)
+)
+
+pw <- borg_power(clustered_data, groups = "site", target = "value")
+print(pw)
+summary(pw)
+```
+
 ## Interface Summary
 
 | Function | Purpose |
 |----------|---------|
-| `borg()` | Main entry point - diagnose data or validate splits |
+| `borg()` | Main entry point — diagnose data or validate splits |
 | `borg_inspect()` | Detailed inspection of train/test split |
 | `borg_diagnose()` | Analyze data dependencies only |
+| `borg_compare_cv()` | Empirical random vs blocked CV comparison |
+| `borg_power()` | Power analysis after blocking |
 | `plot()` | Visualize results |
-| `summary()` | Generate methods text |
+| `summary()` | Generate methods text for papers |
 | `borg_certificate()` | Create validation certificate |
 | `borg_export()` | Export certificate to YAML/JSON |
 

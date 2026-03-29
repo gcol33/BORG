@@ -210,7 +210,8 @@ test_that("as.data.frame.BorgRisk works", {
 
  expect_s3_class(df, "data.frame")
  expect_equal(nrow(df), 2)
- expect_equal(ncol(df), 5)
+ expect_equal(ncol(df), 6)
+ expect_true("suggested_fix" %in% names(df))
  expect_equal(df$type, c("type1", "type2"))
  expect_equal(df$severity, c("hard_violation", "soft_inflation"))
  expect_equal(df$n_affected, c(3L, 0L))

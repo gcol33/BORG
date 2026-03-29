@@ -4,10 +4,14 @@
 \alias{autoplot.BorgDiagnosis}
 \title{Autoplot Method for BorgDiagnosis Objects}
 \usage{
-\method{autoplot}{BorgDiagnosis}(object, ...)
+\method{autoplot}{BorgDiagnosis}(object, type = c("summary", "variogram"), ...)
 }
 \arguments{
 \item{object}{A \code{\link{BorgDiagnosis}} object.}
+
+\item{type}{Character. Plot type: \code{"summary"} (default) for dependency
+gauge panel, or \code{"variogram"} for empirical semivariogram showing
+spatial autocorrelation structure and suggested block size.}
 
 \item{...}{Additional arguments (currently unused).}
 }

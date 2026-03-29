@@ -22,7 +22,7 @@
 #'   \item{\code{\link{borg_cv}}}{Generate valid CV schemes based on diagnosis}
 #'   \item{\code{\link{borg_inspect}}}{Inspect R objects for leakage signals}
 #'   \item{\code{\link{borg_validate}}}{Validate a complete evaluation workflow}
-#'   \item{\code{\link{borg_rewrite}}}{Automatically rewrite leaky pipelines}
+#'   \item{\code{\link{borg_assimilate}}}{Assimilate leaky pipelines into compliance}
 #' }
 #'
 #' @section Risk Classification:
@@ -57,12 +57,14 @@
 #'     Default: FALSE.}
 #' }
 #'
+#' @return No return value. This is a package-level documentation page.
+#'
 #' @name BORG-package
 #' @aliases BORG
 #' @useDynLib BORG, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom methods is new
-#' @importFrom stats complete.cases cor median model.frame prcomp predict quantile sd var
+#' @importFrom stats complete.cases cor median model.frame prcomp predict quantile sd setNames var
 #' @importFrom utils head
 #' @importFrom grDevices chull rgb
 #' @importFrom graphics abline axis barplot legend lines mtext par plot plot.new plot.window rect text

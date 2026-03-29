@@ -50,15 +50,15 @@ Each stage gets its own BorgRisk assessment. The overall result aggregates
 all risks across stages.
 }
 \examples{
-\dontrun{
-# Validate a caret pipeline
-library(caret)
-ctrl <- trainControl(method = "cv", number = 5)
-model <- train(mpg ~ ., data = mtcars[1:25, ], method = "lm",
-               trControl = ctrl, preProcess = c("center", "scale"))
-result <- borg_pipeline(model, train_idx = 1:25, test_idx = 26:32,
-                        data = mtcars)
-print(result)
+\donttest{
+if (requireNamespace("caret", quietly = TRUE)) {
+  ctrl <- caret::trainControl(method = "cv", number = 5)
+  model <- caret::train(mpg ~ ., data = mtcars[1:25, ], method = "lm",
+                        trControl = ctrl, preProcess = c("center", "scale"))
+  result <- borg_pipeline(model, train_idx = 1:25, test_idx = 26:32,
+                          data = mtcars)
+  print(result)
+}
 }
 
 }

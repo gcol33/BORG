@@ -371,7 +371,7 @@ evaluate_cv_folds <- function(data, formula, folds, model_fn, predict_fn,
     actual <- test_data[[target]]
 
     # Compute metric
-    compute_metric(actual, preds, metric)
+    .compute_metric(actual, preds, metric)
 
   }, numeric(1))
 
@@ -387,7 +387,7 @@ evaluate_cv_folds <- function(data, formula, folds, model_fn, predict_fn,
 # Internal: Compute evaluation metrics
 # ===========================================================================
 
-compute_metric <- function(actual, predicted, metric) {
+.compute_metric <- function(actual, predicted, metric) {
   switch(metric,
     rmse = sqrt(mean((actual - predicted)^2, na.rm = TRUE)),
     mae = mean(abs(actual - predicted), na.rm = TRUE),
@@ -498,6 +498,9 @@ summary.borg_comparison <- function(object, ...) {
 #' @param type Character. Plot type: \code{"boxplot"} (default), \code{"density"},
 #'   or \code{"paired"}.
 #' @param ... Additional arguments passed to plotting functions.
+#'
+#' @return The \code{borg_comparison} object \code{x}, returned invisibly.
+#'   Called for the side effect of producing a plot.
 #'
 #' @export
 plot.borg_comparison <- function(x, type = c("boxplot", "density", "paired"), ...) {

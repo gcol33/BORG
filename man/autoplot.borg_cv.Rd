@@ -9,6 +9,7 @@
   type = c("folds", "spatial", "sizes"),
   data = NULL,
   coords = NULL,
+  raster = NULL,
   ...
 )
 }
@@ -23,6 +24,10 @@ Required for \code{type = "spatial"}.}
 
 \item{coords}{Character vector of coordinate column names. Required for
 \code{type = "spatial"} when \code{data} is a plain data.frame.}
+
+\item{raster}{Optional \code{terra::SpatRaster}. When provided with
+\code{type = "spatial"}, the first layer is rendered as a background
+map behind the fold points. Requires the \pkg{tidyterra} package.}
 
 \item{...}{Additional arguments (currently unused).}
 }

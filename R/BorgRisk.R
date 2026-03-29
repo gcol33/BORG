@@ -108,6 +108,9 @@ setClass(
 #' @importMethodsFrom methods show
 #' @exportMethod show
 #' @param object A \code{BorgRisk} object to be printed.
+#' @return The \code{BorgRisk} object, returned invisibly.
+#'   Called for the side effect of printing a risk assessment summary to the
+#'   console.
 setMethod("show", "BorgRisk", function(object) {
  cat("BorgRisk Assessment\n")
  cat("===================\n\n")
@@ -116,7 +119,8 @@ setMethod("show", "BorgRisk", function(object) {
  if (object@is_valid) {
    cat("Status: VALID (no hard violations)\n")
  } else {
-   cat("Status: INVALID (hard violations detected)\n")
+   cat(sprintf("Status: INVALID (%d hard violation%s) \u2014 Resistance is futile\n",
+               object@n_hard, if (object@n_hard > 1) "s" else ""))
  }
 
  cat(sprintf("  Hard violations:  %d\n", object@n_hard))
@@ -150,6 +154,7 @@ setMethod("show", "BorgRisk", function(object) {
                      n_affected, paste(r$affected_indices[1:5], collapse = ", ")))
        }
      }
+     cat(sprintf("    Fix: %s\n", .suggest_fix(r$type)))
    }
  }
 
@@ -164,6 +169,7 @@ setMethod("show", "BorgRisk", function(object) {
      if (!is.null(r$source_object)) {
        cat(sprintf("    Source: %s\n", r$source_object))
      }
+     cat(sprintf("    Fix: %s\n", .suggest_fix(r$type)))
    }
  }
 
@@ -198,6 +204,7 @@ as.data.frame.BorgRisk <- function(x, row.names = NULL, optional = FALSE, ...) {
      description = character(0),
      source_object = character(0),
      n_affected = integer(0),
+     suggested_fix = character(0),
      stringsAsFactors = FALSE
    ))
  }
@@ -208,6 +215,7 @@ as.data.frame.BorgRisk <- function(x, row.names = NULL, optional = FALSE, ...) {
    description = vapply(x@risks, function(r) r$description, character(1)),
    source_object = vapply(x@risks, function(r) r$source_object %||% NA_character_, character(1)),
    n_affected = vapply(x@risks, function(r) length(r$affected_indices %||% integer(0)), integer(1)),
+   suggested_fix = vapply(x@risks, function(r) .suggest_fix(r$type), character(1)),
    stringsAsFactors = FALSE
  )
 
@@ -216,4 +224,55 @@ as.data.frame.BorgRisk <- function(x, row.names = NULL, optional = FALSE, ...) {
  }
 
  df
+}
+
+
+# ===========================================================================
+# Suggested fix lookup
+# ===========================================================================
+
+#' Map risk type to an actionable suggested fix (Internal)
+#' @noRd
+.suggest_fix <- function(risk_type) {
+  fixes <- list(
+    # --- Rewritable by borg_assimilate() ---
+    preprocessing_leak =
+      "Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)",
+    normalization_leak =
+      "Refit center/scale on training data only. Auto-fix: borg_assimilate(workflow)",
+    imputation_leak =
+      "Refit imputation on training data only. Auto-fix: borg_assimilate(workflow)",
+    pca_leak =
+      "Refit PCA on training data only. Auto-fix: borg_assimilate(workflow)",
+    encoding_leak =
+      "Refit encoding (target/one-hot) on training data only. Auto-fix: borg_assimilate(workflow)",
+    threshold_leak =
+      "Optimize threshold on training/validation predictions. Auto-fix: borg_assimilate(workflow)",
+
+    # --- Require manual intervention ---
+    index_overlap =
+      "Recreate train/test split with non-overlapping indices",
+    duplicate_rows =
+      "Remove duplicate rows or ensure they fall within the same fold",
+    target_leakage_direct =
+      "Remove features derived from the target variable",
+    temporal_lookahead =
+      "Use a temporal split: train on past, predict future. See borg_cv()",
+    group_overlap =
+      "Use group-based CV so all observations from one group stay in the same fold. See borg_cv()",
+
+    # --- Soft inflation ---
+    spatial_autocorrelation =
+      "Use spatial block CV with block size >= autocorrelation range. See borg_cv()",
+    clustered_observations =
+      "Use group-based CV on the clustering variable. See borg_cv()",
+    small_test_set =
+      "Increase test set size or use repeated CV for stable estimates",
+    feature_selection_leak =
+      "Move feature selection inside the CV loop (per-fold selection)",
+    hpo_leak =
+      "Use nested CV: inner loop for tuning, outer loop for evaluation"
+  )
+
+  fixes[[risk_type]] %||% "Review evaluation workflow for potential information reuse"
 }

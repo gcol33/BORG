@@ -92,28 +92,28 @@
 
       # step_center stores means
       if (step_class == "step_center" && !is.null(step$means)) {
-        risk <- .check_step_means(step$means, data, train_idx, test_idx,
-                                  "step_center", i)
+        risk <- .check_step_params(step$means, data, train_idx, test_idx,
+                                   "step_center", i, stat = "mean")
         if (!is.null(risk)) risks <- c(risks, list(risk))
       }
 
       # step_scale stores sds
       if (step_class == "step_scale" && !is.null(step$sds)) {
-        risk <- .check_step_sds(step$sds, data, train_idx, test_idx,
-                                "step_scale", i)
+        risk <- .check_step_params(step$sds, data, train_idx, test_idx,
+                                   "step_scale", i, stat = "sd")
         if (!is.null(risk)) risks <- c(risks, list(risk))
       }
 
       # step_normalize combines center and scale
       if (step_class == "step_normalize") {
         if (!is.null(step$means)) {
-          risk <- .check_step_means(step$means, data, train_idx, test_idx,
-                                    "step_normalize", i)
+          risk <- .check_step_params(step$means, data, train_idx, test_idx,
+                                     "step_normalize", i, stat = "mean")
           if (!is.null(risk)) risks <- c(risks, list(risk))
         }
         if (!is.null(step$sds)) {
-          risk <- .check_step_sds(step$sds, data, train_idx, test_idx,
-                                  "step_normalize", i)
+          risk <- .check_step_params(step$sds, data, train_idx, test_idx,
+                                     "step_normalize", i, stat = "sd")
           if (!is.null(risk)) risks <- c(risks, list(risk))
         }
       }
@@ -132,40 +132,35 @@
   risks
 }
 
-#' Check recipe step means against train-only means
+#' Check recipe step parameters against train-only values
+#' @param stored_params Named numeric vector of stored parameters.
+#' @param data Full dataset.
+#' @param train_idx Integer vector of training row indices.
+#' @param test_idx Integer vector of test row indices.
+#' @param step_name Character label for the recipe step.
+#' @param step_index Integer position of the step in the recipe.
+#' @param stat One of \code{"mean"} or \code{"sd"}.
 #' @noRd
-.check_step_means <- function(stored_means, data, train_idx, test_idx,
-                              step_name, step_index) {
-  cols <- intersect(names(stored_means), names(data))
+.check_step_params <- function(stored_params, data, train_idx, test_idx,
+                               step_name, step_index, stat = c("mean", "sd")) {
+  stat <- match.arg(stat)
+  cols <- intersect(names(stored_params), names(data))
   if (length(cols) == 0) return(NULL)
 
   train_data <- data[train_idx, cols, drop = FALSE]
-  .check_param_leak(
-    stored = stored_means[cols],
-    recomputed = colMeans(train_data, na.rm = TRUE),
-    description = sprintf(
-      "%s centering parameters were computed on data beyond training set (mean difference: %%.6g)",
-      step_name
-    ),
-    source_object = sprintf("recipe$steps[[%d]] (%s)", step_index, step_name),
-    test_idx = test_idx
-  )
-}
+  recomputed <- if (stat == "mean") {
+    colMeans(train_data, na.rm = TRUE)
+  } else {
+    apply(train_data, 2, sd, na.rm = TRUE)
+  }
+  label <- if (stat == "mean") "centering" else "scaling"
 
-#' Check recipe step sds against train-only sds
-#' @noRd
-.check_step_sds <- function(stored_sds, data, train_idx, test_idx,
-                            step_name, step_index) {
-  cols <- intersect(names(stored_sds), names(data))
-  if (length(cols) == 0) return(NULL)
-
-  train_data <- data[train_idx, cols, drop = FALSE]
   .check_param_leak(
-    stored = stored_sds[cols],
-    recomputed = apply(train_data, 2, sd, na.rm = TRUE),
+    stored = stored_params[cols],
+    recomputed = recomputed,
     description = sprintf(
-      "%s scaling parameters were computed on data beyond training set (sd difference: %%.6g)",
-      step_name
+      "%s %s parameters were computed on data beyond training set (%s difference: %%.6g)",
+      step_name, label, stat
     ),
     source_object = sprintf("recipe$steps[[%d]] (%s)", step_index, step_name),
     test_idx = test_idx

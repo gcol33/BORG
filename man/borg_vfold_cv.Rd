@@ -54,25 +54,21 @@ dependencies before creating folds. If spatial, temporal, or clustered
 dependencies are detected, random CV is blocked.
 }
 \examples{
-\dontrun{
-library(rsample)
+\donttest{
+if (requireNamespace("rsample", quietly = TRUE)) {
+  # Safe: no dependencies
+  data <- data.frame(x = rnorm(100), y = rnorm(100))
+  folds <- borg_vfold_cv(data, v = 5)
 
-# Safe: no dependencies
-data <- data.frame(x = rnorm(100), y = rnorm(100))
-folds <- borg_vfold_cv(data, v = 5)
-
-# Blocked: spatial dependencies detected
-spatial_data <- data.frame(
-  lon = runif(100, -10, 10),
-  lat = runif(100, -10, 10),
-  response = rnorm(100)
-)
-# This will error:
-# borg_vfold_cv(spatial_data, coords = c("lon", "lat"))
-
-# Use auto_block to automatically switch to spatial CV:
-folds <- borg_vfold_cv(spatial_data, coords = c("lon", "lat"),
-                       target = "response", auto_block = TRUE)
+  # Use auto_block to automatically switch to spatial CV:
+  spatial_data <- data.frame(
+    lon = runif(100, -10, 10),
+    lat = runif(100, -10, 10),
+    response = rnorm(100)
+  )
+  folds <- borg_vfold_cv(spatial_data, coords = c("lon", "lat"),
+                         target = "response", auto_block = TRUE)
+}
 }
 
 }

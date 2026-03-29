@@ -47,7 +47,9 @@ navbar:
 reference:
 - title: Main Entry Point
   desc: Start here
-  contents: borg
+  contents:
+  - borg
+  - borg_workflow
 - title: Core Functions
   desc: Detailed validation functions
   contents:
@@ -57,29 +59,60 @@ reference:
   - borg_export
 - title: Remediation
   desc: Automatic pipeline correction
-  contents: borg_rewrite
+  contents: borg_assimilate
+- title: Spatial Tools
+  desc: Raster extraction, thinning, blocking, and geographic analysis
+  contents:
+  - borg_extract
+  - borg_thin
+  - borg_block_size
+  - borg_check_coverage
+  - borg_leaflet
+  - borg_prediction_map
+  - borg_importance
 - title: Visualization
   desc: Plot and summary methods for BORG objects
   contents:
   - plot.BorgRisk
   - plot.borg_result
   - plot.borg_comparison
+  - autoplot.borg_fold_perf
   - summary.BorgRisk
   - summary.BorgDiagnosis
   - summary.borg_result
+- title: Diagnosis & Evidence
+  desc: Dependency detection, CV comparison, and power analysis
+  contents:
+  - borg_diagnose
+  - borg_compare_cv
+  - borg_power
+  - borg_cv
+  - borg_fold_performance
+  - borg_stability
+  - borg_check_nested_cv
+  - BorgDiagnosis
+- title: Reporting
+  desc: HTML reports and certificates
+  contents:
+  - borg_report
+  - borg_certificate
+  - borg_export
 - title: Audit Functions
   desc: Prediction and CV auditing
   contents:
   - audit_predictions
   - audit_importance
   - cv_leakage_report
-  - borg_cv
-  - borg_diagnose
-  - borg_compare_cv
-  - BorgDiagnosis
-- title: Framework Integration
-  desc: Wrappers for ML frameworks
+- title: SDM Integration
+  desc: Species distribution modelling frameworks
   contents:
+  - borg_to_enmeval
+  - borg_to_biomod2
+- title: Framework Integration
+  desc: Wrappers for ML frameworks (tidymodels, caret, mlr3)
+  contents:
+  - borg_spatial_cv
+  - borg_temporal_cv
   - borg-wrappers
   - borg_initial_split
   - borg_vfold_cv

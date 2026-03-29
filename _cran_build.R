@@ -1,0 +1,5 @@
+setwd("C:/Users/Gilles Colling/Documents/dev/BORG")
+Sys.setenv(PATH = paste("C:/Program Files/Pandoc", Sys.getenv("PATH"), sep = ";"))
+Sys.setenv(RSTUDIO_PANDOC = "C:/Program Files/Pandoc")
+pkg <- devtools::build()
+cat("TARBALL:", pkg, "\n")

@@ -128,3 +128,71 @@ haversine_distance_matrix <- function(lon, lat) {
     2 * R * asin(sqrt(a))
   })
 }
+
+
+#' Apply Spatial Buffer Exclusion to CV Folds (Internal)
+#'
+#' Removes training observations within `buffer` distance of any test point.
+#' Uses CRS-aware distance (Haversine for geographic, Euclidean otherwise).
+#'
+#' @noRd
+apply_spatial_buffer <- function(folds, x_coord, y_coord, buffer,
+                                  crs = NULL, verbose = FALSE) {
+  use_geo <- !is.null(crs) && is_geographic_crs(crs)
+  n_excluded_total <- 0L
+
+  buffered_folds <- lapply(seq_along(folds), function(i) {
+    fold <- folds[[i]]
+    test_x <- x_coord[fold$test]
+    test_y <- y_coord[fold$test]
+
+    train_keep <- vapply(fold$train, function(j) {
+      if (use_geo) {
+        lon_j <- x_coord[j] * pi / 180
+        lat_j <- y_coord[j] * pi / 180
+        lon_t <- test_x * pi / 180
+        lat_t <- test_y * pi / 180
+        dlat <- lat_t - lat_j
+        dlon <- lon_t - lon_j
+        a <- sin(dlat / 2)^2 + cos(lat_j) * cos(lat_t) * sin(dlon / 2)^2
+        dists <- 2 * 6371000 * asin(sqrt(a))
+      } else {
+        dists <- sqrt((x_coord[j] - test_x)^2 + (y_coord[j] - test_y)^2)
+      }
+      min(dists) > buffer
+    }, logical(1))
+
+    n_removed <- sum(!train_keep)
+    n_excluded_total <<- n_excluded_total + n_removed
+
+    if (verbose && n_removed > 0) {
+      message(sprintf("  Fold %d: excluded %d training obs within buffer (%.1f%%)",
+                       i, n_removed, 100 * n_removed / length(fold$train)))
+    }
+
+    n_remaining <- sum(train_keep)
+    if (n_remaining < length(fold$test)) {
+      warning(sprintf(
+        "Fold %d: buffer excluded %d of %d training obs (%d remaining). Consider reducing buffer.",
+        i, n_removed, length(fold$train), n_remaining
+      ))
+    }
+
+    list(train = fold$train[train_keep], test = fold$test)
+  })
+
+  if (verbose) {
+    message(sprintf("Spatial buffer (%.1f): excluded %d training obs across %d folds",
+                     buffer, n_excluded_total, length(folds)))
+  }
+
+  # Preserve attributes from original folds
+  for (a in setdiff(names(attributes(folds)), c("names", "class"))) {
+    attr(buffered_folds, a) <- attr(folds, a)
+  }
+  attr(buffered_folds, "buffer_meta") <- list(
+    buffer = buffer, n_excluded = n_excluded_total
+  )
+
+  buffered_folds
+}

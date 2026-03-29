@@ -1,7 +1,7 @@
-#' Automatically Rewrite Leaky Evaluation Pipelines
+#' Assimilate Leaky Evaluation Pipelines
 #'
-#' `borg_rewrite()` attempts to automatically fix detected evaluation risks
-#' by restructuring the pipeline to avoid information leakage.
+#' `borg_assimilate()` attempts to automatically fix detected evaluation risks
+#' by restructuring the pipeline to eliminate information leakage.
 #'
 #' @param workflow A list containing the evaluation workflow (same structure
 #'   as \code{\link{borg_validate}}).
@@ -21,7 +21,7 @@
 #'   }
 #'
 #' @details
-#' `borg_rewrite()` can automatically fix certain types of leakage:
+#' `borg_assimilate()` can automatically fix certain types of leakage:
 #'
 #' \describe{
 #'   \item{Preprocessing on full data}{Refits preprocessing objects using
@@ -40,25 +40,27 @@
 #' }
 #'
 #' @seealso
-#' \code{\link{borg_validate}} for validation without rewriting,
+#' \code{\link{borg_validate}} for validation without assimilation,
 #' \code{\link{borg}} for proactive enforcement.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Attempt to fix a leaky workflow
-#' result <- borg_rewrite(my_workflow)
+#' workflow <- list(
+#'   data = data.frame(x = rnorm(100), y = rnorm(100)),
+#'   train_idx = 1:70,
+#'   test_idx = 71:100
+#' )
+#' result <- borg_assimilate(workflow)
 #'
 #' if (length(result$unfixable) > 0) {
-#'   warning("Some risks could not be automatically fixed")
+#'   message("Some risks require manual intervention:")
 #'   print(result$unfixable)
 #' }
-#'
-#' # Use the fixed workflow
-#' fixed_workflow <- result$workflow
 #' }
 #'
 #' @export
-borg_rewrite <- function(
+borg_assimilate <- function(
  workflow,
  risks = NULL,
  fix = "all"
@@ -292,38 +294,43 @@ borg_rewrite <- function(
 
 
 #' @noRd
+.try_rewrite_caret <- function(workflow, train_data, target_methods) {
+  if (!requireNamespace("caret", quietly = TRUE)) return(NULL)
+
+  pp <- workflow$preprocess
+  old_pp <- if (inherits(pp, "preProcess")) pp
+            else if (is.list(pp)) {
+              matches <- Filter(function(x) inherits(x, "preProcess"), pp)
+              if (length(matches) > 0) matches[[1]] else NULL
+            } else NULL
+
+  if (is.null(old_pp) || !inherits(old_pp, "preProcess")) return(NULL)
+
+  method <- old_pp$method
+  if (!any(method %in% target_methods)) return(NULL)
+
+  numeric_cols <- names(train_data)[vapply(train_data, is.numeric, logical(1))]
+  if (length(numeric_cols) == 0) return(NULL)
+
+  new_pp <- tryCatch(
+    caret::preProcess(train_data[, numeric_cols, drop = FALSE], method = method),
+    error = function(e) NULL
+  )
+  if (is.null(new_pp)) return(NULL)
+
+  workflow <- .replace_preprocess(workflow, new_pp)
+  list(workflow = workflow, success = TRUE)
+}
+
 .rewrite_imputation <- function(workflow, risk) {
-  # Refit imputation on training data only
   train_data <- .get_train_data(workflow)
   if (is.null(train_data)) {
     return(list(workflow = workflow, success = FALSE))
   }
 
-  # Handle caret preProcess with imputation methods
-  if (requireNamespace("caret", quietly = TRUE)) {
-    pp <- workflow$preprocess
-    old_pp <- if (inherits(pp, "preProcess")) pp
-              else if (is.list(pp)) Filter(function(x) inherits(x, "preProcess"), pp)[[1]]
-              else NULL
-
-    if (!is.null(old_pp) && inherits(old_pp, "preProcess")) {
-      method <- old_pp$method
-      impute_methods <- c("knnImpute", "bagImpute", "medianImpute")
-      if (any(method %in% impute_methods)) {
-        numeric_cols <- names(train_data)[vapply(train_data, is.numeric, logical(1))]
-        if (length(numeric_cols) > 0) {
-          new_pp <- tryCatch(
-            caret::preProcess(train_data[, numeric_cols, drop = FALSE], method = method),
-            error = function(e) NULL
-          )
-          if (!is.null(new_pp)) {
-            workflow <- .replace_preprocess(workflow, new_pp)
-            return(list(workflow = workflow, success = TRUE))
-          }
-        }
-      }
-    }
-  }
+  result <- .try_rewrite_caret(workflow, train_data,
+                               c("knnImpute", "bagImpute", "medianImpute"))
+  if (!is.null(result)) return(result)
 
   # Handle recipes with imputation steps
   if (requireNamespace("recipes", quietly = TRUE)) {
@@ -367,28 +374,8 @@ borg_rewrite <- function(
   }
 
   # Handle caret preProcess with PCA
-  if (requireNamespace("caret", quietly = TRUE)) {
-    old_pp <- if (inherits(pp, "preProcess")) pp
-              else if (is.list(pp)) {
-                matches <- Filter(function(x) inherits(x, "preProcess"), pp)
-                if (length(matches) > 0) matches[[1]] else NULL
-              } else NULL
-
-    if (!is.null(old_pp) && "pca" %in% old_pp$method) {
-      numeric_cols <- names(train_data)[vapply(train_data, is.numeric, logical(1))]
-      if (length(numeric_cols) > 0) {
-        new_pp <- tryCatch(
-          caret::preProcess(train_data[, numeric_cols, drop = FALSE],
-                            method = old_pp$method),
-          error = function(e) NULL
-        )
-        if (!is.null(new_pp)) {
-          workflow <- .replace_preprocess(workflow, new_pp)
-          return(list(workflow = workflow, success = TRUE))
-        }
-      }
-    }
-  }
+  result <- .try_rewrite_caret(workflow, train_data, "pca")
+  if (!is.null(result)) return(result)
 
   list(workflow = workflow, success = FALSE)
 }
@@ -396,7 +383,6 @@ borg_rewrite <- function(
 
 #' @noRd
 .rewrite_encoding <- function(workflow, risk) {
-  # Refit encoding (target encoding, one-hot, etc.) on training data only
   train_data <- .get_train_data(workflow)
   if (is.null(train_data)) {
     return(list(workflow = workflow, success = FALSE))
@@ -410,32 +396,8 @@ borg_rewrite <- function(
     }
   }
 
-  # Handle caret preProcess with dummy variables
-  if (requireNamespace("caret", quietly = TRUE)) {
-    pp <- workflow$preprocess
-    old_pp <- if (inherits(pp, "preProcess")) pp
-              else if (is.list(pp)) {
-                matches <- Filter(function(x) inherits(x, "preProcess"), pp)
-                if (length(matches) > 0) matches[[1]] else NULL
-              } else NULL
-
-    if (!is.null(old_pp) && inherits(old_pp, "preProcess")) {
-      method <- old_pp$method
-      if (any(method %in% c("dummy", "zv", "nzv"))) {
-        numeric_cols <- names(train_data)[vapply(train_data, is.numeric, logical(1))]
-        if (length(numeric_cols) > 0) {
-          new_pp <- tryCatch(
-            caret::preProcess(train_data[, numeric_cols, drop = FALSE], method = method),
-            error = function(e) NULL
-          )
-          if (!is.null(new_pp)) {
-            workflow <- .replace_preprocess(workflow, new_pp)
-            return(list(workflow = workflow, success = TRUE))
-          }
-        }
-      }
-    }
-  }
+  result <- .try_rewrite_caret(workflow, train_data, c("dummy", "zv", "nzv"))
+  if (!is.null(result)) return(result)
 
   list(workflow = workflow, success = FALSE)
 }

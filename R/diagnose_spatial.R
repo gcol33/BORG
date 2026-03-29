@@ -61,8 +61,10 @@ diagnose_spatial <- function(data, coords, y, alpha, verbose, crs = NULL) {
   # Compute Moran's I
   morans <- compute_morans_i(y_sub_val, dist_mat)
 
-  # Estimate spatial range from variogram
+  # Compute variogram and estimate spatial range
+  variogram <- compute_empirical_variogram(y_sub_val, dist_mat)
   range_estimate <- estimate_spatial_range(y_sub_val, dist_mat)
+  sill <- if (!is.null(variogram)) max(variogram$semivariance) else NA_real_
 
   # Compute effective sample size
   effective_n <- compute_effective_n_spatial(n_complete, morans$I, range_estimate,
@@ -76,7 +78,9 @@ diagnose_spatial <- function(data, coords, y, alpha, verbose, crs = NULL) {
     morans_p = morans$p,
     range_estimate = range_estimate,
     effective_n = effective_n,
-    coords_used = coords
+    coords_used = coords,
+    variogram = variogram,
+    sill = sill
   )
 }
 
@@ -137,46 +141,51 @@ compute_morans_i <- function(y, dist_mat) {
 }
 
 
-#' Estimate Spatial Range from Variogram (Internal)
+#' Compute Empirical Variogram (Internal)
+#'
+#' Bins pairwise semivariance by distance for spatial autocorrelation analysis.
+#'
+#' @return A data.frame with columns: distance, semivariance, n_pairs.
+#'   NULL if insufficient data.
 #' @noRd
-estimate_spatial_range <- function(y, dist_mat) {
-  n <- length(y)
-
-  # Get upper triangle (unique pairs)
+compute_empirical_variogram <- function(y, dist_mat, n_bins = 15) {
   upper_idx <- upper.tri(dist_mat)
   distances <- dist_mat[upper_idx]
   semivar <- 0.5 * outer(y, y, function(a, b) (a - b)^2)[upper_idx]
 
-  # Bin by distance
-  n_bins <- min(15, floor(length(distances) / 50))
-  if (n_bins < 3) return(max(dist_mat) / 3)  # Fallback
+  n_bins <- min(n_bins, floor(length(distances) / 50))
+  if (n_bins < 3) return(NULL)
 
   breaks <- quantile(distances, probs = seq(0, 1, length.out = n_bins + 1))
   breaks <- unique(breaks)
 
   bins <- cut(distances, breaks, include.lowest = TRUE)
-  bin_means <- tapply(distances, bins, mean)
-  bin_semivar <- tapply(semivar, bins, mean)
+  bin_distance <- tapply(distances, bins, mean)
+  bin_semivariance <- tapply(semivar, bins, mean)
+  bin_n_pairs <- tapply(distances, bins, length)
 
-  # Remove NA
-  valid <- !is.na(bin_means) & !is.na(bin_semivar)
-  bin_means <- bin_means[valid]
-  bin_semivar <- bin_semivar[valid]
+  valid <- !is.na(bin_distance) & !is.na(bin_semivariance)
 
-  if (length(bin_means) < 3) return(max(dist_mat) / 3)
+  data.frame(
+    distance = as.numeric(bin_distance[valid]),
+    semivariance = as.numeric(bin_semivariance[valid]),
+    n_pairs = as.integer(bin_n_pairs[valid]),
+    stringsAsFactors = FALSE
+  )
+}
 
-  # Find range: distance at which semivariance reaches ~95% of sill
-  sill_estimate <- max(bin_semivar)
+
+#' Estimate Spatial Range from Variogram (Internal)
+#' @noRd
+estimate_spatial_range <- function(y, dist_mat) {
+  vario <- compute_empirical_variogram(y, dist_mat)
+  if (is.null(vario) || nrow(vario) < 3) return(max(dist_mat) / 3)
+
+  sill_estimate <- max(vario$semivariance)
   threshold <- 0.95 * sill_estimate
 
-  range_idx <- which(bin_semivar >= threshold)[1]
-  if (is.na(range_idx)) {
-    range_estimate <- max(bin_means)
-  } else {
-    range_estimate <- bin_means[range_idx]
-  }
-
-  range_estimate
+  range_idx <- which(vario$semivariance >= threshold)[1]
+  if (is.na(range_idx)) max(vario$distance) else vario$distance[range_idx]
 }
 
 

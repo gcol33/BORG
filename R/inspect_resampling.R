@@ -162,14 +162,6 @@
   risks
 }
 
-#' @noRd
-.inspect_rset <- function(object, train_idx, test_idx, ...) {
-  # rset is the base class for rsample resampling objects
-
-  # vfold_cv, bootstraps, mc_cv, etc. all inherit from rset
-  # Delegate to vfold_cv inspector which handles the common structure
-  .inspect_vfold_cv(object, train_idx, test_idx, ...)
-}
 
 #' @noRd
 .inspect_caret_train <- function(object, train_idx, test_idx, ...) {

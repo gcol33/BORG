@@ -43,16 +43,18 @@ A guarded version of \code{caret::trainControl()} that validates CV settings
 against data dependencies.
 }
 \examples{
-\dontrun{
-library(caret)
-
-# This will warn/error if dependencies detected
-ctrl <- borg_trainControl(
-  data = spatial_data,
-  method = "cv",
-  number = 5,
-  coords = c("lon", "lat")
-)
+\donttest{
+if (requireNamespace("caret", quietly = TRUE)) {
+  spatial_data <- data.frame(
+    lon = runif(50), lat = runif(50), response = rnorm(50)
+  )
+  ctrl <- borg_trainControl(
+    data = spatial_data,
+    method = "cv",
+    number = 5,
+    coords = c("lon", "lat")
+  )
+}
 }
 
 }

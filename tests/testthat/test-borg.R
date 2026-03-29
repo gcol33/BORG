@@ -420,7 +420,7 @@ test_that("borg() diagnosis mode includes inflation estimate", {
 })
 
 test_that("borg() shows message when no structure specified", {
-  data <- data.frame(x = rnorm(100), y = rnorm(100))
+  data <- data.frame(val1 = rnorm(100), val2 = rnorm(100))
 
   expect_message(
     borg(data),
@@ -475,10 +475,10 @@ test_that("borg() folds have no group overlap in diagnosis mode", {
   set.seed(42)
   data <- data.frame(
     site = rep(1:15, each = 10),
-    value = rnorm(150)
+    value = rep(rnorm(15, sd = 3), each = 10) + rnorm(150, sd = 0.1)
   )
 
-  result <- borg(data, groups = "site")
+  result <- borg(data, groups = "site", target = "value")
 
   # Check each fold has no group overlap
   for (fold in result$folds) {

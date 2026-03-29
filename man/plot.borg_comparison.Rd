@@ -14,6 +14,10 @@ or \code{"paired"}.}
 
 \item{...}{Additional arguments passed to plotting functions.}
 }
+\value{
+The \code{borg_comparison} object \code{x}, returned invisibly.
+Called for the side effect of producing a plot.
+}
 \description{
 Creates a visualization comparing random vs blocked CV performance.
 }

@@ -1,7 +1,7 @@
 # BORG
 
 [![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml)
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html#maturing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Bounded Outcome Risk Guard for Model Evaluation**
@@ -27,13 +27,19 @@ The test set means leaked into the scaler. Your reported accuracy is wrong.
 BORG finds this automatically — for scaling, PCA, recipes, caret pipelines,
 and more.
 
-## Why This Matters
+## Statement of Need
 
 A model shows 95% accuracy on test data, then drops to 60% in production. The usual cause: data leakage. Information from the test set contaminated training, and the reported metrics were wrong.
 
 A [Princeton meta-analysis](https://reproducible.cs.princeton.edu/) found leakage errors in **648 published papers across 30 fields**. In civil war prediction research, correcting leakage revealed that "complex ML models do not perform substantively better than decades-old Logistic Regression." The reported gains were artifacts.
 
-BORG catches these errors before metrics are computed.
+BORG addresses this problem by **automatically detecting** six categories of leakage — index overlap, duplicate rows, preprocessing leakage, target leakage, group leakage, and temporal violations — across common R frameworks (base R, caret, tidymodels, mlr3). Beyond detection, BORG diagnoses data dependencies (spatial, temporal, clustered), generates appropriate cross-validation schemes, and produces publication-ready methods paragraphs with test statistics.
+
+These features make the package useful in domains like:
+
+- ecological and environmental modeling (spatial/temporal autocorrelation),
+- clinical research (repeated measures, patient clustering),
+- any predictive modeling workflow where evaluation integrity matters.
 
 ## Features
 
@@ -57,6 +63,26 @@ BORG catches these errors before metrics are computed.
   - Detects temporal autocorrelation (ACF/Ljung-Box)
   - Detects clustered structure (ICC)
   - Recommends appropriate CV strategy
+
+### Empirical Evidence & Power Analysis
+
+- **`borg_compare_cv()`**: Run random and blocked CV side by side on the same data
+  - Produces the "smoking gun" evidence for reviewers
+  - Paired t-test quantifies metric inflation
+  - `plot()` for visual comparison
+
+- **`borg_power()`**: Estimate power loss from switching to blocked CV
+  - Design effect from Moran's I, ACF, or ICC
+  - Reports effective sample size and minimum detectable effect
+  - Answers "is my dataset large enough for blocked CV?"
+
+### Publication Support
+
+- **`summary()`**: Generate publication-ready methods paragraphs
+  - Includes test statistics (Moran's I, ACF, ICC with p-values)
+  - Three citation styles: APA, Nature, Ecology
+  - Integrates `borg_compare_cv()` inflation estimates when available
+- **`borg_certificate()`** / **`borg_export()`**: Machine-readable validation certificates in YAML/JSON for audit trails
 
 ### Risk Categories
 
@@ -84,6 +110,10 @@ BORG catches these errors before metrics are computed.
 # Install from GitHub
 # install.packages("pak")
 pak::pak("gcol33/BORG")
+
+# Or using devtools
+# install.packages("devtools")
+devtools::install_github("gcol33/BORG")
 ```
 
 ## Usage Examples
@@ -129,6 +159,7 @@ leaky_data$leaked <- leaky_data$outcome + rnorm(100, sd = 0.01)
 borg_inspect(leaky_data, train_idx = 1:70, test_idx = 71:100, target = "outcome")
 #> Hard violation: target_leakage_direct
 ```
+
 ### Grouped Data Validation
 
 ```r
@@ -163,6 +194,35 @@ result$diagnosis@recommended_cv
 #> "spatial_block"
 ```
 
+### Empirical CV Comparison
+
+```r
+# Prove to reviewers that random CV inflates metrics
+comparison <- borg_compare_cv(
+  spatial_data,
+  formula = response ~ lon + lat,
+  coords = c("lon", "lat"),
+  repeats = 10
+)
+print(comparison)
+plot(comparison)
+```
+
+### Generate Methods Text for Papers
+
+```r
+# summary() writes a publication-ready methods paragraph
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
+summary(result)
+#> Model performance was evaluated using spatial block cross-validation
+#> (k = 5 folds). Spatial autocorrelation was detected in the data
+#> (Moran's I = 0.12, p < 0.001)...
+
+# Three citation styles
+summary(result, style = "nature")
+summary(result, style = "ecology")
+```
+
 ### Framework Integration
 
 BORG works with common ML frameworks:
@@ -185,22 +245,45 @@ borg_inspect(rec, train_idx = 1:25, test_idx = 26:32, data = mtcars)
 
 | Function | Purpose |
 |----------|---------|
-| `borg()` | Main entry point - diagnose data or validate splits |
+| `borg()` | Main entry point — diagnose data or validate splits |
 | `borg_inspect()` | Detailed inspection of objects |
 | `borg_diagnose()` | Analyze data dependencies |
 | `borg_validate()` | Validate complete workflow |
-| `borg_rewrite()` | Attempt automatic repair |
+| `borg_assimilate()` | Assimilate leaky pipelines into compliance |
+| `borg_compare_cv()` | Empirical random vs blocked CV comparison |
+| `borg_power()` | Power analysis after blocking |
 | `plot()` | Visualize results |
-| `summary()` | Generate methods text |
+| `summary()` | Generate methods text for papers |
 | `borg_certificate()` | Create validation certificate |
 | `borg_export()` | Export certificate to YAML/JSON |
 
 ## Documentation
 
-- [Quick Start](https://gcol33.github.io/BORG/articles/quickstart.html)
-- [Risk Taxonomy](https://gcol33.github.io/BORG/articles/risk-taxonomy.html)
-- [Framework Integration](https://gcol33.github.io/BORG/articles/frameworks.html)
+- [Quick Start](https://gillescolling.com/BORG/articles/quickstart.html)
+- [Risk Taxonomy](https://gillescolling.com/BORG/articles/risk-taxonomy.html)
+- [Framework Integration](https://gillescolling.com/BORG/articles/frameworks.html)
+
+## Support
+
+> "Software is like sex: it's better when it's free." — Linus Torvalds
+
+I'm a PhD student who builds R packages in my free time because I believe good tools should be free and open. I started these projects for my own work and figured others might find them useful too.
+
+If this package saved you some time, buying me a coffee is a nice way to say thanks. It helps with my coffee addiction.
+
+[![Buy Me A Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/gcol33)
 
 ## License
 
 MIT (see the LICENSE.md file)
+
+## Citation
+
+```bibtex
+@software{BORG,
+  author = {Colling, Gilles},
+  title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},
+  year = {2026},
+  url = {https://github.com/gcol33/BORG}
+}
+```

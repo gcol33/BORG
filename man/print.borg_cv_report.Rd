@@ -11,6 +11,11 @@
 
 \item{...}{Additional arguments (ignored).}
 }
+\value{
+The \code{borg_cv_report} object \code{x}, returned invisibly.
+Called for the side effect of printing a human-readable leakage summary
+to the console.
+}
 \description{
 Print CV Leakage Report
 }

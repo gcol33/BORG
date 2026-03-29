@@ -12,6 +12,11 @@
 \arguments{
 \item{object}{A \code{BorgRisk} object to be printed.}
 }
+\value{
+The \code{BorgRisk} object, returned invisibly.
+Called for the side effect of printing a risk assessment summary to the
+console.
+}
 \description{
 Holds the result of \code{\link{borg_inspect}} or \code{\link{borg_validate}}:
 a structured assessment of evaluation risks detected in a workflow or object.

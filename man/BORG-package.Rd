@@ -5,8 +5,11 @@
 \alias{BORG-package}
 \alias{BORG}
 \title{BORG: Bounded Outcome Risk Guard for Model Evaluation}
+\value{
+No return value. This is a package-level documentation page.
+}
 \description{
-Automatically detects and enforces valid model evaluation by identifying information reuse between training and evaluation data. Guards against data leakage, look-ahead bias, and invalid cross-validation schemes that inflate performance estimates. Supports temporal, spatial, and grouped evaluation structures.
+Comprehensive toolkit for valid spatial, temporal, and grouped model evaluation. Automatically detects data dependencies (spatial autocorrelation, temporal structure, clustered observations), generates appropriate cross-validation schemes (spatial blocking, checkerboard, hexagonal, KNNDM, environmental blocking, leave-location-out, purged CV), and validates evaluation pipelines for leakage. Includes area of applicability (AOA) assessment following Meyer & Pebesma (2021) \doi{10.1111/2041-210X.13650}, forward feature selection with blocked CV, spatial thinning, block-permutation variable importance, extrapolation detection, and interactive visualizations. Integrates with 'tidymodels', 'caret', 'mlr3', 'ENMeval', and 'biomod2'. Based on evaluation principles described in Roberts et al. (2017) \doi{10.1111/ecog.02881}, Kaufman et al. (2012) \doi{10.1145/2382577.2382579}, Kapoor & Narayanan (2023) \doi{10.1016/j.patter.2023.100804}, and Linnenbrink et al. (2024) \doi{10.5194/gmd-17-5897-2024}.
 
 BORG automatically detects and enforces valid model evaluation by identifying
 information reuse between training and evaluation data. It guards against:
@@ -27,7 +30,7 @@ information reuse between training and evaluation data. It guards against:
 \item{\code{\link{borg_cv}}}{Generate valid CV schemes based on diagnosis}
 \item{\code{\link{borg_inspect}}}{Inspect R objects for leakage signals}
 \item{\code{\link{borg_validate}}}{Validate a complete evaluation workflow}
-\item{\code{\link{borg_rewrite}}}{Automatically rewrite leaky pipelines}
+\item{\code{\link{borg_assimilate}}}{Assimilate leaky pipelines into compliance}
 }
 }
 
@@ -72,6 +75,7 @@ Default: FALSE.}
 Useful links:
 \itemize{
   \item \url{https://github.com/gcol33/BORG}
+  \item \url{https://gillescolling.com/BORG/}
   \item Report bugs at \url{https://github.com/gcol33/BORG/issues}
 }
 

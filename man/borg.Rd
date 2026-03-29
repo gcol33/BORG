@@ -10,9 +10,13 @@ borg(
   time = NULL,
   groups = NULL,
   target = NULL,
+  formula = NULL,
   v = 5,
   train_idx = NULL,
   test_idx = NULL,
+  buffer = NULL,
+  env = NULL,
+  repeats = 1L,
   output = c("list", "rsample", "caret", "mlr3"),
   ...
 )
@@ -35,6 +39,10 @@ temporal autocorrelation detection.}
 \item{target}{Character string specifying the response variable column name.
 Used for more accurate autocorrelation diagnostics.}
 
+\item{formula}{A model formula (e.g. \code{y ~ x1 + x2}). If supplied,
+the response variable is extracted as \code{target} (unless \code{target}
+is also provided).}
+
 \item{v}{Integer. Number of CV folds. Default: 5.}
 
 \item{train_idx}{Integer vector of training indices. If provided along with
@@ -42,6 +50,17 @@ Used for more accurate autocorrelation diagnostics.}
 
 \item{test_idx}{Integer vector of test indices. Required if \code{train_idx}
 is provided.}
+
+\item{buffer}{Numeric. Spatial buffer distance (in coordinate units) applied
+around test-fold observations. Training points within this buffer are
+removed to reduce spatial autocorrelation leakage. Default: NULL (no buffer).}
+
+\item{env}{Environmental covariates used for environmental blocking.
+A \code{SpatRaster}, data frame, or matrix with one row per observation.
+Passed to \code{\link{borg_cv}}.}
+
+\item{repeats}{Integer. Number of times to repeat the CV fold generation
+with different random seeds. Default: 1 (no repetition).}
 
 \item{output}{Character. CV output format: "list" (default), "rsample",
 "caret", "mlr3". Ignored when validating an existing split.}

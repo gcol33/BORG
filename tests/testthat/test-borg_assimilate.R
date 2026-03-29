@@ -1,31 +1,31 @@
 # ===========================================================================
-# Tests for borg_rewrite()
+# Tests for borg_assimilate()
 # ===========================================================================
 
-test_that("borg_rewrite validates required arguments", {
+test_that("borg_assimilate validates required arguments", {
   # Non-list workflow
   expect_error(
-    borg_rewrite("not a list"),
+    borg_assimilate("not a list"),
     "'workflow' must be a list"
   )
 
   # Invalid risks object
   expect_error(
-    borg_rewrite(list(data = data.frame(x = 1:10), train_idx = 1:5, test_idx = 6:10),
+    borg_assimilate(list(data = data.frame(x = 1:10), train_idx = 1:5, test_idx = 6:10),
                  risks = "not a BorgRisk"),
     "'risks' must be a BorgRisk object"
   )
 })
 
 
-test_that("borg_rewrite returns correct structure", {
+test_that("borg_assimilate returns correct structure", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:5,
     test_idx = 6:10
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true(is.list(result))
   expect_true("workflow" %in% names(result))
@@ -37,14 +37,14 @@ test_that("borg_rewrite returns correct structure", {
 })
 
 
-test_that("borg_rewrite passes through clean workflow", {
+test_that("borg_assimilate passes through clean workflow", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:5,
     test_idx = 6:10
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true(result$report@is_valid)
   expect_equal(length(result$fixed), 0)
@@ -52,21 +52,21 @@ test_that("borg_rewrite passes through clean workflow", {
 })
 
 
-test_that("borg_rewrite identifies unfixable index overlap", {
+test_that("borg_assimilate identifies unfixable index overlap", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:6,
     test_idx = 5:10  # overlap at 5, 6
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_false(result$report@is_valid)
   expect_true("index_overlap" %in% result$unfixable)
 })
 
 
-test_that("borg_rewrite identifies unfixable duplicate rows", {
+test_that("borg_assimilate identifies unfixable duplicate rows", {
   workflow <- list(
     data = data.frame(
       x = c(1, 2, 3, 4, 5, 1, 2, 3),  # rows 6-8 duplicate rows 1-3
@@ -76,13 +76,13 @@ test_that("borg_rewrite identifies unfixable duplicate rows", {
     test_idx = 6:8
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true("duplicate_rows" %in% result$unfixable)
 })
 
 
-test_that("borg_rewrite identifies unfixable target leakage", {
+test_that("borg_assimilate identifies unfixable target leakage", {
   set.seed(42)
   n <- 100
   target <- rnorm(n)
@@ -99,13 +99,13 @@ test_that("borg_rewrite identifies unfixable target leakage", {
     target_col = "y"
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true("target_leakage_direct" %in% result$unfixable)
 })
 
 
-test_that("borg_rewrite accepts pre-computed risks", {
+test_that("borg_assimilate accepts pre-computed risks", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:6,
@@ -117,13 +117,13 @@ test_that("borg_rewrite accepts pre-computed risks", {
 
   # Pass to rewrite
 
-  result <- borg_rewrite(workflow, risks = risks)
+  result <- borg_assimilate(workflow, risks = risks)
 
   expect_true("index_overlap" %in% result$unfixable)
 })
 
 
-test_that("borg_rewrite fix parameter filters risk types", {
+test_that("borg_assimilate fix parameter filters risk types", {
   skip_if_not_installed("caret")
 
   set.seed(42)
@@ -145,10 +145,10 @@ test_that("borg_rewrite fix parameter filters risk types", {
   )
 
   # With fix = "all" (default), attempt to fix preprocessing
-  result_all <- borg_rewrite(workflow, fix = "all")
+  result_all <- borg_assimilate(workflow, fix = "all")
 
   # With fix = "thresholds", skip preprocessing fix
-  result_thresholds <- borg_rewrite(workflow, fix = "thresholds")
+  result_thresholds <- borg_assimilate(workflow, fix = "thresholds")
 
   expect_s4_class(result_all$report, "BorgRisk")
   expect_s4_class(result_thresholds$report, "BorgRisk")
@@ -158,7 +158,7 @@ test_that("borg_rewrite fix parameter filters risk types", {
 })
 
 
-test_that("borg_rewrite fixes caret preProcess leak", {
+test_that("borg_assimilate fixes caret preProcess leak", {
   skip_if_not_installed("caret")
 
   set.seed(42)
@@ -179,7 +179,7 @@ test_that("borg_rewrite fixes caret preProcess leak", {
     preprocess = pp_bad
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   # Should be fixed
 
@@ -197,7 +197,7 @@ test_that("borg_rewrite fixes caret preProcess leak", {
 })
 
 
-test_that("borg_rewrite fixes PCA leak (base R prcomp)", {
+test_that("borg_assimilate fixes PCA leak (base R prcomp)", {
   set.seed(42)
   data <- data.frame(
     x1 = rnorm(100),
@@ -217,7 +217,7 @@ test_that("borg_rewrite fixes PCA leak (base R prcomp)", {
     preprocess = pca_bad
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true("preprocessing_leak" %in% result$fixed)
 
@@ -228,7 +228,7 @@ test_that("borg_rewrite fixes PCA leak (base R prcomp)", {
 })
 
 
-test_that("borg_rewrite fixes threshold on test data", {
+test_that("borg_assimilate fixes threshold on test data", {
   set.seed(42)
   n <- 100
   data <- data.frame(
@@ -253,7 +253,7 @@ test_that("borg_rewrite fixes threshold on test data", {
     )
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true("threshold_leak" %in% result$fixed)
   expect_equal(result$workflow$thresholds$optimized_on, "train")
@@ -261,14 +261,14 @@ test_that("borg_rewrite fixes threshold on test data", {
 })
 
 
-test_that("borg_rewrite re-validates after rewriting", {
+test_that("borg_assimilate re-validates after rewriting", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:5,
     test_idx = 6:10
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   # The report should reflect the state after any rewrites
   expect_s4_class(result$report, "BorgRisk")
@@ -276,7 +276,7 @@ test_that("borg_rewrite re-validates after rewriting", {
 })
 
 
-test_that("borg_rewrite handles workflow with model", {
+test_that("borg_assimilate handles workflow with model", {
   # Simple lm model - should pass through without issues
   set.seed(42)
   data <- data.frame(x = 1:20, y = 2 * (1:20) + rnorm(20))
@@ -292,7 +292,7 @@ test_that("borg_rewrite handles workflow with model", {
     model = model
   )
 
-  result <- borg_rewrite(workflow)
+  result <- borg_assimilate(workflow)
 
   expect_true(is.list(result))
   expect_s4_class(result$report, "BorgRisk")
@@ -303,7 +303,7 @@ test_that("borg_rewrite handles workflow with model", {
 # Edge-case tests for high-severity gaps
 # ===========================================================================
 
-test_that("borg_rewrite handles workflow with missing data gracefully", {
+test_that("borg_assimilate handles workflow with missing data gracefully", {
   # Exercise the path where .get_train_data returns NULL because both
  # data and train_idx are NULL. We construct a workflow that has the
 
@@ -344,13 +344,13 @@ test_that("borg_rewrite handles workflow with missing data gracefully", {
 
   # The normalization rewriter checks for preProcess or scaled matrix.
   # This workflow has neither, so it returns success=FALSE -> unfixable.
-  expect_no_error(result <- borg_rewrite(workflow, risks = fake_risk))
+  expect_no_error(result <- borg_assimilate(workflow, risks = fake_risk))
   expect_true("normalization_leak" %in% result$unfixable)
   expect_s4_class(result$report, "BorgRisk")
 })
 
 
-test_that("borg_rewrite handles unknown risk type", {
+test_that("borg_assimilate handles unknown risk type", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:5,
@@ -375,9 +375,9 @@ test_that("borg_rewrite handles unknown risk type", {
     call = quote(borg_validate(x))
   )
 
-  # borg_rewrite should not error on unknown risk types
+  # borg_assimilate should not error on unknown risk types
 
-  expect_no_error(result <- borg_rewrite(workflow, risks = fake_risk))
+  expect_no_error(result <- borg_assimilate(workflow, risks = fake_risk))
 
   # Unknown risk type is neither in rewritable_types nor unfixable_types,
   # so the switch returns NULL and it gets skipped entirely. It won't
@@ -389,7 +389,7 @@ test_that("borg_rewrite handles unknown risk type", {
 })
 
 
-test_that("borg_rewrite handles normalization with zero-variance column", {
+test_that("borg_assimilate handles normalization with zero-variance column", {
   skip_if_not_installed("caret")
 
   set.seed(42)
@@ -416,13 +416,13 @@ test_that("borg_rewrite handles normalization with zero-variance column", {
 
   # Should not error even though one column has zero variance
   # Suppress caret's zero-variance warnings from the rewriter re-fitting
-  expect_no_error(result <- suppressWarnings(borg_rewrite(workflow)))
+  expect_no_error(result <- suppressWarnings(borg_assimilate(workflow)))
   expect_true(is.list(result))
   expect_s4_class(result$report, "BorgRisk")
 })
 
 
-test_that("borg_rewrite handles threshold optimization with identical predictions", {
+test_that("borg_assimilate handles threshold optimization with identical predictions", {
   set.seed(42)
   n <- 100
 
@@ -484,7 +484,7 @@ test_that("borg_rewrite handles threshold optimization with identical prediction
   # All predictions are ~0.5 (single unique value), so thresholds_to_try
   # has one element and the Youden's J loop runs exactly once.
   expect_no_error(
-    result <- suppressWarnings(borg_rewrite(workflow, risks = threshold_risk))
+    result <- suppressWarnings(borg_assimilate(workflow, risks = threshold_risk))
   )
   expect_true(is.list(result))
   expect_s4_class(result$report, "BorgRisk")
@@ -495,7 +495,7 @@ test_that("borg_rewrite handles threshold optimization with identical prediction
 })
 
 
-test_that("borg_rewrite handles empty risks (clean workflow)", {
+test_that("borg_assimilate handles empty risks (clean workflow)", {
   workflow <- list(
     data = data.frame(x = 1:10, y = 11:20),
     train_idx = 1:5,
@@ -514,7 +514,7 @@ test_that("borg_rewrite handles empty risks (clean workflow)", {
     call = quote(borg_validate(x))
   )
 
-  expect_no_error(result <- borg_rewrite(workflow, risks = clean_risk))
+  expect_no_error(result <- borg_assimilate(workflow, risks = clean_risk))
 
   # Should return unchanged workflow
   expect_identical(result$workflow$data, workflow$data)

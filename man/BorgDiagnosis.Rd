@@ -12,6 +12,10 @@
 \arguments{
 \item{object}{A \code{BorgDiagnosis} object to be printed.}
 }
+\value{
+The \code{BorgDiagnosis} object, returned invisibly.
+Called for the side effect of printing a diagnostic summary to the console.
+}
 \description{
 Holds the result of \code{\link{borg_diagnose}}: a structured assessment
 of data dependency patterns that affect cross-validation validity.
