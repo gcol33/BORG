@@ -1,7 +1,10 @@
 # BORG
 
+[![CRAN status](https://www.r-pkg.org/badges/version/BORG)](https://CRAN.R-project.org/package=BORG)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/BORG)](https://cran.r-project.org/package=BORG)
+[![Monthly downloads](https://cranlogs.r-pkg.org/badges/BORG)](https://cran.r-project.org/package=BORG)
 [![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml)
-[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html#maturing)
+[![Codecov test coverage](https://codecov.io/gh/gcol33/BORG/graph/badge.svg)](https://app.codecov.io/gh/gcol33/BORG)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Bounded Outcome Risk Guard for Model Evaluation**
