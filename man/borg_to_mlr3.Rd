@@ -7,13 +7,14 @@
 borg_to_mlr3(data = NULL, folds = NULL, cv_obj = NULL, id = "borg")
 }
 \arguments{
-\item{data}{A data frame.}
+\item{data}{A data frame. Required when using \code{folds} directly,
+not needed when using \code{cv_obj}.}
 
 \item{folds}{A list of lists, each with \code{train} and \code{test}
 integer index vectors.}
 
-\item{cv_obj}{A \code{borg_cv} object. If provided, \code{data} and
-\code{folds} are extracted from it.}
+\item{cv_obj}{A \code{borg_cv} object. If provided, \code{folds}
+are extracted from it.}
 
 \item{id}{Character. Resampling identifier. Default: \code{"borg"}.}
 }

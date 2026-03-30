@@ -170,6 +170,7 @@ borg_disc_cv <- function(data, coords, target = NULL, radius = NULL,
 
   result <- list(
     folds = folds,
+    n = n,
     radius = radius,
     n_excluded = n_excluded,
     effective_training = effective_training,

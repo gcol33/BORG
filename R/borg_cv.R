@@ -50,8 +50,8 @@
 #' @return Depending on \code{output}:
 #' \describe{
 #'   \item{"list"}{A list with elements: \code{folds} (list of train/test index vectors),
-#'     \code{diagnosis} (the BorgDiagnosis used), \code{strategy} (CV strategy name),
-#'     \code{params} (parameters used).}
+#'     \code{n} (number of observations), \code{diagnosis} (the BorgDiagnosis used),
+#'     \code{strategy} (CV strategy name), \code{params} (parameters used).}
 #'   \item{"rsample"}{An \code{rsample} \code{rset} object compatible with tidymodels.}
 #'   \item{"caret"}{A \code{trainControl} object for caret.}
 #'   \item{"mlr3"}{An \code{mlr3} \code{Resampling} object.}
@@ -280,6 +280,7 @@ borg_cv <- function(data,
 
   result <- list(
     folds = folds,
+    n = n,
     diagnosis = diagnosis,
     strategy = strategy,
     params = params

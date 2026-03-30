@@ -8,11 +8,12 @@
 #' cross-validation folds, enabling direct use with mlr3 benchmarking
 #' infrastructure.
 #'
-#' @param data A data frame.
+#' @param data A data frame. Required when using \code{folds} directly,
+#'   not needed when using \code{cv_obj}.
 #' @param folds A list of lists, each with \code{train} and \code{test}
 #'   integer index vectors.
-#' @param cv_obj A \code{borg_cv} object. If provided, \code{data} and
-#'   \code{folds} are extracted from it.
+#' @param cv_obj A \code{borg_cv} object. If provided, \code{folds}
+#'   are extracted from it.
 #' @param id Character. Resampling identifier. Default: \code{"borg"}.
 #'
 #' @return An \code{mlr3::Resampling} R6 object that can be used
@@ -49,16 +50,14 @@ borg_to_mlr3 <- function(data = NULL, folds = NULL, cv_obj = NULL,
     if (!inherits(cv_obj, "borg_cv")) {
       stop("cv_obj must be a borg_cv object")
     }
-    data <- cv_obj$data
     folds <- cv_obj$folds
+    n <- if (!is.null(data)) nrow(data) else cv_obj$n
+  } else {
+    if (is.null(data) || is.null(folds)) {
+      stop("Provide either cv_obj or both data and folds")
+    }
+    n <- nrow(data)
   }
-
-  if (is.null(data) || is.null(folds)) {
-    stop("Provide either cv_obj or both data and folds")
-  }
-
-  n <- nrow(data)
-  v <- length(folds)
 
   # Build train/test index lists
   train_sets <- lapply(folds, function(f) f$train)
@@ -69,7 +68,6 @@ borg_to_mlr3 <- function(data = NULL, folds = NULL, cv_obj = NULL,
   resampling$id <- id
 
   # Instantiate with our pre-computed folds
-  # ResamplingCustom$instantiate requires a task, but we can set directly
   task_dummy <- mlr3::TaskRegr$new(id = "borg_dummy",
                                     backend = data.frame(y = seq_len(n)),
                                     target = "y")
