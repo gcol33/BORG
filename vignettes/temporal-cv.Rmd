@@ -1,0 +1,924 @@
+---
+title: "Temporal Cross-Validation"
+author: "Gilles Colling"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Temporal Cross-Validation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  dev = "svglite",
+  fig.ext = "svg"
+)
+library(BORG)
+library(ggplot2)
+
+theme_borg <- theme_minimal(base_size = 12) +
+  theme(
+    panel.background = element_rect(fill = "transparent", colour = NA),
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA)
+  )
+theme_set(theme_borg)
+```
+
+# Introduction
+
+Time series cross-validation is one of those techniques that most practitioners
+know they should use but often skip in favour of random k-fold CV. The cost of
+that shortcut is inflated performance estimates. A model that appears to explain
+60% of variance under random CV might explain 25% when evaluated honestly on
+future data. The gap between those numbers is real: it shows up in production,
+in failed forecasts, and in published results that do not replicate.
+
+The problem is look-ahead bias. When random CV scatters observations into folds
+without regard for time, the training set routinely contains future observations.
+A model trained on data from January through December and tested on March has
+already seen April. The test error shrinks because the model has access to
+information that would not exist at prediction time. This is not a subtle
+statistical nuance; it is a data leak that invalidates the entire evaluation.
+
+The mechanism is straightforward. Suppose we want to predict species abundance
+in July 2023. Under random 5-fold CV, the training set could include
+observations from June and August 2023. A model that simply memorizes local
+trajectories will report low test error because it interpolates between
+temporally adjacent training points. Under temporal CV, the training set
+contains only data from before July 2023. The model must extrapolate from
+the past, which is the actual task we care about.
+
+Look-ahead bias affects any dataset where observations have a natural temporal
+ordering: financial time series, ecological monitoring records, climate
+projections, sensor readings, patient health trajectories. In finance, a
+stock-price model evaluated with random CV can appear to predict next-day
+returns with 2% accuracy when the true out-of-sample accuracy is 0.5%. In
+ecology, species distribution models fitted to multi-year survey data
+routinely show R-squared inflation of 15-40% under random CV because annual
+population counts are autocorrelated. In clinical medicine, patient health
+trajectories measured at weekly intervals carry enough autocorrelation that
+random CV inflates the apparent predictive power of longitudinal biomarker
+models by 10-30%.
+
+Panel data deserves special mention. Longitudinal studies track the same
+units (patients, field sites, countries) over time. Both temporal
+autocorrelation within each unit and similarity between repeated measurements
+on the same unit inflate metrics simultaneously. A patient's blood glucose at
+time $t$ predicts their blood glucose at time $t+1$, and a random CV fold
+that places both observations in different sets allows the model to exploit
+this identity-level autocorrelation. Ignoring either the temporal or the
+group structure produces optimistic estimates; ignoring both produces
+estimates that can be off by a factor of two.
+
+BORG provides temporal cross-validation strategies that enforce chronological
+ordering, insert embargo gaps between training and test periods, and detect
+when random CV would produce misleading results. This vignette walks through
+the full workflow: diagnosing temporal structure, choosing between blocking
+and expanding window strategies, setting embargo periods, comparing random vs
+temporal CV, and detecting concept drift in deployment data.
+
+The functions we will use are `borg_simulate()`, `borg_diagnose()`, `borg_cv()`,
+`borg_temporal_cv()`, `borg_compare_cv()`, `borg_drift()`, and
+`borg_fold_performance()`. All code runs end to end with no external
+dependencies beyond BORG and ggplot2.
+
+# The problem: temporal autocorrelation
+
+Temporal autocorrelation is the tendency for consecutive observations to
+resemble each other. Today's temperature predicts tomorrow's. This quarter's
+GDP predicts next quarter's. A patient's blood pressure reading at 10:00 AM
+carries information about the reading at 10:15 AM. The closer two observations
+are in time, the more correlated they tend to be.
+
+Three quantities characterize the severity of temporal autocorrelation for
+cross-validation purposes.
+
+**Autocorrelation function (ACF).** The ACF measures the correlation between a
+time series and lagged versions of itself. The lag-1 ACF is the correlation
+between consecutive observations. For financial returns, this might be 0.05
+(nearly independent). For daily temperature, it exceeds 0.9. For ecological
+population counts measured annually, values of 0.4-0.7 are common. When the
+lag-1 ACF exceeds 0.2, random CV starts to produce measurably inflated
+estimates.
+
+**Ljung-Box test.** The Ljung-Box Q-statistic tests the null hypothesis that
+the first *k* autocorrelations are all zero. A significant result (p < 0.05)
+means the series contains temporal structure that CV must respect. BORG
+computes this at lag 10 by default. A non-significant result does not
+guarantee independence (the series could have nonlinear dependence), but a
+significant result is a clear signal that random CV is inappropriate.
+
+**Effective sample size.** With autocorrelation, 500 observations do not carry
+as much information as 500 independent observations. The effective sample size
+is $n_{\text{eff}} = n \cdot (1 - \rho) / (1 + \rho)$, where $\rho$ is the
+lag-1 ACF. A series of 500 observations with $\rho = 0.8$ has an effective
+sample size of about 56. Random CV acts as if each of those 500 observations
+contributes independent test information. They do not. The test error is
+estimated from 56 effective data points masquerading as 500, producing
+confidence intervals that are far too narrow and point estimates that are
+biased toward optimism.
+
+The connection between autocorrelation and CV inflation is mechanical.
+Consider a simple scenario: you want to predict $y_{t+1}$ given predictors
+$x_t$. In random CV, the training set might contain $y_{t-1}$, $y_t$,
+$y_{t+2}$, and $y_{t+3}$. If $\rho = 0.8$, the model can predict $y_{t+1}$
+to within $\sqrt{1 - \rho^2} \approx 0.6$ standard deviations just by
+interpolating between the surrounding training points. The apparent R-squared
+rises, but the model has learned nothing about the underlying data-generating
+process; it has memorized the local trajectory.
+
+The interaction between autocorrelation and model complexity matters. Linear
+models are somewhat protected because they cannot memorize local trajectories
+as aggressively; they fit a global hyperplane and the autocorrelation mainly
+inflates confidence intervals rather than point predictions. Tree-based models
+(random forests, gradient boosted trees) are more vulnerable because they
+partition the feature space into small regions and can effectively memorize
+clusters of temporally adjacent training points. A random forest trained with
+random CV on daily temperature data will place nearby days in the same leaf
+nodes and report near-perfect test accuracy. The same forest evaluated with
+temporal CV will show the true predictive skill, which for a naive model is
+often poor. Neural networks sit somewhere in between: their capacity to
+memorize depends on architecture and regularization, but high-capacity
+networks with dropout disabled can exploit temporal leakage as aggressively
+as tree-based methods.
+
+The character of the autocorrelation also matters. Strong short-range
+autocorrelation, like daily weather or hourly sensor data, means that
+observations 1-3 time steps apart are nearly identical. The lag-1 ACF might
+be 0.95. Random CV on such data is almost equivalent to testing on the
+training set itself, because adjacent observations end up on opposite sides
+of the train/test split. The inflation is large (often 30-60%) but easy to
+detect with `borg_diagnose()`. Weak long-range autocorrelation is subtler.
+Annual ecological surveys with lag-1 ACF of 0.3-0.5 produce moderate
+inflation (5-20%) that is easy to dismiss as noise. But at these
+autocorrelation levels, the effective sample size is already 40-70% of the
+nominal $n$, and confidence intervals around the CV estimate are meaningfully
+too narrow. The danger with weak long-range autocorrelation is not that the
+point estimate is wildly wrong, but that the practitioner believes the
+estimate is more precise than it is.
+
+# Simulating temporal data
+
+We start by generating data with known temporal structure. `borg_simulate()`
+with `type = "temporal"` creates AR(1) predictors and an AR(1) noise process.
+Both the features and the response exhibit temporal autocorrelation, which is
+the typical scenario in applied work where predictors are themselves time
+series (economic indicators, environmental measurements, lagged variables).
+
+```{r simulate}
+sim <- borg_simulate(
+  n = 500,
+  type = "temporal",
+  n_predictors = 5,
+  signal_strength = 0.3,
+  autocorrelation = 0.7,
+  seed = 42
+)
+
+sim
+```
+
+The simulated data contains a `time` column (daily dates starting from
+2020-01-01), five predictors (`x1` through `x5`), and a response `y`. The
+true R-squared is `r round(sim$true_r2, 2)`, which represents the ceiling
+for any model that correctly recovers the signal without temporal leakage.
+
+```{r colnames}
+names(sim$data)
+```
+
+We can visualize the response over time to see the autocorrelation structure:
+
+```{r plot-ts, fig.width = 7, fig.height = 4}
+ggplot(sim$data, aes(x = time, y = y)) +
+  geom_line(alpha = 0.6) +
+  labs(title = "Simulated temporal response (AR(1), rho = 0.7)",
+       x = "Time", y = "Response")
+```
+
+The smooth, slowly varying trajectory is the visual fingerprint of temporal
+autocorrelation. Consecutive values track each other closely, which means
+that a random train/test split would place temporally adjacent observations
+on both sides of the partition.
+
+Now we confirm the temporal structure formally with `borg_diagnose()`:
+
+```{r diagnose}
+diag <- borg_diagnose(
+  sim$data,
+  time = "time",
+  target = "y",
+  verbose = FALSE
+)
+
+diag
+```
+
+BORG detects the temporal dependency, reports the lag-1 ACF, the Ljung-Box
+p-value, the decorrelation lag, and the minimum embargo period. The
+`@recommended_cv` slot tells us which CV strategy BORG would select
+automatically.
+
+The diagnostic output deserves careful reading. The lag-1 ACF is the
+single most informative number: values above 0.2 indicate that random CV
+will produce measurably inflated estimates, and values above 0.5 indicate
+that the inflation will be large enough to change substantive conclusions.
+The Ljung-Box p-value is a formal hypothesis test; a value below 0.05
+rejects the null of independence, but values well below 0.001 (as we see
+here) indicate that the temporal structure is not borderline but
+unambiguous. The decorrelation lag tells us how many time steps it takes
+for the autocorrelation to decay below the significance threshold
+($2 / \sqrt{n}$). For our data with $\rho = 0.7$ and $n = 500$, the
+significance threshold is about 0.09, and the ACF at lag $k$ is
+approximately $0.7^k$, so it takes roughly 27 time steps for the
+autocorrelation to become negligible. The embargo minimum is derived from
+this decorrelation lag and represents the smallest gap between training
+and test sets that will prevent temporal leakage. Setting the embargo
+below this value leaves residual autocorrelation between the last
+training observation and the first test observation.
+
+We can inspect the temporal diagnostics directly:
+
+```{r temporal-slots}
+cat("ACF lag-1:       ", diag@temporal$acf_lag1, "\n")
+cat("Ljung-Box p:     ", diag@temporal$ljung_box_p, "\n")
+cat("Embargo minimum: ", diag@temporal$embargo_minimum, "\n")
+```
+
+The lag-1 ACF of `r round(diag@temporal$acf_lag1, 3)` confirms strong temporal
+dependence. The Ljung-Box p-value is effectively zero, rejecting the null of
+no autocorrelation. The embargo minimum tells us how many time units we need
+between training and test sets to break the autocorrelation link.
+
+# Temporal block CV
+
+Temporal block CV divides the time series into contiguous blocks and assigns
+each block to a fold. Within each iteration, the test set is a continuous time
+window, and the training set is everything before it (minus an embargo gap).
+This mimics the real prediction task: we train on the past and predict the
+future.
+
+```{r temporal-block}
+cv_block <- borg_cv(
+  sim$data,
+  time = "time",
+  target = "y",
+  strategy = "temporal_block",
+  v = 5,
+  verbose = TRUE
+)
+
+cv_block
+```
+
+The fold structure preserves chronological order. Each fold tests on a later
+time window than the previous fold's test set. Training data is always
+temporally prior to test data, with an embargo gap in between.
+
+We can verify the chronological structure by checking the time ranges of
+training and test sets in each fold:
+
+```{r fold-ranges}
+for (i in seq_along(cv_block$folds)) {
+  f <- cv_block$folds[[i]]
+  train_range <- range(sim$data$time[f$train])
+  test_range <- range(sim$data$time[f$test])
+  cat(sprintf("Fold %d: train %s to %s | test %s to %s\n",
+              i, train_range[1], train_range[2],
+              test_range[1], test_range[2]))
+}
+```
+
+In each fold, the training period ends before the test period begins. The gap
+between the last training observation and the first test observation is the
+embargo period. No future data leaks into the training set.
+
+The contiguous block structure is not just a convenience; it is a requirement.
+Consider the alternative: assigning random time points to folds while
+keeping folds "mostly" in order. A fold that tests on March 2021 but
+includes two February 2021 observations in its test set and three March 2021
+observations in the training set has a subtle leak. The autocorrelation
+between the March training and March test observations acts as a bridge.
+Contiguous blocks eliminate this by construction: every observation in the
+test fold is later than every observation in the training set. There is no
+ambiguity and no possibility of partial leakage.
+
+We can also use the convenience wrapper `borg_temporal_cv()`, which returns
+an rsample-compatible `borg_rset` object for use with tidymodels:
+
+```{r temporal-cv-wrapper, eval = requireNamespace("rsample", quietly = TRUE)}
+cv_rset <- borg_temporal_cv(
+  sim$data,
+  time = "time",
+  target = "y",
+  v = 5
+)
+
+cv_rset
+```
+
+This plugs directly into `tune::tune_grid()` and `tune::fit_resamples()`
+without any adapter code.
+
+Per-fold performance gives us a direct view of how model accuracy changes
+over time:
+
+```{r fold-perf}
+perf <- borg_fold_performance(
+  sim$data,
+  folds = cv_block,
+  formula = y ~ x1 + x2 + x3 + x4 + x5,
+  metric = "rmse"
+)
+
+perf
+```
+
+The per-fold RMSE values carry diagnostic information that aggregate metrics
+hide. Three patterns are worth looking for. First, a monotonically increasing
+RMSE across folds suggests concept drift: the relationship between predictors
+and response is changing over time, and the model trained on early data
+predicts later periods poorly. Second, a U-shaped pattern (high RMSE in early
+and late folds, low in the middle) can indicate seasonality or a periodic
+process that the model captures during its central period but misses at the
+edges. Third, a single spike in one fold often points to an anomalous event
+(a sensor failure, a policy change, an extreme weather year) rather than a
+systematic problem. Random CV averages all of these patterns away, producing
+a single number that hides the temporal structure of model performance.
+
+# Expanding window CV
+
+Temporal block CV assigns each time block to exactly one fold. Expanding
+window CV (also called forward chaining or walk-forward validation) takes a
+different approach: it grows the training set over time. Fold 1 trains on the
+first block and tests on the second. Fold 2 trains on the first two blocks and
+tests on the third. By the final fold, the training set contains almost all
+historical data.
+
+```{r expanding}
+cv_expand <- borg_cv(
+  sim$data,
+  time = "time",
+  target = "y",
+  strategy = "temporal_expanding",
+  v = 5,
+  verbose = TRUE
+)
+
+cv_expand
+```
+
+Compare the training set sizes across folds:
+
+```{r expanding-sizes}
+sizes <- data.frame(
+  fold = seq_along(cv_expand$folds),
+  n_train = vapply(cv_expand$folds, function(f) length(f$train), integer(1)),
+  n_test = vapply(cv_expand$folds, function(f) length(f$test), integer(1))
+)
+
+sizes
+```
+
+The training set grows with each fold while the test set remains roughly
+constant. This reflects the real deployment scenario more faithfully than block
+CV when the model will be retrained on all available data before making
+predictions.
+
+**When to use which.** Temporal block CV is appropriate when you want
+unbiased estimates of average future performance and when the data-generating
+process is approximately stationary. Each fold contributes roughly equal
+weight, and the estimate is not dominated by the largest training set.
+Expanding window CV is appropriate when the model will be deployed with a
+growing training history (which is almost always the case in production
+forecasting). It answers the question: "Given everything I know up to time
+$t$, how well do I predict the next window?" The cost is that early folds have
+small training sets and may underperform, which inflates the variance of the
+overall estimate.
+
+The bias-variance tradeoff between the two strategies is concrete. Temporal
+block CV uses a fixed training set size for each fold (roughly $n \times
+(v-1)/v$ observations). This gives each fold comparable statistical power, so
+the per-fold estimates have similar variance. But if the data-generating
+process evolves over time, the early folds train on data that may no longer
+represent the current regime, introducing bias. Expanding window CV reduces
+bias in later folds because it trains on the most data, but early folds
+suffer from high variance due to small training sets. In practice, the
+expanding window estimate is dominated by the last few folds (which have
+the most training data and the most test-relevant information), while the
+block CV estimate weights all folds equally.
+
+A third option exists: sliding window CV (also called rolling window). Here,
+the training set has a fixed width and slides forward in time. Fold 1 trains
+on observations 1-100 and tests on 101-120. Fold 2 trains on 21-120 and
+tests on 121-140. The training set never grows; old data is dropped as new
+data enters. This is the right strategy when old data is actively harmful
+(e.g., a financial regime changed two years ago, and pre-change data misleads
+the model). BORG does not currently implement sliding window CV as a separate
+strategy, but you can approximate it by setting `strategy = "temporal_block"`
+and filtering the training indices in each fold to include only observations
+within a fixed time window before the test period.
+
+A practical heuristic: if you have fewer than 200 observations, use expanding
+window CV to avoid wasting data on small training sets. If you have 500+
+observations and care about average performance across the full time range,
+use temporal block CV. If concept drift is a concern, expanding window CV
+is more informative because you can plot performance against time and see
+whether the model degrades.
+
+# Embargo periods
+
+The embargo parameter controls the gap between the last training observation
+and the first test observation. Without an embargo, the observation immediately
+before the test window appears in training. If autocorrelation is high, that
+observation carries information about the test data, and the information leak
+(while reduced compared to random CV) persists.
+
+BORG computes a recommended embargo from the decorrelation lag: the number of
+time steps after which the ACF drops below the significance threshold
+($2 / \sqrt{n}$). For our simulated data with $\rho = 0.7$, the decorrelation
+lag is several time steps, and the embargo needs to span at least that many
+time steps to eliminate residual leakage.
+
+Here we compare temporal block CV with and without an embargo:
+
+```{r embargo-compare}
+cv_no_embargo <- borg_cv(
+  sim$data,
+  time = "time",
+  target = "y",
+  strategy = "temporal_block",
+  embargo = 0,
+  v = 5,
+  verbose = FALSE
+)
+
+cv_embargo <- borg_cv(
+  sim$data,
+  time = "time",
+  target = "y",
+  strategy = "temporal_block",
+  embargo = 10,
+  v = 5,
+  verbose = FALSE
+)
+```
+
+Check training set sizes to see the effect of the embargo:
+
+```{r embargo-sizes}
+no_emb_sizes <- vapply(cv_no_embargo$folds,
+                       function(f) length(f$train), integer(1))
+emb_sizes <- vapply(cv_embargo$folds,
+                    function(f) length(f$train), integer(1))
+
+cat("Without embargo:", paste(no_emb_sizes, collapse = ", "), "\n")
+cat("With embargo=10:", paste(emb_sizes, collapse = ", "), "\n")
+```
+
+The embargo removes training observations that fall within the gap window.
+Larger embargoes exclude more data, which reduces the effective training set
+but also reduces leakage. The trade-off is clear: too small and leakage
+persists; too large and training data is wasted.
+
+The embargo must also account for feature engineering. If the model uses
+lagged features or rolling statistics, the embargo needs to be at least as
+wide as the widest feature window. Consider a model that uses 7-day rolling
+averages as input features. The rolling average at day $t$ is computed from
+days $t-6$ through $t$. If the embargo is only 3 days, the training set
+includes observations from day $t-3$, and the 7-day rolling average at day
+$t$ in the test set was computed using data from day $t-6$, which overlaps
+with the training period. The embargo must be at least 7 days to prevent
+this indirect leakage. More generally, if the model uses $k$-step lagged
+features, rolling windows of width $w$, or exponentially weighted moving
+averages with a half-life of $h$, the embargo should be at least
+$\max(k, w, 3h)$ time steps. BORG's automatic embargo is based on the
+raw autocorrelation of the response, not on the feature engineering
+pipeline, so you may need to override it with a larger value when lagged
+or rolling features are present.
+
+How to choose the right embargo:
+
+- Set it to the decorrelation lag from `borg_diagnose()`. This is the default
+  when you let BORG choose automatically.
+- For daily financial data, 1-5 days is typical.
+- For monthly ecological monitoring, 2-6 months covers most autocorrelation
+  structures.
+- For annual data with low sample sizes, an embargo of 1-2 years may consume
+  too many observations. In that case, accept a slightly optimistic estimate
+  rather than discarding 20% of your data as an embargo buffer.
+
+If you are uncertain, run `borg_fold_performance()` with several embargo values
+and check whether the per-fold RMSE stabilizes. If increasing the embargo from
+5 to 10 does not change the metrics, 5 is sufficient.
+
+# Comparing random vs temporal CV
+
+The strongest evidence for using temporal CV is an empirical comparison on
+your own data. `borg_compare_cv()` runs both random and blocked CV, repeats
+the comparison for stability, and tests whether the performance gap is
+statistically significant.
+
+```{r compare, fig.width = 7, fig.height = 5}
+comparison <- borg_compare_cv(
+  sim$data,
+  formula = y ~ x1 + x2 + x3 + x4 + x5,
+  time = "time",
+  metric = "rmse",
+  v = 5,
+  repeats = 10,
+  seed = 42,
+  verbose = FALSE
+)
+
+comparison
+```
+
+The output reports mean RMSE under random and temporal CV, the estimated
+inflation as a percentage, and a p-value from a paired t-test. For our
+simulated data with $\rho = 0.7$, random CV typically underestimates RMSE
+by 20-40%. That gap represents the look-ahead bias.
+
+Visualize the comparison:
+
+```{r plot-compare, fig.width = 6, fig.height = 5}
+plot(comparison, type = "boxplot")
+```
+
+Each box shows the distribution of RMSE values across repeats. When the boxes
+do not overlap, the inflation is both statistically and practically
+significant. This plot serves as direct evidence for reviewers, or for
+yourself, that random CV on this dataset gives a misleading picture of model
+performance.
+
+To calibrate our intuition, we can run the same comparison on independent
+data where random CV should be fine:
+
+```{r compare-independent}
+sim_ind <- borg_simulate(
+  n = 500,
+  type = "independent",
+  n_predictors = 5,
+  signal_strength = 0.3,
+  seed = 123
+)
+
+comp_ind <- borg_compare_cv(
+  sim_ind$data,
+  formula = y ~ x1 + x2 + x3 + x4 + x5,
+  metric = "rmse",
+  v = 5,
+  repeats = 10,
+  seed = 123,
+  verbose = FALSE
+)
+
+comp_ind
+```
+
+With independent data, the two CV approaches should give similar RMSE values.
+Any residual gap is due to the different fold geometries (temporal folds are
+contiguous; random folds are scattered), not leakage. This sanity check
+confirms that temporal CV is not introducing unnecessary pessimism when the
+data are genuinely independent.
+
+The inflation number from `borg_compare_cv()` belongs in your methods section.
+A statement like "Random 5-fold CV underestimated RMSE by 32% relative to
+temporal block CV (paired t-test, p < 0.001)" gives readers a concrete,
+dataset-specific measure of how much the evaluation strategy matters. For a
+journal publication, we recommend including the following numbers: the mean
+and standard deviation of the metric under both random and temporal CV, the
+inflation percentage, and the paired t-test p-value. Reviewers increasingly
+expect this comparison, especially in ecology and environmental science where
+Roberts et al. (2017) has made temporal and spatial CV standard practice.
+
+How you respond to the inflation result depends on its magnitude. If the
+inflation is small (below 5%), the temporal structure in your data is weak
+enough that random CV gives a reasonable estimate. You can note this in the
+methods section and proceed with either strategy. If the inflation is between
+5% and 20%, random CV is measurably optimistic but the qualitative
+conclusions (which model is best, which features matter) are likely
+unchanged. Report the temporal CV metrics as the primary result and mention
+the inflation as context. If the inflation exceeds 20%, random CV is
+actively misleading. The model's apparent performance is substantially
+better than its true out-of-sample performance. In this regime, random CV
+should not be used for model selection, hyperparameter tuning, or
+performance reporting. Use temporal CV exclusively, and flag the inflation
+to co-authors and reviewers as evidence that the evaluation strategy is
+not a methodological detail but a first-order concern.
+
+# Concept drift detection
+
+Temporal CV produces honest estimates of how well a model predicts the near
+future. But what happens when the deployment data differs from the training
+data? In time series, the data-generating process can change: a climate
+regime shifts, a market enters a new phase, a population crosses a tipping
+point. This is concept drift, and it means that even honestly estimated
+performance on historical data overestimates performance on deployment data.
+
+`borg_drift()` detects whether the distribution of predictor variables has
+shifted between a training set and a new dataset. It combines per-feature
+Kolmogorov-Smirnov tests with a multivariate classifier two-sample test.
+
+To demonstrate, we split our simulated data into an early training period
+and a late deployment period:
+
+```{r drift-split}
+n <- nrow(sim$data)
+train_data <- sim$data[1:round(n * 0.7), ]
+deploy_data <- sim$data[(round(n * 0.7) + 1):n, ]
+
+cat("Training period:",
+    as.character(min(train_data$time)), "to",
+    as.character(max(train_data$time)), "\n")
+cat("Deployment period:",
+    as.character(min(deploy_data$time)), "to",
+    as.character(max(deploy_data$time)), "\n")
+```
+
+Now test for drift:
+
+```{r drift-test}
+drift <- borg_drift(
+  train = train_data,
+  new = deploy_data,
+  predictors = paste0("x", 1:5),
+  seed = 42
+)
+
+drift
+```
+
+For our AR(1) simulation with a constant data-generating process, the drift
+test should report no severe shift: the predictor distributions are
+stationary by construction. The classifier AUC should be near 0.5 (no better
+than random at distinguishing training from deployment), and the per-feature
+KS tests should mostly be non-significant.
+
+In real applications, concept drift arises from identifiable causes. Regime
+changes are the most common: a lake transitions from oligotrophic to
+eutrophic, an economy enters a recession, or a new policy alters the
+relationship between predictors and outcomes. Sensor degradation is another
+source: an instrument that drifts out of calibration over months produces
+features whose distributions shift gradually. Seasonal or cyclical processes
+can mimic drift if the training period does not cover a full cycle. A model
+trained on spring and summer data will see apparent drift when evaluated on
+autumn data, even though the underlying process is stationary over years.
+Finally, changes in data collection protocols (a new survey method, a
+different sampling frequency, a replaced sensor) create abrupt distributional
+shifts that are easy to detect but hard to correct without retraining.
+
+Here is an artificial example where we shift the deployment data:
+
+```{r drift-shifted}
+deploy_shifted <- deploy_data
+deploy_shifted$x1 <- deploy_shifted$x1 + 1.5
+deploy_shifted$x2 <- deploy_shifted$x2 * 2
+
+drift_shifted <- borg_drift(
+  train = train_data,
+  new = deploy_shifted,
+  predictors = paste0("x", 1:5),
+  seed = 42
+)
+
+drift_shifted
+```
+
+With two features shifted, the classifier AUC rises well above 0.5, and the
+per-feature results identify exactly which variables drifted. The
+`overall_severity` field summarizes whether the shift is mild, moderate, or
+severe.
+
+The severity levels map to concrete actions. "None" means the deployment data
+is indistinguishable from the training data; no action is needed. "Mild"
+means one or two features show statistically significant shifts, but the
+effect sizes are small (KS statistic below 0.15). The model's predictions
+are likely still reliable, but monitoring the drifted features over the next
+evaluation cycle is prudent. "Moderate" means the classifier can distinguish
+training from deployment data with AUC above 0.65, or multiple features show
+KS statistics between 0.15 and 0.30. Performance degradation is likely, and
+retraining on more recent data is recommended before deployment. "Severe"
+means the classifier AUC exceeds 0.75 or at least one feature has a KS
+statistic above 0.30. The deployment data comes from a different regime than
+the training data, and any performance estimates derived from the training
+period are unreliable. Retrain the model, investigate which features changed
+and why, and consider whether the model's feature set is still appropriate
+for the new regime.
+
+The practical workflow is:
+
+1. Train your model and evaluate it with temporal CV.
+2. Before deploying, run `borg_drift()` on the deployment data.
+3. If severity is "none" or "mild", proceed. If "moderate" or "severe",
+   retrain on more recent data or investigate which features changed and why.
+
+Concept drift detection does not replace temporal CV; it extends it. Temporal
+CV tells you how well the model predicts the next time window given the
+current training data. Drift detection tells you whether the next time window
+is similar enough to the training data for those predictions to be trustworthy.
+
+# Practical guidance
+
+## Choosing a strategy
+
+The choice between temporal block CV and expanding window CV depends on the
+prediction task and dataset size.
+
+**Temporal block CV** (`strategy = "temporal_block"`): the default for
+temporal data. Each fold tests on a contiguous time block. Training data
+comes from before the test block. Use this when you want an average estimate
+of future prediction performance and when the time series is long enough
+(300+ observations with 5 folds, so each fold has 60+ observations).
+
+**Expanding window CV** (`strategy = "temporal_expanding"`): the training
+set grows with each fold. Use this when the model will be retrained on all
+available data before deployment. Also the better choice for shorter time
+series (100-300 observations) because early folds still have enough training
+data to fit a reasonable model.
+
+**Purged CV** (`strategy = "purged_cv"`): de Prado's combinatorial purged
+cross-validation. Uses all combinations of time groups as test sets, with
+embargo gaps. Most conservative; computationally expensive. Use for financial
+applications where even small leakage has large dollar consequences.
+
+A decision tree:
+
+- Fewer than 100 observations -> expanding window with v = 3.
+- 100-300 observations -> expanding window with v = 5.
+- 300+ observations, stationary process -> temporal block with v = 5.
+- 300+ observations, suspected drift -> expanding window with v = 5-10,
+  then plot per-fold performance to detect degradation.
+- Financial time series -> purged CV with appropriate embargo.
+
+## Rules of thumb with specific numbers
+
+**Minimum dataset size.** Temporal block CV with 5 folds requires at least
+100 observations for each fold to have 20 test observations. Below 50 total
+observations, expanding window with v = 3 is the practical minimum.
+
+**Embargo size.** Set it to the decorrelation lag. For daily data with
+$\rho = 0.7$, this is typically 5-10 days. For monthly data with $\rho = 0.5$,
+2-4 months. The embargo should never exceed 20% of the total time range;
+if it does, the training sets become too small.
+
+**Number of folds.** Five is the default. Three folds work for short series
+(under 200 observations). Ten folds are appropriate for long series (1000+
+observations) where you want lower-bias estimates.
+
+**Repeats.** Temporal block CV is deterministic given the data ordering, so
+repeats = 1 is fine for a single run. Use repeats = 5-10 in `borg_compare_cv()`
+because the random CV baseline needs repeated sampling for stability.
+
+**When to worry about inflation.** If `borg_compare_cv()` shows less than
+5% inflation, temporal CV and random CV are practically equivalent for your
+data. This can happen when the autocorrelation is weak ($\rho < 0.1$) or
+when the signal-to-noise ratio is high enough that the signal dominates
+the autocorrelation structure.
+
+**Feature engineering pipelines.** Temporal CV interacts with feature
+engineering in ways that are easy to overlook. If features are computed
+from the response variable (e.g., lagged response, rolling mean of
+response), those computations must happen inside the CV loop, not before
+it. Computing a 30-day rolling average of the response on the full dataset
+and then splitting into temporal folds leaks future response values into
+the training set through the rolling window. BORG does not perform feature
+engineering, so this is the user's responsibility. The safe approach is to
+compute time-dependent features separately for each fold's training set and
+apply the same transformation (using only training-set parameters) to the
+test set. For features derived only from predictors (e.g., lagged
+temperature, rolling mean of precipitation), pre-computation on the full
+dataset is safe as long as the embargo accounts for the feature window width.
+
+**Reporting temporal CV in publications.** The methods section should state
+the CV strategy (temporal block or expanding window), the number of folds,
+the embargo size in the same time units as the data (e.g., "10-day embargo"
+not "embargo = 10"), and whether the embargo was set automatically or
+overridden. If `borg_compare_cv()` was run, report the inflation percentage
+and the paired t-test p-value. Include per-fold metrics in a supplementary
+table or figure so that reviewers can assess whether performance is stable
+across time or shows evidence of drift. A sentence like "Temporal block CV
+with 5 folds and a 10-day embargo produced mean RMSE of 0.42 (SD 0.05);
+random 5-fold CV underestimated RMSE by 28% (paired t-test, p < 0.001)"
+is sufficient for most journals.
+
+## When NOT to use temporal CV
+
+Temporal CV is not always the right choice, even when the data has timestamps.
+
+**Interpolation tasks.** If the goal is to fill gaps in a time series (e.g.,
+imputing missing sensor readings between known values), random CV correctly
+mimics the prediction task. The model will interpolate at prediction time,
+so testing its interpolation ability is appropriate.
+
+**Cross-sectional data with timestamps.** If you survey 500 sites once, and
+each observation has a sampling date, but the dates reflect logistics (which
+field crew visited when) rather than temporal dynamics, the timestamps carry
+no temporal autocorrelation. Use `borg_diagnose()` to check: if the Ljung-Box
+test is non-significant and the lag-1 ACF is below 0.1, random CV is safe.
+
+**Stationary data with weak autocorrelation.** When $\rho < 0.1$ and the
+Ljung-Box test is non-significant, the series is effectively independent
+for cross-validation purposes. Temporal blocking would reduce the effective
+sample size without improving the estimate.
+
+**Very short time series.** With fewer than 30 observations, no CV strategy
+produces stable estimates. Consider a train/test split at a fixed time point,
+or use bootstrap-based confidence intervals instead.
+
+In all these cases, set `allow_random = TRUE` in `borg_cv()` to override the
+automatic blocking. BORG will issue a warning with the estimated inflation, so
+the decision is transparent and documented.
+
+## Panel data
+
+Panel data (multiple entities observed over time) requires both temporal
+and group structure. Each entity (patient, site, country) has its own time
+series, and observations within an entity are autocorrelated.
+
+For panel data, pass both `time` and `groups` to `borg_cv()`:
+
+```{r panel, eval = FALSE}
+cv_panel <- borg_cv(
+  panel_data,
+  time = "date",
+  groups = "site_id",
+  target = "response",
+  v = 5
+)
+```
+
+BORG will detect the joint structure and select a strategy that respects both
+the temporal ordering and the group boundaries. No site appears in both
+training and test within a fold, and training observations are always
+temporally prior to test observations.
+
+If groups are not important (all entities share the same data-generating
+process and you want to predict future values for the same entities),
+temporal blocking alone is sufficient. If entities are important (you want
+to predict for new entities), group CV is needed in addition to temporal
+blocking.
+
+## End-to-end workflow
+
+Putting the pieces together, here is the workflow for temporal model
+validation:
+
+1. **Diagnose.** Run `borg_diagnose()` with the `time` argument. Check
+   the lag-1 ACF, the Ljung-Box p-value, and the recommended embargo.
+2. **Generate folds.** Call `borg_cv()` with `time = "time"`. Let BORG
+   select the strategy automatically, or choose between `"temporal_block"`
+   and `"temporal_expanding"` based on the decision tree above.
+3. **Set the embargo.** The default (from diagnosis) is usually adequate.
+   Override with `embargo = k` if you have domain knowledge about the
+   decorrelation time.
+4. **Evaluate per-fold.** Use `borg_fold_performance()` to compute
+   per-fold metrics. Plot them in order. If performance degrades in later
+   folds, concept drift may be present.
+5. **Compare.** Run `borg_compare_cv()` at least once. Report the
+   inflation percentage in your methods section.
+6. **Check for drift.** Before deployment, run `borg_drift()` on the
+   deployment data. Retrain if severity is moderate or above.
+7. **Report.** Include the CV strategy, the embargo size, the number of
+   folds, the inflation estimate, and the drift severity. These five
+   numbers let readers assess whether the reported metrics are trustworthy.
+
+```{r workflow-summary}
+cat("Diagnosis:\n")
+cat("  Dependency type:", diag@dependency_type, "\n")
+cat("  Severity:       ", diag@severity, "\n")
+cat("  Recommended CV: ", diag@recommended_cv, "\n\n")
+cat("CV strategy used: ", cv_block$strategy, "\n")
+cat("Number of folds:  ", length(cv_block$folds), "\n")
+```
+
+A few extra lines of code, a few extra numbers in the methods section. The
+payoff is an evaluation you can trust, and a model that performs in deployment
+the way your metrics predicted it would.
+
+# References
+
+- Roberts, D.R., et al. (2017). Cross-validation strategies for data with
+  temporal, spatial, hierarchical, or phylogenetic structure. *Ecography*,
+  40(8), 913-929. doi:10.1111/ecog.02881
+
+- de Prado, M.L. (2018). *Advances in Financial Machine Learning*. John
+  Wiley & Sons. Chapter 7: Cross-Validation in Finance.
+
+- Bergmeir, C., & Benitez, J.M. (2012). On the use of cross-validation
+  for time series predictor evaluation. *Information Sciences*, 191, 192-213.
+  doi:10.1016/j.ins.2011.12.028
+
+- Cerqueira, V., Torgo, L., & Mozetic, I. (2020). Evaluating time series
+  forecasting models: An empirical study on performance estimation methods.
+  *Machine Learning*, 109, 1997-2028. doi:10.1007/s10994-020-05910-7
+
+- Tashman, L.J. (2000). Out-of-sample tests of forecasting accuracy: an
+  analysis and review. *International Journal of Forecasting*, 16(4), 437-450.
+  doi:10.1016/S0169-2070(00)00065-0

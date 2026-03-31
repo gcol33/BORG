@@ -488,6 +488,52 @@ observations are in training. The model then predicts the past for a patient
 it has already seen in the future. Both risks need to be addressed: split by
 groups first, then ensure temporal ordering within each group.
 
+## Temporal + Spatial
+
+Spatiotemporal datasets carry two dependency axes at once. A classic case is
+environmental monitoring: weather stations at fixed locations record daily
+values for years. Observations close in space share local conditions
+(microclimate, topography), while observations close in time share global
+conditions (season, regime). A random split violates both dependencies
+simultaneously. Blocking on space alone still allows temporal leakage within
+each spatial block. Blocking on time alone still allows spatial interpolation
+within each time slice.
+
+The practical consequence is that neither a pure spatial block CV nor a pure
+temporal block CV produces honest error estimates. A spatial block CV applied
+to a 10-year daily monitoring dataset will place all 3,650 days from a
+held-out station into the test set, but the model still sees the same days at
+neighboring stations. If the spatial autocorrelation range is 50 km and
+stations are 20 km apart, the model interpolates with ease. Conversely, a
+temporal block CV that holds out the final year still allows the model to
+train on the held-out year's spatial neighbors.
+
+The correct approach is to block on both axes: hold out entire spatial regions
+for entire time windows. This is sometimes called "leave-location-and-time-out"
+(LLTO) CV. The inflation gap between random CV and LLTO CV is often the
+largest of any single correction, because two leakage channels close at once.
+In species distribution modelling with multi-year survey data, we have seen
+R-squared drop by 40-70% when switching from random to LLTO CV.
+
+```{r temporal-spatial-interaction}
+# Simulate data with both spatial and temporal structure
+sim_sp <- borg_simulate(n = 200, type = "spatial", autocorrelation = 0.7, seed = 10)
+sim_tm <- borg_simulate(n = 200, type = "temporal", autocorrelation = 0.7, seed = 10)
+
+# Diagnose each independently
+diag_sp <- borg_diagnose(sim_sp$data, coords = c("x", "y"), target = "y.1",
+                         verbose = FALSE)
+diag_tm <- borg_diagnose(sim_tm$data, time = "time", target = "y",
+                         verbose = FALSE)
+
+cat("Spatial dependency:", diag_sp@dependency_type, "\n")
+cat("Temporal dependency:", diag_tm@dependency_type, "\n")
+```
+
+When both structures are present, run `borg_diagnose()` with both `coords` and
+`time` arguments so that BORG can recommend a spatiotemporal blocking strategy
+rather than a single-axis block.
+
 
 # Decision Tree: Which Risks to Check
 
@@ -554,6 +600,106 @@ cat("Soft warnings:", inspection@n_soft, "\n")
 When `borg_diagnose()` reports spatial or temporal structure and
 `borg_inspect()` flags spatial proximity on a random split, the diagnosis and
 inspection agree: you need blocked CV.
+
+
+# Practical Guidance
+
+## Hard vs. Soft: Triage Order
+
+Hard violations invalidate the evaluation entirely. Soft inflation risks bias
+it. The triage order follows from this distinction: fix all hard violations
+first, because no amount of soft-risk mitigation matters if the evaluation is
+fundamentally broken. A dataset with index overlap and spatial proximity has
+two problems, but the index overlap must be fixed before the spatial proximity
+is even worth thinking about. Once all hard violations are resolved, address
+soft risks in order of estimated inflation magnitude, which usually means
+spatial proximity first (it tends to produce the largest bias in environmental
+and ecological data), then proxy leakage, then spatial overlap.
+
+A common mistake is to spend effort on spatial blocking while the dataset
+still contains duplicate rows from a sloppy merge. The spatial blocking will
+not help. The model memorizes the duplicates and scores well on them regardless
+of how the geographic blocks are arranged. Always clear the hard violations
+before tuning the soft ones.
+
+## How Risk Severity Scales with Dataset Size
+
+Small datasets amplify every risk. With n = 50, a single duplicate row in the
+test set represents 6-7% of the test data (assuming a 70/30 split). With
+n = 10,000 and the same one duplicate, the effect is 0.03% of the test set,
+which is negligible. The same logic applies to preprocessing leakage: the
+train-set mean and the full-dataset mean converge as n grows, so the
+information leaked through preprocessing diminishes. At n > 5,000, the bias
+from preprocessing leakage on well-behaved numeric features is typically below
+0.5% of the metric.
+
+Spatial proximity is the exception. Its severity depends on the ratio of
+inter-point distance to autocorrelation range, not on n directly. A dataset
+with n = 100,000 points densely covering a small area can have worse spatial
+leakage than n = 200 points spread across a continent. The relevant quantity
+is the effective spatial coverage, not the sample size.
+
+Target leakage severity is independent of n. A perfectly correlated feature
+dominates the model at any sample size.
+
+## Rules of Thumb
+
+These are empirically grounded defaults. They will not be correct in every
+situation, but they cover the majority of applied cases we have encountered.
+
+**1. Below n = 200, treat every soft risk as hard.** With fewer than 200
+observations, the margin between a biased evaluation and an honest one is
+small enough that soft inflation risks can flip model rankings. A spatial
+proximity warning on n = 150 is, in practice, as damaging as a hard violation
+on n = 5,000. Run `borg_diagnose()` and fix everything it flags.
+
+**2. If the median nearest-neighbor distance between test and train points is
+less than 10% of the autocorrelation range, spatial blocking is mandatory.**
+This threshold comes from simulation studies in spatial statistics: below it,
+interpolation dominates and error estimates are optimistic by 30% or more. If
+the autocorrelation range is unknown, estimate it from a variogram. If that is
+not feasible, use 5% of the spatial extent as a conservative proxy for the
+autocorrelation range and apply the 10% rule to that.
+
+**3. When all features have |r| < 0.8 with the target and n > 500, spatial
+proximity is the dominant remaining risk for georeferenced data.** In this
+regime, target leakage is absent and the sample is large enough that
+preprocessing leakage and duplicates have negligible effect. The evaluation's
+honesty hinges almost entirely on whether the spatial structure was respected.
+Conversely, if any feature has |r| > 0.95, target leakage is the dominant
+risk regardless of spatial structure, and it must be resolved first.
+
+**4. For time series shorter than 100 observations, use a single temporal
+split rather than rolling-window CV.** Rolling-window CV on short series
+produces folds with very few test points (sometimes fewer than 10), which
+makes the performance estimate high-variance and unreliable. A single 70/30
+chronological split gives a noisier but less biased estimate than 5-fold
+rolling windows with 15 test points each.
+
+**5. Group-aware splitting is non-negotiable when the ICC exceeds 0.3.** An
+intra-class correlation of 0.3 means that 30% of the total variance lives
+between groups. Random CV that ignores groups will exploit this structure and
+inflate metrics accordingly. At ICC > 0.5, the inflation from ignoring groups
+routinely exceeds the inflation from ignoring spatial structure.
+
+```{r practical-guidance-example}
+# Quick triage workflow
+sim <- borg_simulate(n = 150, type = "combined", autocorrelation = 0.6,
+                     leak_strength = 0.97, seed = 7)
+
+set.seed(7)
+train_idx <- sample(150, 105)
+test_idx <- setdiff(1:150, train_idx)
+
+result <- borg_inspect(sim$data, train_idx = train_idx, test_idx = test_idx,
+                       target = "y.1", coords = c("x", "y"))
+cat("Hard violations:", result@n_hard, "\n")
+cat("Soft warnings:", result@n_soft, "\n")
+```
+
+With n = 150, both the target leakage (hard) and spatial proximity (soft)
+need fixing. The hard violation comes first. Remove or investigate the leaked
+feature, then switch to spatial blocking for the remaining soft risk.
 
 
 # Quick Reference
