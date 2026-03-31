@@ -569,9 +569,14 @@ sim_ind <- borg_simulate(
   seed = 123
 )
 
+# Add a time column so we can compare random vs temporal CV
+sim_ind$data$time <- seq.Date(as.Date("2020-01-01"), by = "day",
+                              length.out = nrow(sim_ind$data))
+
 comp_ind <- borg_compare_cv(
   sim_ind$data,
   formula = y ~ x1 + x2 + x3 + x4 + x5,
+  time = "time",
   metric = "rmse",
   v = 5,
   repeats = 10,
