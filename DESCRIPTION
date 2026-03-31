@@ -50,7 +50,8 @@ Suggests:
     future.apply,
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    svglite
 VignetteBuilder: knitr
 URL: https://github.com/gcol33/BORG, https://gillescolling.com/BORG/
 BugReports: https://github.com/gcol33/BORG/issues
