@@ -92,7 +92,7 @@ with target - `spatial_proximity` - Test points close to training -
 ``` r
 
 # Install from GitHub
-# install.packages("pak")
+install.packages("pak")
 pak::pak("gcol33/BORG")
 ```
 

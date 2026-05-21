@@ -111,7 +111,7 @@ These features make the package useful in domains like:
 
 ```r
 # Install from GitHub
-# install.packages("pak")
+install.packages("pak")
 pak::pak("gcol33/BORG")
 
 # Or using devtools
