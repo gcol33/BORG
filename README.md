@@ -1,6 +1,6 @@
 # BORG
 
-*great in cross-validation, useless in the field*
+*cross-validation for data that isn't independent*
 
 [![CRAN status](https://www.r-pkg.org/badges/version/BORG)](https://CRAN.R-project.org/package=BORG)
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/BORG)](https://cran.r-project.org/package=BORG)
