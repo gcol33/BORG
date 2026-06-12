@@ -1,5 +1,7 @@
 # BORG
 
+> Small exact engines for scientific computing in R.
+
 *cross-validation for data that isn't independent*
 
 [![CRAN status](https://www.r-pkg.org/badges/version/BORG)](https://CRAN.R-project.org/package=BORG)
