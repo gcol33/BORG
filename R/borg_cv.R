@@ -27,7 +27,8 @@
 #'   \code{strategy = "custom_block"}.
 #' @param prediction_points Data frame, matrix, \code{SpatVector}, or \code{sf}
 #'   object with coordinates of prediction locations. Required when
-#'   \code{strategy = "knndm"}.
+#'   \code{strategy = "knndm"} or \code{"nndm"}, which match cross-validation
+#'   fold geometry to the prediction task.
 #' @param block_size Numeric. For spatial blocking, the minimum block size.
 #'   If NULL, automatically determined from diagnosis. Should be larger than
 #'   the autocorrelation range.
@@ -85,6 +86,19 @@
 #' \subsection{Group CV}{
 #' When clustered structure is detected, entire groups (clusters) are held out
 #' together. No group appears in both train and test within a fold.
+#' }
+#'
+#' \subsection{Distance Matching (kNNDM and NNDM)}{
+#' With \code{strategy = "knndm"} or \code{"nndm"} and \code{prediction_points},
+#' folds are shaped so the distribution of test-to-train nearest-neighbour
+#' distances matches the prediction-to-sample nearest-neighbour distribution.
+#' \code{"knndm"} (Linnenbrink et al. 2024) produces \code{v} folds and scales
+#' to large samples; \code{"nndm"} (Mila et al. 2022) is the leave-one-out
+#' form, growing an exclusion radius around each held-out point until the two
+#' distance distributions align, subject to retaining at least
+#' \code{min_train} (default 0.5) of the data per fold. NNDM builds an
+#' \code{n x n} distance matrix and is best suited to samples up to a few
+#' thousand points; prefer \code{"knndm"} beyond that.
 #' }
 #'
 #' @examples
@@ -192,7 +206,8 @@ borg_cv <- function(data,
   # Select CV strategy
   if (!is.null(strategy)) {
     valid_strategies <- c("random", "spatial_block", "environmental_block",
-                          "checkerboard", "hexagonal", "custom_block", "knndm",
+                          "checkerboard", "hexagonal", "custom_block",
+                          "knndm", "nndm",
                           "leave_location_out", "llto", "spatial_plus",
                           "temporal_block", "temporal_expanding",
                           "temporal_sliding", "purged_cv",
@@ -222,6 +237,7 @@ borg_cv <- function(data,
     "hexagonal" = generate_hexagonal_folds(data, v, diagnosis, coords, block_size, verbose),
     "custom_block" = generate_custom_block_folds(data, v, dist_mat, verbose),
     "knndm" = generate_knndm_folds(data, v, diagnosis, coords, prediction_points, verbose),
+    "nndm" = generate_nndm_folds(data, diagnosis, coords, prediction_points, verbose),
     "leave_location_out" = generate_leave_location_out_folds(data, v, diagnosis, coords, verbose),
     "llto" = generate_llto_folds(data, v, diagnosis, coords, time, groups, verbose),
     "spatial_plus" = generate_spatial_plus_folds(data, v, diagnosis, coords, env, verbose),
@@ -678,6 +694,124 @@ generate_leave_location_out_folds <- function(data, v, diagnosis, coords, verbos
 }
 
 
+#' Extract Prediction-Point Coordinates (Internal)
+#'
+#' Normalises a data frame, matrix, \code{SpatVector}, or \code{sf} of
+#' prediction locations to a \code{list(x, y)}. Shared by the distance
+#' matching fold generators.
+#' @noRd
+extract_prediction_coords <- function(prediction_points, coords = NULL) {
+  if (inherits(prediction_points, "SpatVector") || inherits(prediction_points, "sf")) {
+    pp <- extract_coords(prediction_points)
+    return(list(x = pp$x, y = pp$y))
+  }
+  if (is.data.frame(prediction_points)) {
+    if (!is.null(coords) && all(coords %in% names(prediction_points))) {
+      return(list(x = prediction_points[[coords[1]]], y = prediction_points[[coords[2]]]))
+    }
+    if (ncol(prediction_points) < 2) stop("prediction_points must have at least 2 columns")
+    return(list(x = prediction_points[[1]], y = prediction_points[[2]]))
+  }
+  if (is.matrix(prediction_points)) {
+    if (ncol(prediction_points) < 2) stop("prediction_points must have at least 2 columns")
+    cn <- colnames(prediction_points)
+    if (!is.null(coords) && !is.null(cn) && all(coords %in% cn)) {
+      return(list(x = prediction_points[, coords[1]], y = prediction_points[, coords[2]]))
+    }
+    return(list(x = prediction_points[, 1], y = prediction_points[, 2]))
+  }
+  stop("prediction_points must be data.frame, matrix, SpatVector, or sf")
+}
+
+
+#' Generate NNDM LOO Folds (Internal)
+#'
+#' Nearest Neighbour Distance Matching leave-one-out CV (Mila et al. 2022).
+#' Builds n leave-one-out folds and grows an exclusion radius around each
+#' held-out point so the distribution of test-to-train nearest-neighbour
+#' distances matches the prediction-to-sample nearest-neighbour distribution,
+#' while retaining at least \code{min_train} of the data per fold.
+#' @noRd
+generate_nndm_folds <- function(data, diagnosis, coords, prediction_points,
+                                verbose, phi = NULL, min_train = 0.5) {
+  if (is.null(prediction_points)) {
+    stop("NNDM requires 'prediction_points' (coordinates of prediction locations)")
+  }
+  if (is.null(coords)) coords <- diagnosis@spatial$coords_used
+  if (is.null(coords)) {
+    stop("NNDM requires coordinates. Provide 'coords' argument.")
+  }
+
+  coord_info <- extract_coords(data, coords)
+  x <- coord_info$x
+  y <- coord_info$y
+  n <- length(x)
+  if (n < 3) stop("NNDM requires at least 3 observations")
+
+  pp_coords <- extract_prediction_coords(prediction_points, coords)
+  x_pred <- pp_coords$x
+  y_pred <- pp_coords$y
+
+  # Target G: prediction point -> nearest training point distance
+  target_nn <- vapply(seq_along(x_pred), function(i) {
+    min(sqrt((x_pred[i] - x)^2 + (y_pred[i] - y)^2))
+  }, numeric(1))
+
+  # Per training point, neighbours in ascending distance (self excluded via Inf)
+  dmat <- as.matrix(stats::dist(cbind(x, y)))
+  diag(dmat) <- Inf
+  nbr_order <- t(apply(dmat, 1, order))   # nbr_order[i, ] = indices by distance to i
+  nbr_dist  <- t(apply(dmat, 1, sort))    # ascending; final column is the Inf self-entry
+
+  # phi: maximum exclusion distance; "max" spans the full prediction domain
+  if (is.null(phi) || identical(phi, "max")) phi <- max(target_nn)
+  min_keep <- max(1L, ceiling(min_train * (n - 1L)))
+
+  k <- rep(0L, n)          # neighbours excluded around each held-out point
+  d <- nbr_dist[, 1]       # current test-to-train NN distance per point
+  g_target <- stats::ecdf(target_nn)
+
+  # Greedy: repeatedly lift the smallest over-represented LOO NN distance
+  repeat {
+    g_star <- stats::ecdf(d)
+    moved <- FALSE
+    for (i in order(d)) {
+      k_next <- k[i] + 1L
+      if ((n - 1L) - k_next < min_keep) next
+      d_next <- nbr_dist[i, k_next + 1L]
+      if (!is.finite(d_next) || d_next > phi) next
+      if (g_star(d[i]) > g_target(d[i])) {
+        k[i] <- k_next
+        d[i] <- d_next
+        moved <- TRUE
+        break
+      }
+    }
+    if (!moved) break
+  }
+
+  folds <- lapply(seq_len(n), function(i) {
+    excl <- if (k[i] > 0L) nbr_order[i, seq_len(k[i])] else integer(0)
+    list(train = setdiff(seq_len(n)[-i], excl), test = i)
+  })
+
+  ks <- suppressWarnings(stats::ks.test(d, target_nn)$statistic)
+  if (verbose) {
+    message(sprintf("NNDM: KS = %.3f, mean exclusions/point = %.2f",
+                    as.numeric(ks), mean(k)))
+  }
+
+  attr(folds, "nndm_meta") <- list(
+    ks_statistic = as.numeric(ks),
+    exclusion_counts = k,
+    phi = phi,
+    min_train = min_train,
+    target_nn = target_nn
+  )
+  folds
+}
+
+
 #' Generate KNNDM Folds (Internal)
 #'
 #' K-Nearest Neighbor Distance Matching (Linnenbrink et al. 2024).
@@ -698,30 +832,9 @@ generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, 
   y_train <- coord_info$y
   n <- length(x_train)
 
-  # Extract prediction point coordinates
-  if (is.data.frame(prediction_points) || is.matrix(prediction_points)) {
-    if (ncol(prediction_points) >= 2) {
-      if (all(coords %in% names(prediction_points))) {
-        x_pred <- prediction_points[[coords[1]]]
-        y_pred <- prediction_points[[coords[2]]]
-      } else {
-        x_pred <- prediction_points[, 1]
-        y_pred <- prediction_points[, 2]
-      }
-    } else {
-      stop("prediction_points must have at least 2 columns")
-    }
-  } else if (inherits(prediction_points, "SpatVector")) {
-    pp_coords <- extract_coords(prediction_points)
-    x_pred <- pp_coords$x
-    y_pred <- pp_coords$y
-  } else if (inherits(prediction_points, "sf")) {
-    pp_coords <- extract_coords(prediction_points)
-    x_pred <- pp_coords$x
-    y_pred <- pp_coords$y
-  } else {
-    stop("prediction_points must be data.frame, matrix, SpatVector, or sf")
-  }
+  pp_coords <- extract_prediction_coords(prediction_points, coords)
+  x_pred <- pp_coords$x
+  y_pred <- pp_coords$y
 
   # Compute target NN distance distribution: prediction -> nearest training
   target_nn <- vapply(seq_along(x_pred), function(i) {

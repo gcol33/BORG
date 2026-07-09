@@ -144,11 +144,18 @@ borg_di <- function(train, new = NULL, train_idx = NULL,
 #'   the threshold is derived from cross-validated DI (more robust).
 #' @param threshold Numeric. Manual DI threshold override. If \code{NULL},
 #'   computed from training data (mean + sd of LOO-DI).
+#' @param normalize Logical. If \code{TRUE}, add a \code{di_norm} column
+#'   holding the dissimilarity index rescaled by the AOA threshold, so that
+#'   \code{di_norm = 1} marks the applicability boundary and values above 1
+#'   lie outside the AOA. Makes DI comparable across models and thresholds.
+#'   Default: \code{FALSE}.
 #'
 #' @return A data frame with class \code{"borg_aoa"} containing:
 #'   \describe{
 #'     \item{di}{Dissimilarity index for each prediction point}
 #'     \item{aoa}{Logical. TRUE if inside AOA (DI <= threshold)}
+#'     \item{di_norm}{DI divided by the threshold (only when
+#'       \code{normalize = TRUE}); the AOA boundary sits at 1}
 #'     \item{x, y}{Coordinates (if \code{coords} provided)}
 #'   }
 #'   Has \code{autoplot()} method showing the AOA map.
@@ -170,7 +177,8 @@ borg_di <- function(train, new = NULL, train_idx = NULL,
 #'
 #' @export
 borg_aoa <- function(train, new, predictors = NULL, coords = NULL,
-                       weights = NULL, folds = NULL, threshold = NULL) {
+                       weights = NULL, folds = NULL, threshold = NULL,
+                       normalize = FALSE) {
 
   # Compute DI
   di_vals <- borg_di(train, new, predictors = predictors, weights = weights)
@@ -227,6 +235,10 @@ borg_aoa <- function(train, new, predictors = NULL, coords = NULL,
     stringsAsFactors = FALSE
   )
 
+  if (normalize) {
+    result$di_norm <- as.numeric(di_vals) / threshold
+  }
+
   if (!is.null(coords) && all(coords %in% names(new))) {
     result$x <- new[[coords[1]]]
     result$y <- new[[coords[2]]]
@@ -250,6 +262,10 @@ print.borg_aoa <- function(x, ...) {
               n_inside, n, 100 * n_inside / n))
   cat(sprintf("  DI threshold: %.3f\n", attr(x, "threshold")))
   cat(sprintf("  DI range: [%.3f, %.3f]\n", min(x$di), max(x$di)))
+  if (!is.null(x$di_norm)) {
+    cat(sprintf("  Normalized DI range: [%.3f, %.3f] (boundary at 1)\n",
+                min(x$di_norm), max(x$di_norm)))
+  }
   invisible(x)
 }
 

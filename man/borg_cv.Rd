@@ -55,7 +55,8 @@ Must be an \code{n x n} matrix matching \code{nrow(data)}. Required when
 
 \item{prediction_points}{Data frame, matrix, \code{SpatVector}, or \code{sf}
 object with coordinates of prediction locations. Required when
-\code{strategy = "knndm"}.}
+\code{strategy = "knndm"} or \code{"nndm"}, which match cross-validation
+fold geometry to the prediction task.}
 
 \item{block_size}{Numeric. For spatial blocking, the minimum block size.
 If NULL, automatically determined from diagnosis. Should be larger than
@@ -127,6 +128,19 @@ future observations leaking into training.
 \subsection{Group CV}{
 When clustered structure is detected, entire groups (clusters) are held out
 together. No group appears in both train and test within a fold.
+}
+
+\subsection{Distance Matching (kNNDM and NNDM)}{
+With \code{strategy = "knndm"} or \code{"nndm"} and \code{prediction_points},
+folds are shaped so the distribution of test-to-train nearest-neighbour
+distances matches the prediction-to-sample nearest-neighbour distribution.
+\code{"knndm"} (Linnenbrink et al. 2024) produces \code{v} folds and scales
+to large samples; \code{"nndm"} (Mila et al. 2022) is the leave-one-out
+form, growing an exclusion radius around each held-out point until the two
+distance distributions align, subject to retaining at least
+\code{min_train} (default 0.5) of the data per fold. NNDM builds an
+\code{n x n} distance matrix and is best suited to samples up to a few
+thousand points; prefer \code{"knndm"} beyond that.
 }
 }
 \examples{

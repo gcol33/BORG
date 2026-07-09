@@ -1,3 +1,28 @@
+# BORG 0.3.1
+
+## Nearest-neighbour distance matching (NNDM)
+
+* New `borg_cv(strategy = "nndm", prediction_points = ...)` implements the
+  leave-one-out NNDM scheme of Mila et al. (2022): each held-out point grows an
+  exclusion radius until the test-to-train nearest-neighbour distance
+  distribution matches the prediction-to-sample distribution, retaining at
+  least half the data per fold. Complements the existing `"knndm"` k-fold form.
+* Prediction-coordinate handling for `"knndm"` and `"nndm"` now shares one
+  internal helper.
+
+## Clustered spatial sampling
+
+* New `borg_clustered_sample()` draws parent-offspring clustered point samples
+  over a bounding box, coordinate frame, `sf` polygon, or `SpatVector`. Useful
+  for simulations and for reproducing the spatial dependence that random CV
+  understates.
+
+## Normalized dissimilarity index
+
+* `borg_aoa(normalize = TRUE)` adds a `di_norm` column rescaling the
+  dissimilarity index by the AOA threshold, so `di_norm = 1` marks the
+  applicability boundary and values are comparable across models.
+
 # BORG 0.2.7
 
 ## Suggested fixes in risk reports

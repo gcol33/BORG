@@ -24,7 +24,6 @@ License: MIT + file LICENSE
 Language: en-US
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 LinkingTo: Rcpp
 Imports:
     Rcpp,
@@ -58,3 +57,4 @@ BugReports: https://github.com/gcol33/BORG/issues
 Depends:
     R (>= 4.1.0)
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

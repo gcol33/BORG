@@ -11,7 +11,8 @@ borg_aoa(
   coords = NULL,
   weights = NULL,
   folds = NULL,
-  threshold = NULL
+  threshold = NULL,
+  normalize = FALSE
 )
 }
 \arguments{
@@ -31,12 +32,20 @@ the threshold is derived from cross-validated DI (more robust).}
 
 \item{threshold}{Numeric. Manual DI threshold override. If \code{NULL},
 computed from training data (mean + sd of LOO-DI).}
+
+\item{normalize}{Logical. If \code{TRUE}, add a \code{di_norm} column
+holding the dissimilarity index rescaled by the AOA threshold, so that
+\code{di_norm = 1} marks the applicability boundary and values above 1
+lie outside the AOA. Makes DI comparable across models and thresholds.
+Default: \code{FALSE}.}
 }
 \value{
 A data frame with class \code{"borg_aoa"} containing:
 \describe{
 \item{di}{Dissimilarity index for each prediction point}
 \item{aoa}{Logical. TRUE if inside AOA (DI <= threshold)}
+\item{di_norm}{DI divided by the threshold (only when
+\code{normalize = TRUE}); the AOA boundary sits at 1}
 \item{x, y}{Coordinates (if \code{coords} provided)}
 }
 Has \code{autoplot()} method showing the AOA map.
