@@ -6,8 +6,10 @@
 \usage{
 \method{plot}{borg_result}(
   x,
-  type = c("split", "risk", "temporal", "groups"),
+  type = c("split", "risk", "spatial", "temporal", "groups"),
   fold = 1,
+  data = NULL,
+  coords = NULL,
   time = NULL,
   groups = NULL,
   title = NULL,
@@ -18,9 +20,15 @@
 \item{x}{A \code{borg_result} object from \code{borg()}.}
 
 \item{type}{Character. Plot type: \code{"split"} (default), \code{"risk"},
-\code{"temporal"}, or \code{"groups"}.}
+\code{"spatial"}, \code{"temporal"}, or \code{"groups"}.}
 
 \item{fold}{Integer. Which fold to plot (for split visualization). Default: 1.}
+
+\item{data}{Optional data frame supplying coordinates for
+\code{type = "spatial"} when the folds carry no spatial metadata.}
+
+\item{coords}{Character vector of length 2 naming the coordinate columns in
+\code{data}, used with \code{type = "spatial"}.}
 
 \item{time}{Column name or values for temporal plots.}
 

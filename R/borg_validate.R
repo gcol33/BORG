@@ -188,10 +188,3 @@ borg_validate <- function(workflow, strict = FALSE) {
 
  result
 }
-
-# ---------------------------------------------------------------------------
-# Internal helper functions extracted to separate modules:
-#   validate_leakage.R  — .check_target_leakage(), .check_feature_engineering()
-#   validate_spatial.R  — .check_spatial_autocorrelation()
-#   validate_config.R   — .check_threshold_selection(), .check_hpo_validation()
-# ---------------------------------------------------------------------------

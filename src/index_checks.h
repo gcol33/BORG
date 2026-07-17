@@ -27,4 +27,17 @@ inline IndexSet toIndexSet(Rcpp::IntegerVector vec) {
    return result;
 }
 
+// Validate that every entry of a 1-based index vector lies in [1, n].
+// Rcpp element access is unchecked, so callers that dereference these
+// indices must guard against out-of-range or NA values first.
+inline void checkIndexBounds(Rcpp::IntegerVector idx, int n, const char* name) {
+   for (int i = 0; i < idx.size(); ++i) {
+       int v = idx[i];
+       if (Rcpp::IntegerVector::is_na(v) || v < 1 || v > n) {
+           Rcpp::stop("%s contains an out-of-range index; all indices must be in [1, %d]",
+                      name, n);
+       }
+   }
+}
+
 #endif // INDEX_CHECKS_H

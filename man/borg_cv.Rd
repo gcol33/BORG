@@ -20,6 +20,7 @@ borg_cv(
   buffer = NULL,
   strategy = NULL,
   repeats = 1L,
+  seed = NULL,
   output = c("list", "rsample", "caret", "mlr3"),
   allow_random = FALSE,
   verbose = FALSE
@@ -76,6 +77,11 @@ Default: NULL (auto-detect from diagnosis).}
 
 \item{repeats}{Integer. Number of times to repeat CV fold generation with
 different random seeds. Default: 1 (no repetition).}
+
+\item{seed}{Integer or NULL. Random seed for stochastic fold generators.
+When \code{NULL} (default), a fixed internal seed is used so single runs
+are reproducible. With \code{repeats > 1}, successive repeats derive
+distinct seeds from this value.}
 
 \item{output}{Character. Output format: "list" (default), "rsample", "caret", "mlr3".}
 

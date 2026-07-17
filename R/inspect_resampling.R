@@ -218,22 +218,5 @@
     }
   }
 
-  # Check 3: If preProcess is embedded, inspect it
-  if (!is.null(object$preProcess)) {
-    # caret stores preProcess object when preProc is used in train()
-    # Need original data to check, which we may not have
-    # Flag as potential risk
-    pp_methods <- object$preProcess$method
-    if (!is.null(pp_methods) && length(pp_methods) > 0) {
-      # Note: Without original data, we can only warn about presence
-      # The actual check would need data to be passed
-    }
-  }
-
-  # Check 4: Examine resampling indices used
-  if (!is.null(object$control$index)) {
-    # Already covered by trainControl inspection above
-  }
-
   risks
 }

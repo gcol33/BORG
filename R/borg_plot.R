@@ -43,8 +43,12 @@ plot.BorgRisk <- function(x, title = NULL, max_risks = 10, ...) {
 #'
 #' @param x A \code{borg_result} object from \code{borg()}.
 #' @param type Character. Plot type: \code{"split"} (default), \code{"risk"},
-#'   \code{"temporal"}, or \code{"groups"}.
+#'   \code{"spatial"}, \code{"temporal"}, or \code{"groups"}.
 #' @param fold Integer. Which fold to plot (for split visualization). Default: 1.
+#' @param data Optional data frame supplying coordinates for
+#'   \code{type = "spatial"} when the folds carry no spatial metadata.
+#' @param coords Character vector of length 2 naming the coordinate columns in
+#'   \code{data}, used with \code{type = "spatial"}.
 #' @param time Column name or values for temporal plots.
 #' @param groups Column name or values for group plots.
 #' @param title Optional custom plot title.
@@ -64,8 +68,10 @@ plot.BorgRisk <- function(x, title = NULL, max_risks = 10, ...) {
 #'
 #' @export
 plot.borg_result <- function(x,
-                              type = c("split", "risk", "temporal", "groups"),
+                              type = c("split", "risk", "spatial", "temporal", "groups"),
                               fold = 1,
+                              data = NULL,
+                              coords = NULL,
                               time = NULL,
                               groups = NULL,
                               title = NULL,
@@ -98,6 +104,11 @@ plot.borg_result <- function(x,
   switch(type,
     "split" = plot_split_internal(train_idx, test_idx, n_total,
                                    title = title %||% sprintf("Fold %d Split", fold), ...),
+    "spatial" = {
+      xy <- .resolve_plot_coords(x, data, coords)
+      plot_spatial_internal(xy$x, xy$y, train_idx, test_idx,
+                            title = title %||% sprintf("Fold %d Spatial", fold), ...)
+    },
     "temporal" = {
       if (is.null(time)) stop("'time' required for temporal plot")
       plot_temporal_internal(time, train_idx, test_idx,
@@ -111,6 +122,23 @@ plot.borg_result <- function(x,
   )
 
   invisible(NULL)
+}
+
+
+# Resolve x/y coordinate vectors for a spatial plot from either an explicit
+# data frame + coords, or the spatial metadata attached to the folds.
+#' @noRd
+.resolve_plot_coords <- function(x, data, coords) {
+  if (!is.null(data) && !is.null(coords)) {
+    return(list(x = data[[coords[1]]], y = data[[coords[2]]]))
+  }
+  spatial_meta <- attr(x$folds, "spatial_meta")
+  if (!is.null(spatial_meta) && !is.null(spatial_meta$coords)) {
+    cm <- spatial_meta$coords
+    return(list(x = cm[, 1], y = cm[, 2]))
+  }
+  stop("Spatial plot needs coordinates: pass 'data' and 'coords', or use folds ",
+       "that carry spatial metadata.")
 }
 
 

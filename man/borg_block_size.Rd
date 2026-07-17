@@ -12,6 +12,7 @@ borg_block_size(
   n_sizes = 10,
   range = NULL,
   formula = NULL,
+  crs = NULL,
   verbose = FALSE
 )
 }
@@ -33,6 +34,10 @@ estimate (0.5x to 3x range).}
 
 \item{formula}{Optional model formula for computing residual
 autocorrelation. If \code{NULL}, uses the raw target values.}
+
+\item{crs}{Optional coordinate reference system (an \code{sf} CRS, EPSG
+code, or PROJ string). When it is geographic (lon/lat), distances use the
+Haversine formula; otherwise planar Euclidean.}
 
 \item{verbose}{Logical. Default: FALSE.}
 }

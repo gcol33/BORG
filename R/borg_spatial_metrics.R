@@ -172,16 +172,19 @@ borg_local_moran <- function(residuals, x, y, k = 8L) {
 
   for (i in seq_len(n)) {
     # k nearest neighbors
-    nn_idx <- order(dist_mat[i, ])[seq_len(min(k, n - 1))]
-    wij <- rep(1 / k, length(nn_idx))
+    n_nb <- min(k, n - 1)
+    nn_idx <- order(dist_mat[i, ])[seq_len(n_nb)]
+    wij <- rep(1 / n_nb, n_nb)
 
     # Local Moran's I
     local_i[i] <- (z[i] / s2) * sum(wij * z[nn_idx])
 
-    # Pseudo p-value via permutation (simplified)
+    # Conditional permutation: hold z[i] fixed and draw the n_nb neighbour
+    # values from the remaining n - 1 observations.
+    others <- z[-i]
     null_i <- vapply(seq_len(99), function(r) {
-      z_perm <- sample(z)
-      (z_perm[i] / s2) * sum(wij * z_perm[nn_idx])
+      z_nb <- others[sample.int(length(others), n_nb)]
+      (z[i] / s2) * sum(wij * z_nb)
     }, numeric(1))
 
     p_vals[i] <- (sum(abs(null_i) >= abs(local_i[i])) + 1) / 100
@@ -232,17 +235,20 @@ borg_willmott <- function(actual, predicted) {
   ss_pot <- sum((abs(predicted - mean_obs) + abs(actual - mean_obs))^2, na.rm = TRUE)
   d <- if (ss_pot > 0) 1 - ss_res / ss_pot else NA_real_
 
-  # Refined d1 (uses absolute deviations)
+  # Refined d1 (Willmott 1981): denominator sums both absolute deviations
+  # from the observed mean.
   abs_res <- sum(abs(actual - predicted), na.rm = TRUE)
-  abs_pot <- 2 * sum(abs(actual - mean_obs), na.rm = TRUE)
-  d1 <- if (abs_pot > 0) 1 - abs_res / abs_pot else NA_real_
+  d1_pot <- sum(abs(predicted - mean_obs) + abs(actual - mean_obs), na.rm = TRUE)
+  d1 <- if (d1_pot > 0) 1 - abs_res / d1_pot else NA_real_
 
-  # Modified dr
+  # Modified dr (Willmott et al. 2012): scaled by c = 2 times the sum of
+  # absolute observed deviations from the mean.
   c_val <- 2
-  dr <- if (abs_res <= abs_pot) {
-    1 - abs_res / abs_pot
+  dr_pot <- c_val * sum(abs(actual - mean_obs), na.rm = TRUE)
+  dr <- if (abs_res <= dr_pot) {
+    1 - abs_res / dr_pot
   } else {
-    abs_pot / abs_res - 1
+    dr_pot / abs_res - 1
   }
 
   list(d = d, d1 = d1, dr = dr)

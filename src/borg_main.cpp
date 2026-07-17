@@ -7,7 +7,8 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 List checkIndexOverlap(IntegerVector train_idx, IntegerVector test_idx) {
-   // Convert to 0-based for internal use
+   // Indices are used as opaque set keys (never dereferenced), so they are
+   // compared as-is without any base conversion.
    IndexSet train_set;
    for (int i = 0; i < train_idx.size(); ++i) {
        train_set.insert(train_idx[i]);
@@ -34,35 +35,30 @@ List checkDuplicateRows(
    IntegerVector train_idx,
    IntegerVector test_idx
 ) {
-   // Hash-based duplicate detection
-   // Uses simple concatenation hash for row comparison
+   // Exact row-value duplicate detection (bit-for-bit, full precision).
+
+   int n_row = data.nrow();
+   checkIndexBounds(train_idx, n_row, "train_idx");
+   checkIndexBounds(test_idx, n_row, "test_idx");
 
    int n_train = train_idx.size();
    int n_test = test_idx.size();
    int p = data.ncol();
 
-   // Build hash set of training rows
-   std::unordered_set<std::string> train_hashes;
+   // Build the set of exact training-row keys
+   std::unordered_set<std::string> train_keys;
 
    for (int i = 0; i < n_train; ++i) {
-       int row_idx = train_idx[i] - 1;  // Convert to 0-based
-       std::string hash = "";
-       for (int j = 0; j < p; ++j) {
-           hash += std::to_string(data(row_idx, j)) + "|";
-       }
-       train_hashes.insert(hash);
+       int row_idx = train_idx[i] - 1;  // 1-based -> 0-based
+       train_keys.insert(rowKey(data, row_idx, p));
    }
 
-   // Check test rows for duplicates
+   // Check test rows for exact matches against training rows
    std::vector<int> duplicates;
 
    for (int i = 0; i < n_test; ++i) {
-       int row_idx = test_idx[i] - 1;  // Convert to 0-based
-       std::string hash = "";
-       for (int j = 0; j < p; ++j) {
-           hash += std::to_string(data(row_idx, j)) + "|";
-       }
-       if (train_hashes.find(hash) != train_hashes.end()) {
+       int row_idx = test_idx[i] - 1;  // 1-based -> 0-based
+       if (train_keys.find(rowKey(data, row_idx, p)) != train_keys.end()) {
            duplicates.push_back(test_idx[i]);  // Return 1-based
        }
    }
@@ -80,6 +76,10 @@ List checkTemporalOrder(
    IntegerVector train_idx,
    IntegerVector test_idx
 ) {
+   int n_ts = timestamps.size();
+   checkIndexBounds(train_idx, n_ts, "train_idx");
+   checkIndexBounds(test_idx, n_ts, "test_idx");
+
    // Find max train timestamp
    double max_train_time = R_NegInf;
    for (int i = 0; i < train_idx.size(); ++i) {
@@ -116,6 +116,10 @@ List checkGroupOverlap(
    IntegerVector train_idx,
    IntegerVector test_idx
 ) {
+   int n_grp = groups.size();
+   checkIndexBounds(train_idx, n_grp, "train_idx");
+   checkIndexBounds(test_idx, n_grp, "test_idx");
+
    // Build set of training groups
    std::unordered_set<int> train_groups;
    for (int i = 0; i < train_idx.size(); ++i) {
@@ -155,17 +159,13 @@ double computeCorrelation(NumericVector x, NumericVector y) {
        stop("Vectors must have same length");
    }
 
-   double sum_x = 0, sum_y = 0, sum_xy = 0;
-   double sum_x2 = 0, sum_y2 = 0;
+   // First pass: pairwise-complete means
+   double sum_x = 0, sum_y = 0;
    int count = 0;
-
    for (int i = 0; i < n; ++i) {
        if (!NumericVector::is_na(x[i]) && !NumericVector::is_na(y[i])) {
            sum_x += x[i];
            sum_y += y[i];
-           sum_xy += x[i] * y[i];
-           sum_x2 += x[i] * x[i];
-           sum_y2 += y[i] * y[i];
            count++;
        }
    }
@@ -176,9 +176,19 @@ double computeCorrelation(NumericVector x, NumericVector y) {
 
    double mean_x = sum_x / count;
    double mean_y = sum_y / count;
-   double var_x = sum_x2 / count - mean_x * mean_x;
-   double var_y = sum_y2 / count - mean_y * mean_y;
-   double cov_xy = sum_xy / count - mean_x * mean_y;
+
+   // Second pass: accumulate centered products (avoids the catastrophic
+   // cancellation of the sum-of-squares form for large-magnitude data)
+   double var_x = 0, var_y = 0, cov_xy = 0;
+   for (int i = 0; i < n; ++i) {
+       if (!NumericVector::is_na(x[i]) && !NumericVector::is_na(y[i])) {
+           double dx = x[i] - mean_x;
+           double dy = y[i] - mean_y;
+           var_x += dx * dx;
+           var_y += dy * dy;
+           cov_xy += dx * dy;
+       }
+   }
 
    if (var_x <= 0 || var_y <= 0) {
        return NA_REAL;

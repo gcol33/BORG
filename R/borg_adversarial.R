@@ -146,9 +146,14 @@ borg_adversarial <- function(train, prediction, predictors = NULL, v = 5L) {
 
 #' @noRd
 .compute_auc <- function(labels, probs) {
-  # Mann-Whitney U statistic
-  pos <- probs[labels == 1]
-  neg <- probs[labels == 0]
+  # Mann-Whitney U statistic. Accepts any two-level label coding (0/1,
+  # 1/2, factor); the lower level is treated as negative, the higher as
+  # positive. Returns NA for non-binary labels.
+  lv <- sort(unique(labels[!is.na(labels)]))
+  if (length(lv) < 2) return(0.5)
+  if (length(lv) > 2) return(NA_real_)
+  pos <- probs[labels == lv[2]]
+  neg <- probs[labels == lv[1]]
   if (length(pos) == 0 || length(neg) == 0) return(0.5)
 
   n_pos <- length(pos)

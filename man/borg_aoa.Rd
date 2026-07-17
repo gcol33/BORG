@@ -31,7 +31,8 @@ borg_aoa(
 the threshold is derived from cross-validated DI (more robust).}
 
 \item{threshold}{Numeric. Manual DI threshold override. If \code{NULL},
-computed from training data (mean + sd of LOO-DI).}
+computed as the outlier-adjusted maximum (Q75 + 1.5 * IQR rule) of the
+LOO training DI, or of the cross-validated DI when \code{folds} is given.}
 
 \item{normalize}{Logical. If \code{TRUE}, add a \code{di_norm} column
 holding the dissimilarity index rescaled by the AOA threshold, so that

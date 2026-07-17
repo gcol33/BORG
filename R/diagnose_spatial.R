@@ -54,7 +54,8 @@ diagnose_spatial <- function(data, coords, y, alpha, verbose, crs = NULL) {
       morans_p = NA_real_,
       range_estimate = if (detected) median_nn * 10 else NA_real_,
       effective_n = if (detected) n_complete * clustering_ratio * 10 else as.numeric(n_complete),
-      coords_used = coords
+      coords_used = coords,
+      crs = crs
     ))
   }
 
@@ -79,6 +80,7 @@ diagnose_spatial <- function(data, coords, y, alpha, verbose, crs = NULL) {
     range_estimate = range_estimate,
     effective_n = effective_n,
     coords_used = coords,
+    crs = crs,
     variogram = variogram,
     sill = sill
   )

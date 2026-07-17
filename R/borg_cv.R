@@ -43,6 +43,10 @@
 #'   Default: NULL (auto-detect from diagnosis).
 #' @param repeats Integer. Number of times to repeat CV fold generation with
 #'   different random seeds. Default: 1 (no repetition).
+#' @param seed Integer or NULL. Random seed for stochastic fold generators.
+#'   When \code{NULL} (default), a fixed internal seed is used so single runs
+#'   are reproducible. With \code{repeats > 1}, successive repeats derive
+#'   distinct seeds from this value.
 #' @param output Character. Output format: "list" (default), "rsample", "caret", "mlr3".
 #' @param allow_random Logical. If TRUE, allows random CV even when dependencies detected.
 #'   Default: FALSE. Setting to TRUE requires explicit acknowledgment.
@@ -146,6 +150,7 @@ borg_cv <- function(data,
                     buffer = NULL,
                     strategy = NULL,
                     repeats = 1L,
+                    seed = NULL,
                     output = c("list", "rsample", "caret", "mlr3"),
                     allow_random = FALSE,
                     verbose = FALSE) {
@@ -229,17 +234,17 @@ borg_cv <- function(data,
   # Generate folds based on strategy
   .generate_folds_once <- function(seed = 42L) {
     switch(strategy,
-      "random" = generate_random_folds(data, v),
-      "random_override" = generate_random_folds(data, v),
+      "random" = generate_random_folds(data, v, seed = seed),
+      "random_override" = generate_random_folds(data, v, seed = seed),
       "spatial_block" = generate_spatial_block_folds(data, v, diagnosis, coords, block_size, verbose, seed = seed),
-      "environmental_block" = generate_environmental_block_folds(data, v, diagnosis, coords, env, verbose),
+      "environmental_block" = generate_environmental_block_folds(data, v, diagnosis, coords, env, verbose, seed = seed),
     "checkerboard" = generate_checkerboard_folds(data, v, diagnosis, coords, block_size, verbose),
     "hexagonal" = generate_hexagonal_folds(data, v, diagnosis, coords, block_size, verbose),
-    "custom_block" = generate_custom_block_folds(data, v, dist_mat, verbose),
-    "knndm" = generate_knndm_folds(data, v, diagnosis, coords, prediction_points, verbose),
+    "custom_block" = generate_custom_block_folds(data, v, dist_mat, verbose, seed = seed),
+    "knndm" = generate_knndm_folds(data, v, diagnosis, coords, prediction_points, verbose, seed = seed),
     "nndm" = generate_nndm_folds(data, diagnosis, coords, prediction_points, verbose),
-    "leave_location_out" = generate_leave_location_out_folds(data, v, diagnosis, coords, verbose),
-    "llto" = generate_llto_folds(data, v, diagnosis, coords, time, groups, verbose),
+    "leave_location_out" = generate_leave_location_out_folds(data, v, diagnosis, coords, verbose, seed = seed),
+    "llto" = generate_llto_folds(data, v, diagnosis, coords, time, groups, verbose, seed = seed),
     "spatial_plus" = generate_spatial_plus_folds(data, v, diagnosis, coords, env, verbose),
       "temporal_block" = generate_temporal_block_folds(data, v, diagnosis, time, embargo, verbose),
       "temporal_expanding" = generate_temporal_expanding_folds(data, v, diagnosis, time, embargo, verbose),
@@ -256,15 +261,17 @@ borg_cv <- function(data,
   repeats <- as.integer(max(1L, repeats))
   all_folds <- NULL
 
+  base_seed <- if (is.null(seed)) 42L else as.integer(seed)
+
   if (repeats > 1L) {
-    seeds <- seq(42L, by = 1000L, length.out = repeats)
+    seeds <- seq(base_seed, by = 1000L, length.out = repeats)
     all_folds <- lapply(seq_len(repeats), function(r) {
       if (verbose) message(sprintf("Repeat %d/%d", r, repeats))
       .generate_folds_once(seed = seeds[r])
     })
     folds <- all_folds[[1]]
   } else {
-    folds <- .generate_folds_once()
+    folds <- .generate_folds_once(seed = base_seed)
   }
 
   # Apply spatial buffer if requested
@@ -277,7 +284,8 @@ borg_cv <- function(data,
       warning("buffer specified but no coordinates available; ignoring buffer")
     } else {
       folds <- apply_spatial_buffer(folds, data[[buf_coords[1]]], data[[buf_coords[2]]],
-                                     buffer, verbose = verbose)
+                                     buffer, crs = diagnosis@spatial$crs,
+                                     verbose = verbose)
     }
   }
 
@@ -352,7 +360,8 @@ print.borg_cv <- function(x, ...) {
 
 #' Generate Random Folds (Internal)
 #' @noRd
-generate_random_folds <- function(data, v) {
+generate_random_folds <- function(data, v, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
   n <- nrow(data)
   idx <- sample(n)
   fold_ids <- rep(1:v, length.out = n)
@@ -396,10 +405,15 @@ generate_spatial_block_folds <- function(data, v, diagnosis, coords, block_size,
 
   if (verbose) message(sprintf("Using spatial block size: %.2f", block_size))
 
-  # Use k-means to create spatial clusters
-  # Number of clusters should be >= v
-  n_clusters <- max(v, ceiling(n / 20))  # At least 20 points per cluster
-  n_clusters <- min(n_clusters, n %/% 3)  # But not too many
+  # Number of spatial clusters is driven by block size: tiling the coordinate
+  # extent with square cells of side block_size gives roughly this many cells,
+  # so a larger block size yields fewer, larger spatial folds. Bounded to keep
+  # at least v folds and at least a few points per cluster.
+  x_extent <- diff(range(x_coord, na.rm = TRUE))
+  y_extent <- diff(range(y_coord, na.rm = TRUE))
+  n_cells <- (x_extent / block_size) * (y_extent / block_size)
+  n_clusters <- max(v, round(n_cells))
+  n_clusters <- min(n_clusters, n %/% 3)
 
   coord_mat <- cbind(x_coord, y_coord)
   complete <- complete.cases(coord_mat)
@@ -575,7 +589,7 @@ generate_spatial_plus_folds <- function(data, v, diagnosis, coords, env, verbose
 #' \emph{Environmental Modelling & Software}, 101, 1-9.
 #' \doi{10.1016/j.envsoft.2017.12.001}
 #' @noRd
-generate_llto_folds <- function(data, v, diagnosis, coords, time_col, group_col, verbose) {
+generate_llto_folds <- function(data, v, diagnosis, coords, time_col, group_col, verbose, seed = NULL) {
   # Need either coords or groups for spatial, and time for temporal
   if (is.null(time_col)) time_col <- diagnosis@temporal$time_col
   if (is.null(time_col)) {
@@ -612,7 +626,7 @@ generate_llto_folds <- function(data, v, diagnosis, coords, time_col, group_col,
   unique_st <- unique(st_id)
 
   # Distribute spatiotemporal groups across folds
-  set.seed(42)
+  if (!is.null(seed)) set.seed(seed)
   n_st <- length(unique_st)
   fold_map <- setNames(
     rep(seq_len(v), length.out = n_st)[sample(n_st)],
@@ -644,7 +658,7 @@ generate_llto_folds <- function(data, v, diagnosis, coords, time_col, group_col,
 #' For repeated measurements at sites. Locations are distributed
 #' across v folds for computational tractability.
 #' @noRd
-generate_leave_location_out_folds <- function(data, v, diagnosis, coords, verbose) {
+generate_leave_location_out_folds <- function(data, v, diagnosis, coords, verbose, seed = NULL) {
   if (is.null(coords)) coords <- diagnosis@spatial$coords_used
   if (is.null(coords)) {
     stop("Leave-location-out requires coordinates. Provide 'coords' argument.")
@@ -669,7 +683,7 @@ generate_leave_location_out_folds <- function(data, v, diagnosis, coords, verbos
   v_actual <- min(v, n_locs)
 
   # Assign locations to folds (round-robin)
-  set.seed(42)
+  if (!is.null(seed)) set.seed(seed)
   loc_order <- sample(n_locs)
   loc_fold <- rep(NA_integer_, n_locs)
   loc_fold[loc_order] <- rep(seq_len(v_actual), length.out = n_locs)
@@ -818,7 +832,7 @@ generate_nndm_folds <- function(data, diagnosis, coords, prediction_points,
 #' Creates folds where the NN distance distribution between train and test
 #' matches the distance from prediction points to training data.
 #' @noRd
-generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, verbose) {
+generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, verbose, seed = NULL) {
   if (is.null(prediction_points)) {
     stop("KNNDM requires 'prediction_points' (coordinates of prediction locations)")
   }
@@ -845,10 +859,11 @@ generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, 
   # Greedy optimization: assign observations to folds such that
   # train-test NN distances match the target distribution
   # Start with random assignment, then swap to improve KS statistic
-  set.seed(42)
+  if (!is.null(seed)) set.seed(seed)
   fold_assignment <- sample(rep(seq_len(v), length.out = n))
 
   best_ks <- Inf
+  best_assignment <- fold_assignment
 
   for (iter in seq_len(100)) {
     # Compute current train-test NN distances across all folds
@@ -870,7 +885,7 @@ generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, 
       stats::ks.test(current_nn, target_nn)$statistic
     )
 
-    if (ks < best_ks) {
+    if (!is.na(ks) && ks < best_ks) {
       best_ks <- ks
       best_assignment <- fold_assignment
     }
@@ -906,7 +921,7 @@ generate_knndm_folds <- function(data, v, diagnosis, coords, prediction_points, 
 #' Uses a user-provided distance matrix with k-medoids (PAM) clustering
 #' to create blocks. Useful for ecological, network, or genetic distances.
 #' @noRd
-generate_custom_block_folds <- function(data, v, dist_mat, verbose) {
+generate_custom_block_folds <- function(data, v, dist_mat, verbose, seed = NULL) {
   if (is.null(dist_mat)) {
     stop("Custom blocking requires 'dist_mat' argument (distance matrix or dist object)")
   }
@@ -925,7 +940,7 @@ generate_custom_block_folds <- function(data, v, dist_mat, verbose) {
   n_clusters <- max(v, ceiling(n / 20))
   n_clusters <- min(n_clusters, n %/% 3)
 
-  set.seed(42)
+  if (!is.null(seed)) set.seed(seed)
 
   # Initialize medoids randomly
   medoids <- sample(n, n_clusters)
@@ -1119,7 +1134,7 @@ generate_checkerboard_folds <- function(data, v, diagnosis, coords, block_size, 
 #' Blocks by environmental similarity: PCA on environmental variables,
 #' k-means clustering on PC scores, assign clusters to folds.
 #' @noRd
-generate_environmental_block_folds <- function(data, v, diagnosis, coords, env, verbose) {
+generate_environmental_block_folds <- function(data, v, diagnosis, coords, env, verbose, seed = NULL) {
   if (is.null(env)) {
     stop("Environmental blocking requires 'env' argument (SpatRaster or data.frame)")
   }
@@ -1182,7 +1197,7 @@ generate_environmental_block_folds <- function(data, v, diagnosis, coords, env, 
   n_clusters <- max(v, ceiling(sum(complete) / 20))
   n_clusters <- min(n_clusters, sum(complete) %/% 3)
 
-  set.seed(42)
+  if (!is.null(seed)) set.seed(seed)
   km <- stats::kmeans(pc_scores, centers = n_clusters, nstart = 10)
 
   # Assign clusters back
@@ -1278,15 +1293,10 @@ generate_temporal_block_folds <- function(data, v, diagnosis, time_col, embargo,
       train_idx <- integer(0)
     }
 
-    # If no training data, use later data (expanding window)
-    if (length(train_idx) < 10) {
-      # Use later blocks as training instead
-      if (test_end < n) {
-        test_max_time <- max(time_numeric[test_idx], na.rm = TRUE)
-        after_mask <- time_numeric[ord[(test_end + 1):n]] > (test_max_time + embargo)
-        train_idx <- c(train_idx, ord[(test_end + 1):n][after_mask])
-      }
-    }
+    # Never backfill with future observations: for temporal CV the training
+    # set must only contain data dated before the test block. Folds whose
+    # past-only training set is too small are dropped downstream rather than
+    # padded with look-ahead data.
 
     list(train = train_idx, test = test_idx)
   })
@@ -1297,14 +1307,16 @@ generate_temporal_block_folds <- function(data, v, diagnosis, time_col, embargo,
   if (length(valid_folds) < 2) {
     warning("Temporal blocking with embargo produced < 2 valid folds. ",
             "Consider reducing embargo or using a different strategy.")
-    # Fallback to simple temporal split without embargo
+    # Fallback to an expanding-window split without embargo. Training is still
+    # strictly past-only; the first block (no prior data) is dropped.
     folds <- lapply(1:v, function(i) {
       test_start <- fold_boundaries[i] + 1
       test_end <- fold_boundaries[i + 1]
       test_idx <- ord[test_start:test_end]
-      train_idx <- setdiff(ord, test_idx)
+      train_idx <- if (test_start > 1) ord[seq_len(test_start - 1)] else integer(0)
       list(train = train_idx, test = test_idx)
     })
+    folds <- Filter(function(f) length(f$train) > 0, folds)
   } else {
     folds <- valid_folds
   }
@@ -1403,25 +1415,30 @@ generate_group_folds <- function(data, v, diagnosis, group_col, verbose) {
 
   if (verbose) message(sprintf("Creating %d-fold group CV with %d groups", v, n_groups))
 
-  # Assign groups to folds (balanced by total observations)
+  # Assign groups to folds (balanced by total observations).
+  # Key everything by the character group label so numeric group IDs cannot
+  # be interpreted as positional indices.
+  group_keys <- as.character(unique_groups)
   group_sizes <- table(groups)
-  group_order <- order(group_sizes, decreasing = TRUE)
+  size_by_key <- as.integer(group_sizes[group_keys])
+  group_order <- order(size_by_key, decreasing = TRUE)
 
   fold_assignment <- rep(NA_integer_, n_groups)
-  names(fold_assignment) <- unique_groups
+  names(fold_assignment) <- group_keys
   fold_sizes <- rep(0L, v)
 
-  for (g in unique_groups[group_order]) {
+  for (key in group_keys[group_order]) {
     target_fold <- which.min(fold_sizes)
-    fold_assignment[g] <- target_fold
-    fold_sizes[target_fold] <- fold_sizes[target_fold] + group_sizes[g]
+    fold_assignment[key] <- target_fold
+    fold_sizes[target_fold] <- fold_sizes[target_fold] + size_by_key[match(key, group_keys)]
   }
 
   # Create folds
+  group_chr <- as.character(groups)
   lapply(1:v, function(i) {
     test_groups <- names(fold_assignment)[fold_assignment == i]
-    test_idx <- which(groups %in% test_groups)
-    train_idx <- which(!groups %in% test_groups)
+    test_idx <- which(group_chr %in% test_groups)
+    train_idx <- which(!group_chr %in% test_groups)
     list(train = train_idx, test = test_idx)
   })
 }
@@ -1450,7 +1467,8 @@ generate_group_folds <- function(data, v, diagnosis, group_col, verbose) {
     max_extent * 0.05
   }
 
-  apply_spatial_buffer(folds, x_coord, y_coord, buffer_dist, verbose = verbose)
+  apply_spatial_buffer(folds, x_coord, y_coord, buffer_dist,
+                       crs = diagnosis@spatial$crs, verbose = verbose)
 }
 
 #' Generate Spatial-Temporal Folds (Internal)

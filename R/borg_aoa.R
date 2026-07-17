@@ -3,11 +3,26 @@
 # borg_aoa() — Area of Applicability (Meyer & Pebesma 2021)
 # ===========================================================================
 
+# Outlier-adjusted maximum of a DI distribution: the AOA threshold of
+# Meyer & Pebesma (2021). The threshold is the largest value that is not an
+# upper outlier under the standard boxplot rule (Q75 + 1.5 * IQR).
+#' @noRd
+.aoa_threshold <- function(di) {
+  di <- di[is.finite(di)]
+  if (length(di) == 0) return(NA_real_)
+  qs <- stats::quantile(di, probs = c(0.25, 0.75), names = FALSE)
+  fence <- qs[2] + 1.5 * (qs[2] - qs[1])
+  inliers <- di[di <= fence]
+  if (length(inliers) == 0) max(di) else max(inliers)
+}
+
 #' Dissimilarity Index
 #'
-#' Computes the weighted Euclidean distance in feature space from each
-#' point to its nearest training observation. Points with high DI are
-#' dissimilar to the training data and predictions may be unreliable.
+#' Computes the dissimilarity index of Meyer & Pebesma (2021): the weighted
+#' Euclidean distance in feature space from each point to its nearest training
+#' observation, divided by the mean of all pairwise distances among training
+#' points. Points with high DI are dissimilar to the training data and
+#' predictions may be unreliable.
 #'
 #' @param train Data frame of training predictors (or full data with
 #'   \code{train_idx}).
@@ -24,8 +39,9 @@
 #'
 #' @return A numeric vector of DI values (one per row of \code{new}, or
 #'   per training row if \code{new} is NULL). Has class
-#'   \code{"borg_di"} and attribute \code{"threshold"} (mean + sd of
-#'   training DI, used as default AOA cutoff).
+#'   \code{"borg_di"} and attribute \code{"threshold"} (the outlier-adjusted
+#'   maximum of the training DI under the boxplot rule Q75 + 1.5 * IQR, used
+#'   as the default AOA cutoff).
 #'
 #' @references
 #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space?
@@ -86,6 +102,13 @@ borg_di <- function(train, new = NULL, train_idx = NULL,
     w <- rep(1, length(predictors))
   }
 
+  # Mean of all pairwise distances among training points (in the weighted,
+  # scaled feature space). Meyer & Pebesma (2021) normalize the nearest-
+  # neighbour distance by this quantity so the DI is dimensionless and
+  # comparable across datasets.
+  d_bar <- mean(stats::dist(train_scaled), na.rm = TRUE)
+  if (!is.finite(d_bar) || d_bar == 0) d_bar <- 1
+
   # Compute DI for new data or LOO for training
   if (!is.null(new)) {
     new_mat <- as.matrix(new[, predictors, drop = FALSE])
@@ -98,29 +121,30 @@ borg_di <- function(train, new = NULL, train_idx = NULL,
     di_values <- apply(new_scaled, 1, function(row) {
       dists <- sqrt(colSums((t(train_scaled) - row)^2))
       min(dists, na.rm = TRUE)
-    })
+    }) / d_bar
   } else {
     # LOO: distance to nearest other training point
     di_values <- apply(train_scaled, 1, function(row) {
       dists <- sqrt(colSums((t(train_scaled) - row)^2))
       dists[dists == 0] <- Inf  # exclude self
       min(dists, na.rm = TRUE)
-    })
+    }) / d_bar
   }
 
-  # Training DI distribution (LOO)
+  # Training DI distribution (LOO), normalized the same way
   train_di <- apply(train_scaled, 1, function(row) {
     dists <- sqrt(colSums((t(train_scaled) - row)^2))
     dists[dists == 0] <- Inf
     min(dists, na.rm = TRUE)
-  })
+  }) / d_bar
 
-  threshold <- mean(train_di) + stats::sd(train_di)
+  threshold <- .aoa_threshold(train_di)
 
   class(di_values) <- c("borg_di", "numeric")
   attr(di_values, "threshold") <- threshold
   attr(di_values, "train_di_mean") <- mean(train_di)
   attr(di_values, "train_di_sd") <- stats::sd(train_di)
+  attr(di_values, "d_bar") <- d_bar
   attr(di_values, "predictors") <- predictors
 
   di_values
@@ -143,7 +167,8 @@ borg_di <- function(train, new = NULL, train_idx = NULL,
 #' @param folds Optional \code{borg_cv} object or fold list. If provided,
 #'   the threshold is derived from cross-validated DI (more robust).
 #' @param threshold Numeric. Manual DI threshold override. If \code{NULL},
-#'   computed from training data (mean + sd of LOO-DI).
+#'   computed as the outlier-adjusted maximum (Q75 + 1.5 * IQR rule) of the
+#'   LOO training DI, or of the cross-validated DI when \code{folds} is given.
 #' @param normalize Logical. If \code{TRUE}, add a \code{di_norm} column
 #'   holding the dissimilarity index rescaled by the AOA threshold, so that
 #'   \code{di_norm = 1} marks the applicability boundary and values above 1
@@ -201,7 +226,7 @@ borg_aoa <- function(train, new, predictors = NULL, coords = NULL,
                             predictors = predictors, weights = weights)
         cv_di <- c(cv_di, as.numeric(fold_di))
       }
-      threshold <- stats::quantile(cv_di, 0.95)
+      threshold <- .aoa_threshold(cv_di)
     } else {
       threshold <- attr(di_vals, "threshold")
     }

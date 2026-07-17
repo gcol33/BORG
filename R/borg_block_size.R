@@ -20,6 +20,9 @@
 #'   estimate (0.5x to 3x range).
 #' @param formula Optional model formula for computing residual
 #'   autocorrelation. If \code{NULL}, uses the raw target values.
+#' @param crs Optional coordinate reference system (an \code{sf} CRS, EPSG
+#'   code, or PROJ string). When it is geographic (lon/lat), distances use the
+#'   Haversine formula; otherwise planar Euclidean.
 #' @param verbose Logical. Default: FALSE.
 #'
 #' @return A list with class \code{"borg_block_opt"} containing:
@@ -42,7 +45,8 @@
 #'
 #' @export
 borg_block_size <- function(data, coords, target, v = 5, n_sizes = 10,
-                              range = NULL, formula = NULL, verbose = FALSE) {
+                              range = NULL, formula = NULL, crs = NULL,
+                              verbose = FALSE) {
 
   coord_info <- extract_coords(data, coords)
   x <- coord_info$x
@@ -62,7 +66,7 @@ borg_block_size <- function(data, coords, target, v = 5, n_sizes = 10,
     x_sub <- x_sub[idx]; y_sub <- y_sub[idx]; y_sub_val <- y_sub_val[idx]
   }
 
-  dist_mat <- compute_distance_matrix(x_sub, y_sub)
+  dist_mat <- compute_distance_matrix_geo(x_sub, y_sub, crs = crs)
   range_est <- estimate_spatial_range(y_sub_val, dist_mat)
 
   # Define search range
@@ -130,7 +134,7 @@ borg_block_size <- function(data, coords, target, v = 5, n_sizes = 10,
         test_y <- test_y[idx]; test_x_c <- test_x_c[idx]; test_y_c <- test_y_c[idx]
       }
 
-      d <- compute_distance_matrix(test_x_c, test_y_c)
+      d <- compute_distance_matrix_geo(test_x_c, test_y_c, crs = crs)
       tryCatch(compute_morans_i(test_y, d)$I, error = function(e) NA_real_)
     }, numeric(1))
 

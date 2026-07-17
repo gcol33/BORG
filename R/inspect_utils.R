@@ -39,6 +39,30 @@
 }
 
 
+#' Risk entry for a train-scope leak
+#'
+#' A model reporting a fitted sample size that differs from the training set
+#' size indicates it saw data outside the training fold. Returns a one-element
+#' risk list, or an empty list when the counts match or are unavailable.
+#' @noRd
+.check_train_scope <- function(n_model, train_idx, test_idx, source_label) {
+  n_expected <- length(train_idx)
+  if (length(n_model) != 1 || is.na(n_model) || n_model == n_expected) {
+    return(list())
+  }
+  list(.new_risk(
+    type = "model_scope",
+    severity = "hard_violation",
+    description = sprintf(
+      "%s was fitted on %d observations, but the training set has %d. Possible data leakage.",
+      source_label, n_model, n_expected
+    ),
+    affected_indices = test_idx,
+    source_object = source_label
+  ))
+}
+
+
 #' Check if analysis indices leak test data (shared CV leak detection)
 #'
 #' Returns a list of risk entries (empty if no leak).

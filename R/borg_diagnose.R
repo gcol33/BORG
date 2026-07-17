@@ -1,13 +1,5 @@
 # BORG Diagnosis Module
 # Detects data dependency structure: spatial, temporal, clustered
-#
-# Internal helpers split into:
-#   diagnose_spatial.R  — diagnose_spatial(), compute_distance_matrix(),
-#                         compute_morans_i(), estimate_spatial_range(),
-#                         compute_effective_n_spatial()
-#   diagnose_temporal.R — diagnose_temporal(), diagnose_clustered(), compute_icc()
-#   diagnose_inference.R — determine_severity(), recommend_cv_strategy(),
-#                          estimate_inflation()
 
 #' @title BorgDiagnosis S4 Class
 #'

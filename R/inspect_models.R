@@ -10,19 +10,7 @@
   # Check 1: Model was fitted on correct number of observations
   n_model <- length(object$fitted.values)
   n_expected <- length(train_idx)
-
-  if (n_model != n_expected) {
-    risks <- c(risks, list(.new_risk(
-      type = "model_scope",
-      severity = "hard_violation",
-      description = sprintf(
-        "Model was fitted on %d observations, but training set has %d. Possible data leakage.",
-        n_model, n_expected
-      ),
-      affected_indices = test_idx,
-      source_object = "lm"
-    )))
-  }
+  risks <- c(risks, .check_train_scope(n_model, train_idx, test_idx, "lm"))
 
   # Check 2: If we have the original data, verify row alignment
  if (!is.null(data) && n_model == n_expected) {
@@ -75,19 +63,7 @@
   # Check 1: Number of training observations
   n_model <- object$num.samples
   n_expected <- length(train_idx)
-
-  if (n_model != n_expected) {
-    risks <- c(risks, list(.new_risk(
-      type = "model_scope",
-      severity = "hard_violation",
-      description = sprintf(
-        "Ranger model was trained on %d observations, but training set has %d. Possible data leakage.",
-        n_model, n_expected
-      ),
-      affected_indices = test_idx,
-      source_object = "ranger"
-    )))
-  }
+  risks <- c(risks, .check_train_scope(n_model, train_idx, test_idx, "ranger"))
 
   # Check 2: OOB predictions should not exist for test indices
   # (if model stored predictions)
@@ -216,12 +192,6 @@
     risks <- c(risks, underlying_risks)
   }
 
-  # Check parsnip-specific issues
-  # Spec should match what was trained
-  if (!is.null(object$spec) && !is.null(object$fit)) {
-    # Could check mode, engine consistency
-  }
-
   risks
 }
 
@@ -311,18 +281,7 @@
     }
   }
 
-  # Check 2: Verify the object was created from train data only
-  # tune_results stores the original data size
-  if (".config" %in% names(attributes(object))) {
-    # Config may contain info about data used
-  }
-
-  # Check 3: Look for suspiciously good metrics (potential overfitting to CV)
-  if (".metrics" %in% names(object)) {
-    # Could check if best metrics are implausibly good
-  }
-
-  # Check 4: Verify resamples are nested within train set
+  # Verify resamples are nested within the train set
   n_train <- length(train_idx)
   n_test <- length(test_idx)
   n_total <- max(c(train_idx, test_idx))

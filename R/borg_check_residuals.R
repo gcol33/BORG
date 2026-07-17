@@ -14,6 +14,9 @@
 #'   is a numeric vector).
 #' @param coords Character vector of length 2. Coordinate column names.
 #' @param alpha Numeric. Significance level for Moran's I test. Default: 0.05.
+#' @param crs Optional coordinate reference system (an \code{sf} CRS, EPSG
+#'   code, or PROJ string). When geographic (lon/lat), distances use the
+#'   Haversine formula; otherwise planar Euclidean.
 #'
 #' @return A list with class \code{"borg_residual_check"} containing:
 #'   \describe{
@@ -35,7 +38,7 @@
 #'
 #' @export
 borg_check_residuals <- function(model, data = NULL, coords = NULL,
-                                    alpha = 0.05) {
+                                    alpha = 0.05, crs = NULL) {
 
   # Extract residuals
   if (is.numeric(model)) {
@@ -74,7 +77,7 @@ borg_check_residuals <- function(model, data = NULL, coords = NULL,
   }
 
   # Compute distance matrix and Moran's I
-  dist_mat <- compute_distance_matrix(x_sub, y_sub)
+  dist_mat <- compute_distance_matrix_geo(x_sub, y_sub, crs = crs)
   morans <- compute_morans_i(resids_sub, dist_mat)
 
   # Compute residual variogram

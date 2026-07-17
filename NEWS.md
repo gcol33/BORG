@@ -1,3 +1,50 @@
+# BORG 0.3.2 (development)
+
+## Correctness fixes
+
+* `borg_cv(strategy = "group_fold")` now assigns groups to folds by their
+  label rather than by position. Numeric group identifiers whose values were
+  not `1:n_groups` (e.g. site codes) previously produced empty test folds and
+  full-data training sets.
+* Stochastic fold generators (`spatial_block`, `environmental_block`,
+  `leave_location_out`, `llto`, `knndm`, `custom_block`, random) now accept a
+  `seed` argument threaded from `borg_cv(seed = )` and `borg_repeated_cv()`
+  instead of a hardcoded internal seed. Repeated CV now produces genuinely
+  distinct fold sets across repeats for every strategy.
+* `borg_block_size()` now varies the folds with the candidate block size (the
+  block size drives the number of spatial clusters), so the reported optimum
+  reflects the data rather than the search grid.
+* Temporal block CV no longer backfills small early folds with future
+  observations. Training is strictly past-only; the first block (with no prior
+  data) is dropped, so `v` test blocks yield up to `v - 1` usable folds.
+* `borg_conformal(method = "split")` refits the model on the complement of the
+  calibration set so the nonconformity scores are genuinely out-of-sample, and
+  uses the conformal order statistic (`type = 1`) for the quantile. Split
+  intervals now reach their nominal coverage.
+* `borg_di()` / `borg_aoa()` follow Meyer & Pebesma (2021): the dissimilarity
+  index is normalized by the mean pairwise training distance, and the
+  applicability threshold is the outlier-adjusted maximum (Q75 + 1.5 * IQR) of
+  the cross-validated training DI.
+* Spatial buffering and distance-based diagnostics use Haversine distance when
+  a geographic CRS is available. `borg_cv()` now threads the CRS to the buffer,
+  and `borg_block_size()` / `borg_check_residuals()` accept a `crs` argument.
+* `borg_willmott()` computes the refined index `d1` with the correct
+  denominator; `borg_local_moran()` uses conditional permutation for its
+  pseudo p-values.
+* The C++ duplicate-row check compares rows at full double precision instead of
+  truncating to six decimals, and the compiled leakage checks validate their
+  index arguments before dereferencing.
+
+## Internal
+
+* Added parameter-recovery and coverage tests for the statistical estimators
+  (`borg_conformal`, `borg_aoa`, `borg_willmott`, `borg_calibration`,
+  `borg_bootstrap`, `borg_debias`).
+* Consolidated the two metric dispatchers into a single implementation and the
+  train-scope leak check into a shared helper; removed dead code.
+* `plot()` and `autoplot()` for `borg_result` now offer the same set of plot
+  types (`split`, `risk`, `spatial`, `temporal`, `groups`).
+
 # BORG 0.3.1
 
 ## Nearest-neighbour distance matching (NNDM)

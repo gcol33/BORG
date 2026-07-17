@@ -138,10 +138,13 @@ borg_conformal <- function(model, data, new = NULL, target,
   # Step 2: Compute conformal quantile
   # ------------------------------------------------------------------
   # Finite-sample correction: ceil((n_cal + 1) * (1 - alpha)) / n_cal
+  # Finite-sample conformal quantile: the k-th order statistic, k =
+  # ceil((n_cal + 1)(1 - alpha)). Use type = 1 (no interpolation) so q_hat is
+  # exactly that order statistic rather than an interpolated value.
   n_cal <- length(scores)
   q_level <- ceiling((n_cal + 1) * (1 - alpha)) / n_cal
   q_level <- min(q_level, 1)
-  q_hat <- stats::quantile(scores, probs = q_level, names = FALSE)
+  q_hat <- stats::quantile(scores, probs = q_level, names = FALSE, type = 1)
 
   # ------------------------------------------------------------------
   # Step 3: Generate prediction intervals
@@ -283,7 +286,24 @@ borg_conformal <- function(model, data, new = NULL, target,
     cal_idx <- sample(n, n %/% 2)
   }
 
-  preds <- stats::predict(model, newdata = data[cal_idx, , drop = FALSE])
+  # Refit on the complement of the calibration set so the calibration
+  # residuals are genuinely out-of-sample. Split conformal's finite-sample
+  # coverage guarantee requires the calibration set to be disjoint from the
+  # data the scoring model was fit on; using the caller's model (fit on all
+  # of `data`) would yield in-sample residuals and coverage below nominal.
+  train_idx <- setdiff(seq_len(n), cal_idx)
+  fit <- tryCatch(
+    stats::update(model, data = data[train_idx, , drop = FALSE]),
+    error = function(e) NULL
+  )
+  if (is.null(fit)) {
+    warning("Could not refit the model on the calibration split; ",
+            "nonconformity scores fall back to the supplied model and may ",
+            "understate interval width. Pass a model that supports update().")
+    fit <- model
+  }
+
+  preds <- stats::predict(fit, newdata = data[cal_idx, , drop = FALSE])
   if (type == "regression") {
     scores <- abs(actual[cal_idx] - preds)
   } else {

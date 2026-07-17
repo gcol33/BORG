@@ -27,13 +27,16 @@ Typically from \code{\link{borg_importance}()}.}
 \value{
 A numeric vector of DI values (one per row of \code{new}, or
 per training row if \code{new} is NULL). Has class
-\code{"borg_di"} and attribute \code{"threshold"} (mean + sd of
-training DI, used as default AOA cutoff).
+\code{"borg_di"} and attribute \code{"threshold"} (the outlier-adjusted
+maximum of the training DI under the boxplot rule Q75 + 1.5 * IQR, used
+as the default AOA cutoff).
 }
 \description{
-Computes the weighted Euclidean distance in feature space from each
-point to its nearest training observation. Points with high DI are
-dissimilar to the training data and predictions may be unreliable.
+Computes the dissimilarity index of Meyer & Pebesma (2021): the weighted
+Euclidean distance in feature space from each point to its nearest training
+observation, divided by the mean of all pairwise distances among training
+points. Points with high DI are dissimilar to the training data and
+predictions may be unreliable.
 }
 \examples{
 set.seed(42)

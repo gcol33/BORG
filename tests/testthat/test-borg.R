@@ -389,7 +389,11 @@ test_that("borg() diagnosis mode returns borg_result for temporal data", {
 
   expect_s3_class(result, "borg_result")
   expect_s4_class(result$diagnosis, "BorgDiagnosis")
-  expect_length(result$folds, 5)
+  # Temporal blocking trains strictly on the past, so the first block (no prior
+  # data) is dropped: v test blocks yield v - 1 usable folds, all with
+  # non-empty training.
+  expect_length(result$folds, 4)
+  expect_true(all(vapply(result$folds, function(f) length(f$train) > 0, logical(1))))
 })
 
 test_that("borg() diagnosis mode respects v parameter", {

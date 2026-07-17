@@ -4,7 +4,13 @@
 \alias{borg_check_residuals}
 \title{Check Residual Spatial Autocorrelation}
 \usage{
-borg_check_residuals(model, data = NULL, coords = NULL, alpha = 0.05)
+borg_check_residuals(
+  model,
+  data = NULL,
+  coords = NULL,
+  alpha = 0.05,
+  crs = NULL
+)
 }
 \arguments{
 \item{model}{A fitted model with a \code{residuals()} method, or a
@@ -16,6 +22,10 @@ is a numeric vector).}
 \item{coords}{Character vector of length 2. Coordinate column names.}
 
 \item{alpha}{Numeric. Significance level for Moran's I test. Default: 0.05.}
+
+\item{crs}{Optional coordinate reference system (an \code{sf} CRS, EPSG
+code, or PROJ string). When geographic (lon/lat), distances use the
+Haversine formula; otherwise planar Euclidean.}
 }
 \value{
 A list with class \code{"borg_residual_check"} containing:

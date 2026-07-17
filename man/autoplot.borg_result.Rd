@@ -6,7 +6,7 @@
 \usage{
 \method{autoplot}{borg_result}(
   object,
-  type = c("split", "spatial", "temporal", "groups"),
+  type = c("split", "risk", "spatial", "temporal", "groups"),
   fold = 1,
   data = NULL,
   coords = NULL,
@@ -19,8 +19,8 @@
 \arguments{
 \item{object}{A \code{borg_result} object from \code{borg()}.}
 
-\item{type}{Character. Plot type: \code{"split"} (default), \code{"spatial"},
-\code{"temporal"}, or \code{"groups"}.}
+\item{type}{Character. Plot type: \code{"split"} (default), \code{"risk"},
+\code{"spatial"}, \code{"temporal"}, or \code{"groups"}.}
 
 \item{fold}{Integer. Which fold to plot. Default: 1.}
 

@@ -256,11 +256,18 @@ borg_compare_cv <- function(data,
   random_sd <- sd(random_df$metric_value)
   blocked_sd <- sd(blocked_df$metric_value)
 
-  # Paired t-test
-  t_test <- stats::t.test(
-    random_df$metric_value,
-    blocked_df$metric_value,
-    paired = TRUE
+  # Paired t-test. When the paired differences have no variance (e.g. a
+  # signal-free target where both schemes score identically), t.test() errors;
+  # treat that as "no detectable difference" rather than failing.
+  t_test <- tryCatch(
+    stats::t.test(
+      random_df$metric_value,
+      blocked_df$metric_value,
+      paired = TRUE
+    ),
+    error = function(e) list(p.value = NA_real_,
+                             statistic = NA_real_,
+                             conf.int = c(NA_real_, NA_real_))
   )
 
   # Compute inflation
@@ -322,25 +329,6 @@ borg_compare_cv <- function(data,
 
 
 # ===========================================================================
-# Internal: Generate random CV folds
-# ===========================================================================
-
-generate_random_folds <- function(data, v = 5) {
-  n <- nrow(data)
-  fold_ids <- sample(rep(seq_len(v), length.out = n))
-
-  folds <- lapply(seq_len(v), function(fold) {
-    list(
-      train = which(fold_ids != fold),
-      test = which(fold_ids == fold)
-    )
-  })
-
-  folds
-}
-
-
-# ===========================================================================
 # Internal: Evaluate CV folds
 # ===========================================================================
 
@@ -387,38 +375,16 @@ evaluate_cv_folds <- function(data, formula, folds, model_fn, predict_fn,
 # Internal: Compute evaluation metrics
 # ===========================================================================
 
+# Single metric dispatcher for the package. Numeric metrics are computed by
+# .classify_metric (the canonical implementation); the only case handled here
+# is accuracy on non-numeric class predictions, and an unknown metric returns
+# NA rather than erroring.
 .compute_metric <- function(actual, predicted, metric) {
-  switch(metric,
-    rmse = sqrt(mean((actual - predicted)^2, na.rm = TRUE)),
-    mae = mean(abs(actual - predicted), na.rm = TRUE),
-    rsq = {
-      ss_res <- sum((actual - predicted)^2, na.rm = TRUE)
-      ss_tot <- sum((actual - mean(actual, na.rm = TRUE))^2, na.rm = TRUE)
-      1 - ss_res / ss_tot
-    },
-    accuracy = {
-      if (is.numeric(predicted)) {
-        # Binary classification with numeric predictions
-        pred_class <- ifelse(predicted > 0.5, 1, 0)
-        mean(pred_class == actual, na.rm = TRUE)
-      } else {
-        mean(predicted == actual, na.rm = TRUE)
-      }
-    },
-    auc = {
-      # Simple AUC calculation for binary classification
-      if (!requireNamespace("stats", quietly = TRUE)) {
-        return(NA_real_)
-      }
-      # Wilcoxon-Mann-Whitney AUC
-      if (length(unique(actual)) != 2) return(NA_real_)
-      pos <- predicted[actual == max(actual)]
-      neg <- predicted[actual == min(actual)]
-      if (length(pos) == 0 || length(neg) == 0) return(NA_real_)
-      mean(outer(pos, neg, ">")) + 0.5 * mean(outer(pos, neg, "=="))
-    },
-    NA_real_
-  )
+  if (metric == "accuracy" && !is.numeric(predicted)) {
+    return(mean(predicted == actual, na.rm = TRUE))
+  }
+  tryCatch(.classify_metric(actual, predicted, metric),
+           error = function(e) NA_real_)
 }
 
 

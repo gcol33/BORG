@@ -71,10 +71,12 @@ borg_repeated_cv <- function(data,
     stop(sprintf("seeds must have length %d (= repeats), got %d", repeats, length(seeds)))
   }
 
-  # Run first iteration to get diagnosis
+  # Run first iteration to get diagnosis. The per-repeat seed is passed
+  # through to borg_cv so it reaches the fold generators; otherwise each
+  # borg_cv call would re-seed internally and every repeat would be identical.
   dots <- list(...)
-  set.seed(seeds[1])
-  cv1 <- do.call(borg_cv, c(list(data = data, v = v), dots))
+  dots$seed <- NULL
+  cv1 <- do.call(borg_cv, c(list(data = data, v = v, seed = seeds[1]), dots))
   diagnosis <- cv1$diagnosis
   strategy <- cv1$strategy
 
@@ -83,8 +85,8 @@ borg_repeated_cv <- function(data,
   all_folds[[1]] <- cv1$folds
 
   for (r in 2:repeats) {
-    set.seed(seeds[r])
-    cv_r <- do.call(borg_cv, c(list(data = data, v = v, diagnosis = diagnosis), dots))
+    cv_r <- do.call(borg_cv, c(list(data = data, v = v, diagnosis = diagnosis,
+                                    seed = seeds[r]), dots))
     all_folds[[r]] <- cv_r$folds
   }
 

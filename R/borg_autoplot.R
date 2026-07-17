@@ -141,9 +141,7 @@ autoplot.BorgRisk <- function(object, max_risks = 10, show_fixes = TRUE, ...) {
 
   label_col <- if (show_fixes) "fix" else "description"
 
-  # Y-axis = n_affected (meaningful), with log scale if range is large
   max_affected <- max(df$n_affected, na.rm = TRUE)
-  y_vals <- pmax(df$n_affected, 1)  # floor at 1 for log safety
 
   sev_colors <- c(hard_violation = "#C0392B", soft_inflation = "#F39C12")
   sev_fills <- c(hard_violation = "#FADBD8", soft_inflation = "#FEF9E7")
@@ -201,8 +199,8 @@ autoplot.BorgRisk <- function(object, max_risks = 10, show_fixes = TRUE, ...) {
 #' Creates ggplot2 visualizations of BORG diagnosis + CV results.
 #'
 #' @param object A \code{borg_result} object from \code{borg()}.
-#' @param type Character. Plot type: \code{"split"} (default), \code{"spatial"},
-#'   \code{"temporal"}, or \code{"groups"}.
+#' @param type Character. Plot type: \code{"split"} (default), \code{"risk"},
+#'   \code{"spatial"}, \code{"temporal"}, or \code{"groups"}.
 #' @param fold Integer. Which fold to plot. Default: 1.
 #' @param data Optional data frame (or sf/SpatVector) for spatial plots.
 #'   Required for \code{type = "spatial"} to obtain coordinates.
@@ -235,7 +233,7 @@ autoplot.BorgRisk <- function(object, max_risks = 10, show_fixes = TRUE, ...) {
 #'
 #' @exportS3Method ggplot2::autoplot
 autoplot.borg_result <- function(object,
-                                  type = c("split", "spatial", "temporal", "groups"),
+                                  type = c("split", "risk", "spatial", "temporal", "groups"),
                                   fold = 1,
                                   data = NULL,
                                   coords = NULL,
@@ -245,6 +243,14 @@ autoplot.borg_result <- function(object,
                                   ...) {
   check_ggplot2()
   type <- match.arg(type)
+
+  # Risk plot - show the inspection results if available
+  if (type == "risk") {
+    if (!is.null(object$risk) && inherits(object$risk, "BorgRisk")) {
+      return(ggplot2::autoplot(object$risk, ...))
+    }
+    stop("No risk assessment available in this borg_result. Use borg_inspect() to create one.")
+  }
 
   if (is.null(object$folds) || length(object$folds) == 0) {
     stop("No folds available in borg_result object")
