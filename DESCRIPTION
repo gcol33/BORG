@@ -50,6 +50,7 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
+    scales,
     svglite
 VignetteBuilder: knitr
 URL: https://github.com/gcol33/BORG, https://gillescolling.com/BORG/

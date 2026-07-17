@@ -1,0 +1,61 @@
+"seed","estimate","rmse"
+1,"independent-test (truth)",0.726543702263178
+2,"independent-test (truth)",0.551936046928834
+3,"independent-test (truth)",0.651750213183423
+4,"independent-test (truth)",0.833045702430739
+5,"independent-test (truth)",0.610717879441321
+6,"independent-test (truth)",0.835733992633214
+7,"independent-test (truth)",0.650443947074923
+8,"independent-test (truth)",0.670089937153845
+9,"independent-test (truth)",1.03292364840045
+10,"independent-test (truth)",0.695863011653372
+11,"independent-test (truth)",0.661473850146207
+12,"independent-test (truth)",0.748961929229603
+13,"independent-test (truth)",0.638281976863824
+14,"independent-test (truth)",0.66751876061897
+15,"independent-test (truth)",0.762906835310009
+16,"independent-test (truth)",0.593073766251983
+17,"independent-test (truth)",0.700021958575415
+18,"independent-test (truth)",0.617051848465886
+19,"independent-test (truth)",0.721590567649646
+20,"independent-test (truth)",0.795307713467726
+1,"random 5-fold CV",0.39198055735176
+2,"random 5-fold CV",0.445921564036899
+3,"random 5-fold CV",0.375525956983655
+4,"random 5-fold CV",0.395360675062466
+5,"random 5-fold CV",0.437913426687103
+6,"random 5-fold CV",0.385911628035361
+7,"random 5-fold CV",0.361004727637642
+8,"random 5-fold CV",0.377261578532892
+9,"random 5-fold CV",0.399209487941041
+10,"random 5-fold CV",0.416022252130379
+11,"random 5-fold CV",0.353390085592209
+12,"random 5-fold CV",0.431035635032916
+13,"random 5-fold CV",0.353020880197783
+14,"random 5-fold CV",0.394971477413619
+15,"random 5-fold CV",0.380126035936748
+16,"random 5-fold CV",0.462599265097769
+17,"random 5-fold CV",0.415227197490125
+18,"random 5-fold CV",0.359480226782748
+19,"random 5-fold CV",0.409366187677833
+20,"random 5-fold CV",0.362792968794488
+1,"BORG spatial-block CV",0.584878906534087
+2,"BORG spatial-block CV",0.655549352050375
+3,"BORG spatial-block CV",0.664827108495693
+4,"BORG spatial-block CV",0.541139624289046
+5,"BORG spatial-block CV",0.653716316294214
+6,"BORG spatial-block CV",0.567373010210499
+7,"BORG spatial-block CV",0.780896359184174
+8,"BORG spatial-block CV",0.526194200954433
+9,"BORG spatial-block CV",0.576456382012042
+10,"BORG spatial-block CV",0.63542496658241
+11,"BORG spatial-block CV",0.500561350669236
+12,"BORG spatial-block CV",0.670962905184948
+13,"BORG spatial-block CV",0.569138185699479
+14,"BORG spatial-block CV",0.77198554199011
+15,"BORG spatial-block CV",0.563873784658569
+16,"BORG spatial-block CV",0.720376795170244
+17,"BORG spatial-block CV",0.626066447646108
+18,"BORG spatial-block CV",0.607299249578014
+19,"BORG spatial-block CV",0.583549249324318
+20,"BORG spatial-block CV",0.513829959016844

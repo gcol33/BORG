@@ -21,3 +21,4 @@
 ^debug_.*\.R$
 ^test_.*\.R$
 ^Rplots\.pdf$
+^paper$
