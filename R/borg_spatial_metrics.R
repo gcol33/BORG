@@ -32,20 +32,26 @@ borg_fold_similarity <- function(data, folds, predictors = NULL) {
     train_data <- data[fold$train, predictors, drop = FALSE]
     test_data <- data[fold$test, predictors, drop = FALSE]
 
-    # MESS: for each predictor, compute similarity as % of training range
+    # MESS (Elith et al. 2010): per-variable similarity, with extrapolation
+    # beyond the training range scored negative rather than clamped at 0.
     mess_vals <- vapply(predictors, function(var) {
       train_vals <- train_data[[var]]
       test_vals <- test_data[[var]]
       tr_min <- min(train_vals, na.rm = TRUE)
       tr_max <- max(train_vals, na.rm = TRUE)
       tr_range <- tr_max - tr_min
-      if (tr_range == 0) return(100)
+      if (tr_range == 0) return(rep(100, length(test_vals)))
 
-      # MESS formula: minimum similarity across variables
-      f <- stats::ecdf(train_vals)
-      fi <- f(test_vals) * 100
+      n_train <- length(train_vals)
+      f <- vapply(test_vals, function(p) {
+        100 * sum(train_vals <= p, na.rm = TRUE) / n_train
+      }, numeric(1))
 
-      pmin(fi, 100 - fi)  # similarity percentage
+      ifelse(
+        f == 0, 100 * (test_vals - tr_min) / tr_range,
+        ifelse(f == 100, 100 * (tr_max - test_vals) / tr_range,
+        ifelse(f <= 50, 2 * f, 2 * (100 - f)))
+      )
     }, numeric(length(fold$test)))
 
     if (is.matrix(mess_vals)) {

@@ -103,3 +103,26 @@ test_that("borg_power validates inputs", {
     "'diagnosis' must be a BorgDiagnosis object"
   )
 })
+
+
+# --- power_random matches the analytic two-sample t-test power -------------
+# This is a parameter-recovery check, not an ordering check: borg_power's
+# power_random (a normal-approximation two-sample z-test) should track the
+# exact analytic power from stats::power.t.test (noncentral t) once the
+# per-group sample size is large enough for the two to converge.
+test_that("borg_power's power_random matches stats::power.t.test analytically", {
+  alpha <- 0.05
+  n <- 200  # 100 per group
+
+  for (effect_size in c(0.3, 0.5, 0.8)) {
+    data <- data.frame(x = rnorm(n), y = rnorm(n))
+    result <- borg_power(data, target = "y", effect_size = effect_size,
+                          alpha = alpha)
+
+    analytic <- stats::power.t.test(n = n / 2, delta = effect_size, sd = 1,
+                                     sig.level = alpha, power = NULL,
+                                     type = "two.sample")$power
+
+    expect_equal(result$power_random, analytic, tolerance = 0.01)
+  }
+})
