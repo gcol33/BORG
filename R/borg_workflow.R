@@ -72,28 +72,24 @@ borg_workflow <- function(data, formula,
   # Stage 3: Fit models per fold
   if (verbose) message("Stage 3/4: Fitting models...")
   folds <- cv$folds
-  models <- vector("list", length(folds))
-  predictions <- vector("list", length(folds))
 
-  for (i in seq_along(folds)) {
-    train_data <- data[folds[[i]]$train, , drop = FALSE]
-    test_data <- data[folds[[i]]$test, , drop = FALSE]
-
-    models[[i]] <- tryCatch(
-      fit_fun(formula, data = train_data),
-      error = function(e) {
-        warning(sprintf("Fold %d: model fitting failed: %s", i, e$message))
-        NULL
-      }
-    )
-
-    if (!is.null(models[[i]])) {
-      predictions[[i]] <- tryCatch(
-        stats::predict(models[[i]], newdata = test_data),
-        error = function(e) rep(NA_real_, nrow(test_data))
-      )
-    }
+  map_fn <- if (parallel && requireNamespace("future.apply", quietly = TRUE)) {
+    future.apply::future_lapply
+  } else {
+    if (parallel) message("Install 'future.apply' for parallel execution; using sequential")
+    lapply
   }
+
+  fold_results <- map_fn(seq_along(folds), function(i) {
+    eval_fold(
+      data, folds[[i]], formula = formula, fit_fun = fit_fun,
+      metric = metric, target = target,
+      warn_on_fit_error = TRUE, fold_label = sprintf("Fold %d", i)
+    )
+  })
+
+  models <- lapply(fold_results, `[[`, "model")
+  predictions <- lapply(fold_results, `[[`, "preds")
 
   # Stage 4: Validate each fold
   if (verbose) message("Stage 4/4: Validating splits...")
@@ -105,11 +101,9 @@ borg_workflow <- function(data, formula,
     )
   })
 
-  # Compute performance
-  performance <- borg_fold_performance(
-    data, cv, formula, coords = coords, metric = metric,
-    fit_fun = fit_fun, parallel = parallel
-  )
+  # Compute performance from the fold fits above; avoids fitting every fold
+  # a second time through borg_fold_performance().
+  performance <- .build_fold_perf(fold_results, data, folds, metric, coords = coords)
 
   result <- list(
     diagnosis = diagnosis,

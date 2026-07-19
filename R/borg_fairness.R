@@ -125,8 +125,8 @@ borg_fairness <- function(data, model, target,
   results <- lapply(unique_groups, function(g) {
     mask <- group_ids == g
     n_g <- sum(mask)
-    met_rand <- .compute_metric(actual[mask], preds_random[mask], metric)
-    met_block <- .compute_metric(actual[mask], preds_blocked[mask], metric)
+    met_rand <- .classify_metric(actual[mask], preds_random[mask], metric)
+    met_block <- .classify_metric(actual[mask], preds_blocked[mask], metric)
 
     data.frame(
       group = g,
@@ -146,8 +146,8 @@ borg_fairness <- function(data, model, target,
   )
 
   # Overall metrics
-  overall_random <- .compute_metric(actual, preds_random, metric)
-  overall_blocked <- .compute_metric(actual, preds_blocked, metric)
+  overall_random <- .classify_metric(actual, preds_random, metric)
+  overall_blocked <- .classify_metric(actual, preds_blocked, metric)
 
   # For error metrics (rmse, mae): higher blocked = worse = hidden by leakage
 

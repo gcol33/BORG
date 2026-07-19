@@ -174,22 +174,19 @@ borg_pipeline <- function(pipeline, train_idx, test_idx, data = NULL, ...) {
   }
 
   # Stage 4: Model training scope
-  model_risks <- list()
-  if (!is.null(pipeline$trainingData)) {
-    n_used <- nrow(pipeline$trainingData)
-    n_expected <- length(train_idx)
-    if (n_used > n_expected * 1.05) {
-      model_risks <- c(model_risks, list(.new_risk(
-        type = "data_scope",
-        severity = "hard_violation",
-        description = sprintf(
-          "Model trained on %d rows but training set has %d. Non-training data included.",
-          n_used, n_expected
-        ),
-        affected_indices = test_idx,
-        source_object = "train$trainingData"
-      )))
-    }
+  model_risks <- if (!is.null(pipeline$trainingData)) {
+    .check_train_scope(
+      nrow(pipeline$trainingData), train_idx, test_idx, "train$trainingData",
+      type = "data_scope",
+      tolerance = 0.05,  # rounding
+      check_under = FALSE,
+      describe_over = function(label, n, expected) sprintf(
+        "Model trained on %d rows but training set has %d. Non-training data included.",
+        n, expected
+      )
+    )
+  } else {
+    list()
   }
   if (length(model_risks) > 0) {
     stages$model <- .make_borg_risk(model_risks, train_idx, test_idx,

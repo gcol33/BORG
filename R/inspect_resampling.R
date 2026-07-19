@@ -23,22 +23,20 @@
 
   # Check indexOut (holdout indices) - less critical but worth flagging
   if (!is.null(object$indexOut)) {
-    for (i in seq_along(object$indexOut)) {
-      fold_out <- object$indexOut[[i]]
-      leaked_test <- intersect(fold_out, test_idx)
-      if (length(leaked_test) > 0 && length(leaked_test) < length(test_idx)) {
-        risks <- c(risks, list(.new_risk(
-          type = "cv_leak",
-          severity = "soft_inflation",
-          description = sprintf(
-            "CV fold %d holdout contains %d test indices (partial overlap).",
-            i, length(leaked_test)
-          ),
-          affected_indices = leaked_test,
-          source_object = sprintf("trainControl$indexOut[[%d]]", i)
-        )))
-      }
-    }
+    indexout_leaks <- .check_cv_leak(
+      object$indexOut, test_idx,
+      source_prefix = "trainControl$indexOut",
+      severity = "soft_inflation",
+      describe = function(prefix, i, n) sprintf(
+        "CV fold %d holdout contains %d test indices (partial overlap).", i, n
+      )
+    )
+    # A holdout that IS the full test set is the fold working as intended,
+    # not a leak -- only flag partial overlap.
+    indexout_leaks <- Filter(
+      function(r) length(r$affected_indices) < length(test_idx), indexout_leaks
+    )
+    risks <- c(risks, indexout_leaks)
   }
 
   risks
@@ -65,19 +63,14 @@
   }
 
   if (!is.null(analysis_idx)) {
-    leaked_test <- intersect(analysis_idx, test_idx)
-    if (length(leaked_test) > 0) {
-      risks <- c(risks, list(.new_risk(
-        type = "cv_leak",
-        severity = "hard_violation",
-        description = sprintf(
-          "rsplit analysis set contains %d test indices. Test data is being used in model training.",
-          length(leaked_test)
-        ),
-        affected_indices = leaked_test,
-        source_object = "rsplit$in_id"
-      )))
-    }
+    risks <- c(risks, .check_cv_leak(
+      list(analysis_idx), test_idx,
+      source_prefix = "rsplit$in_id",
+      describe = function(prefix, i, n) sprintf(
+        "rsplit analysis set contains %d test indices. Test data is being used in model training.", n
+      ),
+      source_object = function(prefix, i) prefix
+    ))
   }
 
   # Check assessment indices
@@ -88,19 +81,16 @@
 
   if (!is.null(assessment_idx)) {
     # Check if train indices appear in assessment set (information flow issue)
-    train_in_assessment <- intersect(assessment_idx, train_idx)
-    if (length(train_in_assessment) > 0) {
-      risks <- c(risks, list(.new_risk(
-        type = "split_misalignment",
-        severity = "soft_inflation",
-        description = sprintf(
-          "rsplit assessment set contains %d expected training indices. Split boundaries may be misaligned.",
-          length(train_in_assessment)
-        ),
-        affected_indices = train_in_assessment,
-        source_object = "rsplit$out_id"
-      )))
-    }
+    risks <- c(risks, .check_cv_leak(
+      list(assessment_idx), train_idx,
+      source_prefix = "rsplit$out_id",
+      severity = "soft_inflation",
+      type = "split_misalignment",
+      describe = function(prefix, i, n) sprintf(
+        "rsplit assessment set contains %d expected training indices. Split boundaries may be misaligned.", n
+      ),
+      source_object = function(prefix, i) prefix
+    ))
   }
 
   risks
@@ -144,19 +134,15 @@
   }
 
   if (!is.null(n_total) && length(n_total) == 1) {
-    expected_n <- length(train_idx)
-    if (n_total > expected_n) {
-      risks <- c(risks, list(.new_risk(
-        type = "cv_scope",
-        severity = "hard_violation",
-        description = sprintf(
-          "vfold_cv was created on %d observations, but training set has only %d. CV includes non-training data.",
-          n_total, expected_n
-        ),
-        affected_indices = test_idx,
-        source_object = "vfold_cv"
-      )))
-    }
+    risks <- c(risks, .check_train_scope(
+      n_total, train_idx, test_idx, "vfold_cv",
+      type = "cv_scope",
+      check_under = FALSE,
+      describe_over = function(label, n, expected) sprintf(
+        "vfold_cv was created on %d observations, but training set has only %d. CV includes non-training data.",
+        n, expected
+      )
+    ))
   }
 
   risks
@@ -189,33 +175,20 @@
 
   # Check 2: Verify training data row count
   if (!is.null(object$trainingData)) {
-    n_train_used <- nrow(object$trainingData)
-    n_expected <- length(train_idx)
-
-    if (n_train_used != n_expected) {
-      if (n_train_used > n_expected) {
-        risks <- c(risks, list(.new_risk(
-          type = "data_scope",
-          severity = "hard_violation",
-          description = sprintf(
-            "Model was trained on %d rows, but expected training set has %d. Non-training data may be included.",
-            n_train_used, n_expected
-          ),
-          affected_indices = test_idx,
-          source_object = "train$trainingData"
-        )))
-      } else {
-        risks <- c(risks, list(.new_risk(
-          type = "data_scope",
-          severity = "soft_inflation",
-          description = sprintf(
-            "Model was trained on %d rows, but expected %d. Some training data may have been excluded.",
-            n_train_used, n_expected
-          ),
-          source_object = "train$trainingData"
-        )))
-      }
-    }
+    risks <- c(risks, .check_train_scope(
+      nrow(object$trainingData), train_idx, test_idx, "train$trainingData",
+      type = "data_scope",
+      severity_under = "soft_inflation",
+      affected_indices_under = integer(0),
+      describe_over = function(label, n, expected) sprintf(
+        "Model was trained on %d rows, but expected training set has %d. Non-training data may be included.",
+        n, expected
+      ),
+      describe_under = function(label, n, expected) sprintf(
+        "Model was trained on %d rows, but expected %d. Some training data may have been excluded.",
+        n, expected
+      )
+    ))
   }
 
   risks

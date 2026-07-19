@@ -48,27 +48,13 @@ borg_compare_models <- function(data, folds,
     m <- models[[nm]]
 
     fold_vals <- vapply(fold_list, function(fold) {
-      train_data <- data[fold$train, , drop = FALSE]
-      test_data <- data[fold$test, , drop = FALSE]
-
-      if (inherits(m, "formula")) {
-        fitted <- tryCatch(fit_fun(m, data = train_data), error = function(e) NULL)
-        if (is.null(fitted)) return(NA_real_)
-        preds <- tryCatch(stats::predict(fitted, newdata = test_data),
-                           error = function(e) rep(NA_real_, nrow(test_data)))
-        target_var <- all.vars(m)[1]
+      res <- if (inherits(m, "formula")) {
+        eval_fold(data, fold, formula = m, fit_fun = fit_fun, metric = metric)
       } else {
-        # Pre-fitted model — predict directly
-        preds <- tryCatch(stats::predict(m, newdata = test_data),
-                           error = function(e) rep(NA_real_, nrow(test_data)))
-        # Infer target from model
-        target_var <- tryCatch(all.vars(stats::formula(m))[1],
-                                error = function(e) NULL)
-        if (is.null(target_var)) return(NA_real_)
+        # Pre-fitted model — predict directly, target inferred from formula(m)
+        eval_fold(data, fold, model = m, metric = metric)
       }
-
-      actual <- test_data[[target_var]]
-      .classify_metric(actual, preds, metric)
+      res$value
     }, numeric(1))
 
     data.frame(

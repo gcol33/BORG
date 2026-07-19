@@ -602,9 +602,6 @@ borg_register_hooks <- function(frameworks = c("rsample", "caret", "mlr3"),
   # The safer approach is to use borg_vfold_cv() etc. directly
 
   if ("rsample" %in% frameworks && requireNamespace("rsample", quietly = TRUE)) {
-    # Store original function
-    .borg_env$original_vfold_cv <- rsample::vfold_cv
-
     # Create hook function
     hook_fn <- function() {
       # Check if BORG checking is enabled and data is set

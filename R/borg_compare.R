@@ -336,31 +336,10 @@ evaluate_cv_folds <- function(data, formula, folds, model_fn, predict_fn,
                               metric, target) {
 
   fold_metrics <- vapply(folds, function(fold) {
-    train_data <- data[fold$train, , drop = FALSE]
-    test_data <- data[fold$test, , drop = FALSE]
-
-    # Fit model
-    model <- tryCatch(
-      model_fn(formula, train_data),
-      error = function(e) NULL
-    )
-
-    if (is.null(model)) return(NA_real_)
-
-    # Predict
-    preds <- tryCatch(
-      predict_fn(model, test_data),
-      error = function(e) NULL
-    )
-
-    if (is.null(preds)) return(NA_real_)
-
-    # Get actual values
-    actual <- test_data[[target]]
-
-    # Compute metric
-    .compute_metric(actual, preds, metric)
-
+    eval_fold(
+      data = data, fold = fold, formula = formula, fit_fun = model_fn,
+      predict_fn = predict_fn, metric = metric, target = target
+    )$value
   }, numeric(1))
 
   list(
@@ -368,23 +347,6 @@ evaluate_cv_folds <- function(data, formula, folds, model_fn, predict_fn,
     sd = sd(fold_metrics, na.rm = TRUE),
     values = fold_metrics
   )
-}
-
-
-# ===========================================================================
-# Internal: Compute evaluation metrics
-# ===========================================================================
-
-# Single metric dispatcher for the package. Numeric metrics are computed by
-# .classify_metric (the canonical implementation); the only case handled here
-# is accuracy on non-numeric class predictions, and an unknown metric returns
-# NA rather than erroring.
-.compute_metric <- function(actual, predicted, metric) {
-  if (metric == "accuracy" && !is.numeric(predicted)) {
-    return(mean(predicted == actual, na.rm = TRUE))
-  }
-  tryCatch(.classify_metric(actual, predicted, metric),
-           error = function(e) NA_real_)
 }
 
 

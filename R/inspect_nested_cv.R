@@ -17,25 +17,16 @@
   if (is.null(ctrl) || is.null(ctrl$index)) return(risks)
 
   # Check every inner fold's training indices against outer test
-  n_leaking_folds <- 0L
-  total_leaked <- integer(0)
+  fold_leaks <- .check_cv_leak(ctrl$index, test_idx, source_prefix = "train$control$index")
 
-  for (i in seq_along(ctrl$index)) {
-    inner_train <- ctrl$index[[i]]
-    leaked <- intersect(inner_train, test_idx)
-    if (length(leaked) > 0) {
-      n_leaking_folds <- n_leaking_folds + 1L
-      total_leaked <- union(total_leaked, leaked)
-    }
-  }
-
-  if (n_leaking_folds > 0) {
+  if (length(fold_leaks) > 0) {
+    total_leaked <- unique(unlist(lapply(fold_leaks, function(r) r$affected_indices)))
     risks <- c(risks, list(.new_risk(
       type = "nested_cv_leak",
       severity = "hard_violation",
       description = sprintf(
         "Hyperparameter tuning uses outer test data: %d of %d inner CV folds contain %d test indices. Tune on train-only data.",
-        n_leaking_folds, length(ctrl$index), length(total_leaked)
+        length(fold_leaks), length(ctrl$index), length(total_leaked)
       ),
       affected_indices = total_leaked,
       source_object = "train$control$index"
@@ -44,20 +35,16 @@
 
   # Also check: was the full caret::train() called on data including test?
   if (!is.null(object$trainingData)) {
-    n_used <- nrow(object$trainingData)
-    n_train <- length(train_idx)
-    if (n_used > n_train * 1.05) {  # 5% tolerance for rounding
-      risks <- c(risks, list(.new_risk(
-        type = "nested_cv_leak",
-        severity = "hard_violation",
-        description = sprintf(
-          "caret::train() was called on %d rows but outer training set has %d rows. Tuning used non-training data.",
-          n_used, n_train
-        ),
-        affected_indices = test_idx,
-        source_object = "train$trainingData"
-      )))
-    }
+    risks <- c(risks, .check_train_scope(
+      nrow(object$trainingData), train_idx, test_idx, "train$trainingData",
+      type = "nested_cv_leak",
+      tolerance = 0.05,  # rounding
+      check_under = FALSE,
+      describe_over = function(label, n, expected) sprintf(
+        "caret::train() was called on %d rows but outer training set has %d rows. Tuning used non-training data.",
+        n, expected
+      )
+    ))
   }
 
   risks
@@ -95,48 +82,33 @@
     # Try to get n from the underlying data
     # If we can determine the tuning was done on more data than train, flag it
     if (!is.null(data)) {
-      n_data <- nrow(data)
-      n_train <- length(train_idx)
-      if (n_data > n_train * 1.05) {
-        risks <- c(risks, list(.new_risk(
-          type = "nested_cv_leak",
-          severity = "soft_inflation",
-          description = sprintf(
-            "Tuning results may use data beyond training set (%d total rows vs %d training). Verify resampling was done on train-only data.",
-            n_data, n_train
-          ),
-          affected_indices = test_idx,
-          source_object = "tune_results"
-        )))
-      }
+      risks <- c(risks, .check_train_scope(
+        nrow(data), train_idx, test_idx, "tune_results",
+        type = "nested_cv_leak",
+        severity_over = "soft_inflation",
+        tolerance = 0.05,  # rounding
+        check_under = FALSE,
+        describe_over = function(label, n, expected) sprintf(
+          "Tuning results may use data beyond training set (%d total rows vs %d training). Verify resampling was done on train-only data.",
+          n, expected
+        )
+      ))
     }
     return(risks)
   }
 
   # Check each tuning split for outer test data leakage
-  n_leaking <- 0L
-  total_leaked <- integer(0)
+  analysis_sets <- lapply(splits, function(split) split$in_id)
+  fold_leaks <- .check_cv_leak(analysis_sets, test_idx, source_prefix = "tune_results$splits")
 
-  for (i in seq_along(splits)) {
-    split <- splits[[i]]
-    # rsample splits have $in_id for analysis indices
-    analysis_idx <- split$in_id
-    if (is.null(analysis_idx)) next
-
-    leaked <- intersect(analysis_idx, test_idx)
-    if (length(leaked) > 0) {
-      n_leaking <- n_leaking + 1L
-      total_leaked <- union(total_leaked, leaked)
-    }
-  }
-
-  if (n_leaking > 0) {
+  if (length(fold_leaks) > 0) {
+    total_leaked <- unique(unlist(lapply(fold_leaks, function(r) r$affected_indices)))
     risks <- c(risks, list(.new_risk(
       type = "nested_cv_leak",
       severity = "hard_violation",
       description = sprintf(
         "Tuning resamples contain outer test data: %d of %d folds leak %d test indices into hyperparameter selection.",
-        n_leaking, length(splits), length(total_leaked)
+        length(fold_leaks), length(splits), length(total_leaked)
       ),
       affected_indices = total_leaked,
       source_object = "tune_results$splits"

@@ -62,7 +62,7 @@ borg_importance <- function(model, data, target, coords = NULL,
 
   # Baseline performance
   baseline_pred <- stats::predict(model, newdata = data)
-  baseline_error <- .compute_metric(actual, baseline_pred, metric)
+  baseline_error <- .classify_metric(actual, baseline_pred, metric)
 
   # Create spatial blocks for permutation
   if (!is.null(coords) && all(coords %in% names(data))) {
@@ -112,7 +112,7 @@ borg_importance <- function(model, data, target, coords = NULL,
       data_perm[[var]] <- new_vals
 
       perm_pred <- stats::predict(model, newdata = data_perm)
-      .compute_metric(actual, perm_pred, metric)
+      .classify_metric(actual, perm_pred, metric)
     }, numeric(1))
 
     data.frame(

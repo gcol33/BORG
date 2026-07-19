@@ -13,34 +13,32 @@
   # Check training set size vs expected
   if (!is.null(object$state$train_task)) {
     n_train_used <- object$state$train_task$nrow
-    n_train_expected <- length(train_idx)
 
-    if (!is.null(n_train_used) && !is.null(n_train_expected)) {
+    if (!is.null(n_train_used)) {
       n_total <- if (!is.null(data)) nrow(data) else max(c(train_idx, test_idx))
 
-      if (n_train_used == n_total && n_train_used != n_train_expected) {
-        risks <- c(risks, list(.new_risk(
-          type = "model_trained_on_full_data",
-          severity = "hard_violation",
-          description = sprintf(
+      risks <- c(risks, .check_train_scope(
+        n_train_used, train_idx, test_idx, object$id,
+        check_under = FALSE,
+        type = function(n, expected) if (n == n_total) {
+          "model_trained_on_full_data"
+        } else {
+          "model_training_size_mismatch"
+        },
+        severity_over = function(n, expected) if (n == n_total) "hard_violation" else "soft_inflation",
+        affected_indices_over = function(n, expected) if (n == n_total) test_idx else integer(0),
+        describe_over = function(label, n, expected) if (n == n_total) {
+          sprintf(
             "mlr3 Learner (%s) trained on %d observations (full dataset). Expected %d (training only).",
-            object$id, n_train_used, n_train_expected
-          ),
-          affected_indices = test_idx,
-          source_object = object$id
-        )))
-      } else if (n_train_used > n_train_expected) {
-        risks <- c(risks, list(.new_risk(
-          type = "model_training_size_mismatch",
-          severity = "soft_inflation",
-          description = sprintf(
+            label, n, expected
+          )
+        } else {
+          sprintf(
             "mlr3 Learner (%s) trained on %d observations. Expected %d (training set size).",
-            object$id, n_train_used, n_train_expected
-          ),
-          affected_indices = integer(0),
-          source_object = object$id
-        )))
-      }
+            label, n, expected
+          )
+        }
+      ))
     }
   }
 
@@ -65,35 +63,27 @@
     if (is.null(fold_train) || is.null(fold_test)) next
 
     # Check for overlap within fold
-    fold_overlap <- intersect(fold_train, fold_test)
-    if (length(fold_overlap) > 0) {
-      risks <- c(risks, list(.new_risk(
-        type = "cv_fold_overlap",
-        severity = "hard_violation",
-        description = sprintf(
-          "mlr3 Resampling fold %d: %d indices appear in both train and test sets.",
-          i, length(fold_overlap)
-        ),
-        affected_indices = as.integer(fold_overlap),
-        source_object = sprintf("%s (fold %d)", object$id, i)
-      )))
-    }
+    risks <- c(risks, .check_cv_leak(
+      list(fold_train), fold_test,
+      source_prefix = sprintf("%s (fold %d)", object$id, i),
+      type = "cv_fold_overlap",
+      describe = function(prefix, j, n) sprintf(
+        "mlr3 Resampling fold %d: %d indices appear in both train and test sets.", i, n
+      ),
+      source_object = function(prefix, j) prefix
+    ))
 
     # Check if held-out test indices leak into CV training
     if (!is.null(test_idx)) {
-      leaked_test <- intersect(fold_train, test_idx)
-      if (length(leaked_test) > 0) {
-        risks <- c(risks, list(.new_risk(
-          type = "test_in_cv_train",
-          severity = "hard_violation",
-          description = sprintf(
-            "mlr3 Resampling fold %d: %d held-out test indices in CV training set.",
-            i, length(leaked_test)
-          ),
-          affected_indices = as.integer(leaked_test),
-          source_object = sprintf("%s (fold %d)", object$id, i)
-        )))
-      }
+      risks <- c(risks, .check_cv_leak(
+        list(fold_train), test_idx,
+        source_prefix = sprintf("%s (fold %d)", object$id, i),
+        type = "test_in_cv_train",
+        describe = function(prefix, j, n) sprintf(
+          "mlr3 Resampling fold %d: %d held-out test indices in CV training set.", i, n
+        ),
+        source_object = function(prefix, j) prefix
+      ))
     }
   }
 
@@ -106,22 +96,19 @@
   risks <- list()
 
   # Check if task data includes test indices when it should be train-only
-  task_nrow <- object$nrow
   n_total <- max(c(train_idx, test_idx))
-  n_train <- length(train_idx)
 
-  if (task_nrow == n_total && task_nrow != n_train) {
-    risks <- c(risks, list(.new_risk(
-      type = "task_contains_test_data",
-      severity = "soft_inflation",
-      description = sprintf(
-        "mlr3 Task '%s' contains %d rows (full dataset). If used for CV, ensure test indices (%d rows) are properly held out.",
-        object$id, task_nrow, length(test_idx)
-      ),
-      affected_indices = test_idx,
-      source_object = object$id
-    )))
-  }
+  risks <- c(risks, .check_train_scope(
+    object$nrow, train_idx, test_idx, object$id,
+    type = "task_contains_test_data",
+    severity_over = "soft_inflation",
+    check_under = FALSE,
+    only_if = function(n, expected) n == n_total,
+    describe_over = function(label, n, expected) sprintf(
+      "mlr3 Task '%s' contains %d rows (full dataset). If used for CV, ensure test indices (%d rows) are properly held out.",
+      label, n, length(test_idx)
+    )
+  ))
 
   risks
 }

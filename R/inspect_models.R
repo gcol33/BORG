@@ -232,11 +232,6 @@
     }
   }
 
-  # Check 3: Workflow was fitted on correct data
-  if (!is.null(object$fit$fit$fit)) {
-    # Try to get training row count from underlying model
-  }
-
   risks
 }
 
@@ -254,31 +249,18 @@
   # Check 1: Verify splits don't include test data
   if ("splits" %in% names(object)) {
     splits <- object$splits
+    analysis_sets <- lapply(splits, function(split) split$in_id)
 
-    for (i in seq_along(splits)) {
-      split <- splits[[i]]
-
-      # Get analysis (training) indices for this resample
-      if (!is.null(split$in_id)) {
-        analysis_idx <- split$in_id
-
-        # Check if any test indices are in the analysis set
-        leaked_test <- intersect(analysis_idx, test_idx)
-
-        if (length(leaked_test) > 0) {
-          risks <- c(risks, list(.new_risk(
-            type = "tune_test_in_resamples",
-            severity = "hard_violation",
-            description = sprintf(
-              "Tuning resample %d uses %d test indices in training fold. HPO is using test data.",
-              i, length(leaked_test)
-            ),
-            affected_indices = leaked_test,
-            source_object = "tune_results"
-          )))
-        }
-      }
-    }
+    risks <- c(risks, .check_cv_leak(
+      analysis_sets, test_idx,
+      source_prefix = "tune_results$splits",
+      type = "tune_test_in_resamples",
+      describe = function(prefix, i, n) sprintf(
+        "Tuning resample %d uses %d test indices in training fold. HPO is using test data.",
+        i, n
+      ),
+      source_object = function(prefix, i) "tune_results"
+    ))
   }
 
   # Verify resamples are nested within the train set

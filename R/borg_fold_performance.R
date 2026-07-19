@@ -64,53 +64,11 @@ borg_fold_performance <- function(data, folds, formula,
     lapply
   }
 
-  results <- map_fn(seq_along(fold_list), function(i) {
-    fold <- fold_list[[i]]
-    train_data <- data[fold$train, , drop = FALSE]
-    test_data <- data[fold$test, , drop = FALSE]
-
-    # Fit model
-    model <- tryCatch(
-      fit_fun(formula, data = train_data),
-      error = function(e) NULL
-    )
-
-    if (is.null(model)) {
-      val <- NA_real_
-    } else {
-      preds <- tryCatch(
-        stats::predict(model, newdata = test_data),
-        error = function(e) rep(NA_real_, nrow(test_data))
-      )
-
-      response_var <- all.vars(formula)[1]
-      actual <- test_data[[response_var]]
-
-      val <- .classify_metric(actual, preds, metric)
-    }
-
-    row <- data.frame(
-      fold = i,
-      metric = metric,
-      value = val,
-      n_train = length(fold$train),
-      n_test = length(fold$test),
-      stringsAsFactors = FALSE
-    )
-
-    # Add spatial centroids
-    if (!is.null(coords) && length(coords) >= 2) {
-      row$centroid_x <- mean(data[[coords[1]]][fold$test], na.rm = TRUE)
-      row$centroid_y <- mean(data[[coords[2]]][fold$test], na.rm = TRUE)
-    }
-
-    row
+  fold_results <- map_fn(fold_list, function(fold) {
+    eval_fold(data, fold, formula = formula, fit_fun = fit_fun, metric = metric)
   })
 
-  result <- do.call(rbind, results)
-  class(result) <- c("borg_fold_perf", "data.frame")
-  attr(result, "coords") <- coords
-  result
+  .build_fold_perf(fold_results, data, fold_list, metric, coords)
 }
 
 
