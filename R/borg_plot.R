@@ -68,7 +68,7 @@ plot.BorgRisk <- function(x, title = NULL, max_risks = 10, ...) {
 #'
 #' @export
 plot.borg_result <- function(x,
-                              type = c("split", "risk", "spatial", "temporal", "groups"),
+                              type = borg_result_plot_types(),
                               fold = 1,
                               data = NULL,
                               coords = NULL,
@@ -77,7 +77,7 @@ plot.borg_result <- function(x,
                               title = NULL,
                               ...) {
 
-  type <- match.arg(type)
+  type <- match.arg(type, borg_result_plot_types())
 
   # Risk plot - show the inspection results if available
   if (type == "risk") {
@@ -156,14 +156,12 @@ plot_split_internal <- function(train_idx, test_idx, n_total = NULL,
     n_total <- max(c(train_idx, test_idx))
   }
 
-  # Detect overlap
-  overlap <- intersect(train_idx, test_idx)
-
-  # Create color vector
-  colors <- rep("gray90", n_total)
-  colors[train_idx] <- "#2E86AB"  # Blue for train
-  colors[test_idx] <- "#E94F37"   # Red for test
-  colors[overlap] <- "#F9A03F"    # Orange for overlap
+  # Role of every observation (train/test/overlap/excluded) and the
+  # corresponding base-graphics colors
+  role <- build_role_vector(train_idx, test_idx, n_total, as_factor = FALSE)
+  overlap <- which(role == "overlap")
+  colors <- unname(c(train = "#2E86AB", test = "#E94F37",
+                     overlap = "#F9A03F", excluded = "gray90")[role])
 
   if (!is.null(temporal)) {
     # Temporal plot: x-axis is time
@@ -270,20 +268,13 @@ plot_risk_internal <- function(risk, title = NULL, max_risks = 10, ...) {
 
   if (length(risks) == 0) {
     # No risks - show success message
-    oldpar <- par(no.readonly = TRUE)
-    on.exit(par(oldpar))
-
-    par(mar = c(1, 1, 3, 1))
-
-    plot.new()
-    plot.window(xlim = c(0, 1), ylim = c(0, 1))
-    title(main = title %||% "BORG Risk Assessment")
-
-    text(0.5, 0.6, "OK", cex = 5, col = "#2E7D32", font = 2)  # Success
-    text(0.5, 0.3, "No risks detected", cex = 1.5, col = "#2E7D32")
-    text(0.5, 0.15, "Evaluation is valid", cex = 1, col = "gray50")
-
-    return(invisible(NULL))
+    return(.empty_plot(
+      title = title %||% "BORG Risk Assessment",
+      label = "OK", label_size = 5, label_color = "#2E7D32", fontface = "bold",
+      sublabel = "No risks detected", sublabel_size = 1.5, sublabel_color = "#2E7D32",
+      note = "Evaluation is valid",
+      engine = "base"
+    ))
   }
 
   # Limit risks displayed
@@ -381,11 +372,11 @@ plot_temporal_internal <- function(temporal, train_idx, test_idx,
   violations <- test_idx[test_times < max_train]
   has_gap <- min_test > max_train && length(violations) == 0
 
-  # Colors
-  colors <- rep("gray90", n_total)
-  colors[train_idx] <- "#2E86AB"
-  colors[test_idx] <- "#E94F37"
-  colors[violations] <- "#F9A03F"  # Violations in orange
+  # Colors: violations take the "overlap" role/color
+  role <- build_role_vector(train_idx, test_idx, n_total,
+                            overlap_idx = violations, as_factor = FALSE)
+  colors <- unname(c(train = "#2E86AB", test = "#E94F37",
+                     overlap = "#F9A03F", excluded = "gray90")[role])
 
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
@@ -444,19 +435,14 @@ plot_spatial_internal <- function(x, y, train_idx, test_idx,
 
   n_total <- length(x)
 
-  # Detect overlap
-  overlap <- intersect(train_idx, test_idx)
+  # Role of every observation (train/test/overlap/excluded)
+  role <- build_role_vector(train_idx, test_idx, n_total, as_factor = FALSE)
+  overlap <- which(role == "overlap")
 
   # Colors and shapes
-  colors <- rep("gray80", n_total)
-  colors[train_idx] <- "#2E86AB"
-  colors[test_idx] <- "#E94F37"
-  colors[overlap] <- "#F9A03F"
-
-  pch <- rep(1, n_total)
-  pch[train_idx] <- 16
-  pch[test_idx] <- 17
-  pch[overlap] <- 18
+  colors <- unname(c(train = "#2E86AB", test = "#E94F37",
+                     overlap = "#F9A03F", excluded = "gray80")[role])
+  pch <- unname(c(train = 16, test = 17, overlap = 18, excluded = 1)[role])
 
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
@@ -500,16 +486,15 @@ plot_groups_internal <- function(groups, train_idx, test_idx,
 
   n_total <- length(groups)
 
-  # Get unique groups and their assignments
-  unique_groups <- unique(groups)
+  # Determine group assignment (train-only / test-only / overlap)
+  gc <- classify_groups(groups, train_idx, test_idx)
+  unique_groups <- gc$unique_groups
   n_groups <- length(unique_groups)
-
-  # Determine group assignment
-  train_groups <- unique(groups[train_idx])
-  test_groups <- unique(groups[test_idx])
-  overlap_groups <- intersect(train_groups, test_groups)
-  train_only <- setdiff(train_groups, test_groups)
-  test_only <- setdiff(test_groups, train_groups)
+  train_groups <- gc$train_groups
+  test_groups <- gc$test_groups
+  overlap_groups <- gc$overlap_groups
+  train_only <- gc$train_only
+  test_only <- gc$test_only
 
   # Limit groups for display
   if (n_groups > max_groups) {

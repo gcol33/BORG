@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{borg_result}(
   x,
-  type = c("split", "risk", "spatial", "temporal", "groups"),
+  type = borg_result_plot_types(),
   fold = 1,
   data = NULL,
   coords = NULL,

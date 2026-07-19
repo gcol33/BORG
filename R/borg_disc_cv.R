@@ -256,15 +256,15 @@ autoplot.borg_disc_cv <- function(object, data = NULL, coords = NULL,
   f <- object$folds[[fold]]
 
   n <- nrow(data)
-  role <- rep("excluded", n)
-  role[f$train] <- "train"
-  role[f$test] <- "test"
-  if (!is.null(f$excluded)) role[f$excluded] <- "buffer"
+  role <- build_role_vector(f$train, f$test, n,
+                            overlap_idx = f$excluded %||% integer(0),
+                            overlap_label = "buffer",
+                            levels = c("train", "buffer", "test", "excluded"))
 
   df <- data.frame(
     x = data[[coords[1]]],
     y = data[[coords[2]]],
-    role = factor(role, levels = c("train", "buffer", "test", "excluded"))
+    role = role
   )
 
   ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$y,

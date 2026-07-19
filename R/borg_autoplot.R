@@ -103,16 +103,12 @@ autoplot.BorgRisk <- function(object, max_risks = 10, show_fixes = TRUE, ...) {
   risks <- object@risks
 
   if (length(risks) == 0) {
-    df <- data.frame(x = 0.5, y = 0.5)
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$y)) +
-      ggplot2::annotate("text", x = 0.5, y = 0.55, label = "VALID",
-                        size = 16, fontface = "bold", color = borg_palette["valid"]) +
-      ggplot2::annotate("text", x = 0.5, y = 0.42, label = "No risks detected",
-                        size = 5, color = "gray40") +
-      ggplot2::xlim(0, 1) + ggplot2::ylim(0, 1) +
-      ggplot2::theme_void() +
-      ggplot2::labs(title = "BORG Risk Assessment")
-    return(p)
+    return(.empty_plot(
+      title = "BORG Risk Assessment",
+      label = "VALID", label_size = 16, label_color = borg_palette["valid"],
+      fontface = "bold",
+      sublabel = "No risks detected", sublabel_size = 5
+    ))
   }
 
   if (length(risks) > max_risks) risks <- risks[seq_len(max_risks)]
@@ -233,7 +229,7 @@ autoplot.BorgRisk <- function(object, max_risks = 10, show_fixes = TRUE, ...) {
 #'
 #' @exportS3Method ggplot2::autoplot
 autoplot.borg_result <- function(object,
-                                  type = c("split", "risk", "spatial", "temporal", "groups"),
+                                  type = borg_result_plot_types(),
                                   fold = 1,
                                   data = NULL,
                                   coords = NULL,
@@ -242,7 +238,7 @@ autoplot.borg_result <- function(object,
                                   groups = NULL,
                                   ...) {
   check_ggplot2()
-  type <- match.arg(type)
+  type <- match.arg(type, borg_result_plot_types())
 
   # Risk plot - show the inspection results if available
   if (type == "risk") {
@@ -563,18 +559,12 @@ autoplot.BorgDiagnosis <- function(object, type = c("summary", "variogram"), ...
   }
 
   if (nrow(metrics) == 0) {
-    df <- data.frame(x = 0.5, y = 0.5)
-    return(
-      ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$y)) +
-        ggplot2::annotate("text", x = 0.5, y = 0.55, label = "No dependencies",
-                          size = 8, fontface = "bold", color = borg_palette["valid"]) +
-        ggplot2::annotate("text", x = 0.5, y = 0.42,
-                          label = "Random CV is appropriate",
-                          size = 4, color = "gray40") +
-        ggplot2::xlim(0, 1) + ggplot2::ylim(0, 1) +
-        ggplot2::theme_void() +
-        ggplot2::labs(title = "BORG Diagnosis")
-    )
+    return(.empty_plot(
+      title = "BORG Diagnosis",
+      label = "No dependencies", label_size = 8, label_color = borg_palette["valid"],
+      fontface = "bold",
+      sublabel = "Random CV is appropriate", sublabel_size = 4
+    ))
   }
 
   metrics$metric <- factor(metrics$metric, levels = rev(metrics$metric))
@@ -648,12 +638,8 @@ autoplot.BorgDiagnosis <- function(object, type = c("summary", "variogram"), ...
 #' @noRd
 autoplot_split <- function(train_idx, test_idx, fold = 1) {
   n <- max(c(train_idx, test_idx))
-  role <- rep("excluded", n)
-  role[train_idx] <- "train"
-  role[test_idx] <- "test"
-
+  role <- build_role_vector(train_idx, test_idx, n)
   overlap <- intersect(train_idx, test_idx)
-  role[overlap] <- "overlap"
 
   n_train <- length(setdiff(train_idx, overlap))
   n_test <- length(setdiff(test_idx, overlap))
@@ -661,7 +647,7 @@ autoplot_split <- function(train_idx, test_idx, fold = 1) {
 
   df <- data.frame(
     idx = seq_len(n),
-    role = factor(role, levels = c("train", "test", "overlap", "excluded"))
+    role = role
   )
 
   sub <- sprintf(
@@ -695,12 +681,7 @@ autoplot_spatial_single <- function(train_idx, test_idx, data, coords, fold = 1,
   }
 
   n <- if (inherits(data, "SpatVector")) terra::nrow(data) else nrow(data)
-  role <- rep("excluded", n)
-  role[train_idx] <- "train"
-  role[test_idx] <- "test"
-  overlap <- intersect(train_idx, test_idx)
-  role[overlap] <- "overlap"
-  role_fac <- factor(role, levels = c("train", "test", "overlap", "excluded"))
+  role_fac <- build_role_vector(train_idx, test_idx, n)
 
   # SpatVector path: use tidyterra if available, else convert to sf
   if (inherits(data, "SpatVector") && requireNamespace("terra", quietly = TRUE)) {
@@ -869,9 +850,8 @@ autoplot_spatial_faceted <- function(folds, data, coords, spatial_meta = NULL,
       data_sf <- sf::st_as_sf(data)
       rows <- vector("list", n_folds)
       for (i in seq_len(n_folds)) {
-        role <- rep("excluded", n)
-        role[folds[[i]]$train] <- "train"
-        role[folds[[i]]$test] <- "test"
+        role <- build_role_vector(folds[[i]]$train, folds[[i]]$test, n,
+                                  overlap_idx = integer(0), as_factor = FALSE)
         fold_sf <- data_sf
         fold_sf$role <- role
         fold_sf$fold <- sprintf("Fold %d", i)
@@ -902,9 +882,8 @@ autoplot_spatial_faceted <- function(folds, data, coords, spatial_meta = NULL,
     n <- nrow(data)
     rows <- vector("list", n_folds)
     for (i in seq_len(n_folds)) {
-      role <- rep("excluded", n)
-      role[folds[[i]]$train] <- "train"
-      role[folds[[i]]$test] <- "test"
+      role <- build_role_vector(folds[[i]]$train, folds[[i]]$test, n,
+                                overlap_idx = integer(0), as_factor = FALSE)
       fold_sf <- data
       fold_sf$role <- role
       fold_sf$fold <- sprintf("Fold %d", i)
@@ -942,9 +921,8 @@ autoplot_spatial_faceted <- function(folds, data, coords, spatial_meta = NULL,
   hull_rows <- vector("list", n_folds)
 
   for (i in seq_len(n_folds)) {
-    role <- rep("excluded", n)
-    role[folds[[i]]$train] <- "train"
-    role[folds[[i]]$test] <- "test"
+    role <- build_role_vector(folds[[i]]$train, folds[[i]]$test, n,
+                              overlap_idx = integer(0), as_factor = FALSE)
     fold_label <- sprintf("Fold %d", i)
     rows[[i]] <- data.frame(
       x = coord_info$x,
@@ -1017,9 +995,8 @@ autoplot_folds_tile <- function(folds) {
   rows <- vector("list", n_folds)
   size_rows <- vector("list", n_folds)
   for (i in seq_len(n_folds)) {
-    role <- rep("excluded", n)
-    role[folds[[i]]$train] <- "train"
-    role[folds[[i]]$test] <- "test"
+    role <- build_role_vector(folds[[i]]$train, folds[[i]]$test, n,
+                              overlap_idx = integer(0), as_factor = FALSE)
     rows[[i]] <- data.frame(
       obs = seq_len(n),
       fold = i,
@@ -1086,15 +1063,13 @@ autoplot_temporal <- function(train_idx, test_idx, data, time, fold = 1) {
   }
 
   n <- length(time_vals)
-  role <- rep("excluded", n)
-  role[train_idx] <- "train"
-  role[test_idx] <- "test"
 
-  # Detect look-ahead violations
+  # Detect look-ahead violations; they take the "overlap" role/color
   max_train_time <- max(time_vals[train_idx], na.rm = TRUE)
   min_test_time <- min(time_vals[test_idx], na.rm = TRUE)
   violations <- test_idx[time_vals[test_idx] < max_train_time]
-  role[violations] <- "overlap"
+  role <- build_role_vector(train_idx, test_idx, n,
+                            overlap_idx = violations, as_factor = FALSE)
 
   time_numeric <- as.numeric(time_vals)
   max_train_num <- as.numeric(max_train_time)
@@ -1217,12 +1192,13 @@ autoplot_groups <- function(train_idx, test_idx, data, groups, fold = 1) {
     group_vals <- groups
   }
 
-  unique_groups <- unique(group_vals)
-  train_groups <- unique(group_vals[train_idx])
-  test_groups <- unique(group_vals[test_idx])
-  overlap_groups <- intersect(train_groups, test_groups)
-  train_only <- setdiff(train_groups, test_groups)
-  test_only <- setdiff(test_groups, train_groups)
+  gc <- classify_groups(group_vals, train_idx, test_idx)
+  unique_groups <- gc$unique_groups
+  train_groups <- gc$train_groups
+  test_groups <- gc$test_groups
+  overlap_groups <- gc$overlap_groups
+  train_only <- gc$train_only
+  test_only <- gc$test_only
 
   # Build per-group summary
   group_data <- data.frame(
@@ -1331,16 +1307,11 @@ autoplot_fold_sizes <- function(folds) {
 autoplot_variogram <- function(object) {
   vario <- object@spatial$variogram
   if (is.null(vario) || !is.data.frame(vario) || nrow(vario) == 0) {
-    df <- data.frame(x = 0.5, y = 0.5)
-    return(
-      ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$y)) +
-        ggplot2::annotate("text", x = 0.5, y = 0.5,
-                          label = "No variogram data\n(run borg_diagnose() with coords and target)",
-                          size = 5, color = "gray40") +
-        ggplot2::xlim(0, 1) + ggplot2::ylim(0, 1) +
-        ggplot2::theme_void() +
-        ggplot2::labs(title = "BORG Variogram")
-    )
+    return(.empty_plot(
+      title = "BORG Variogram",
+      label = "No variogram data\n(run borg_diagnose() with coords and target)",
+      label_size = 5
+    ))
   }
 
   sill <- object@spatial$sill

@@ -39,10 +39,9 @@ to_sf <- function(data, coords = NULL, crs = NULL) {
 #' @noRd
 fold_sf <- function(data_sf, folds, fold_id) {
   n <- nrow(data_sf)
-  role <- rep("excluded", n)
-  role[folds[[fold_id]]$train] <- "train"
-  role[folds[[fold_id]]$test] <- "test"
-  data_sf$role <- factor(role, levels = c("train", "test", "excluded"))
+  data_sf$role <- build_role_vector(folds[[fold_id]]$train, folds[[fold_id]]$test, n,
+                                    overlap_idx = integer(0),
+                                    levels = c("train", "test", "excluded"))
   data_sf$fold <- fold_id
 
   data_sf
