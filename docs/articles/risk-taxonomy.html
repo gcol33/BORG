@@ -7,14 +7,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Risk Taxonomy • BORG</title>
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Risk Taxonomy">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -22,7 +35,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +86,7 @@
                         <h4 data-toc-skip class="author">Gilles
 Colling</h4>
             
-            <h4 data-toc-skip class="date">2026-03-04</h4>
+            <h4 data-toc-skip class="date">2026-10-10</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gcol33/BORG/blob/HEAD/vignettes/risk-taxonomy.Rmd" class="external-link"><code>vignettes/risk-taxonomy.Rmd</code></a></small>
       <div class="d-none name"><code>risk-taxonomy.Rmd</code></div>
@@ -82,7 +95,16 @@ Colling</h4>
     
     
 <p>This document catalogs all evaluation risks that BORG detects,
-organized by severity and mechanism.</p>
+organized by severity and mechanism. Each risk type includes a
+description of what triggers it, why it matters for real-world
+modelling, and how to fix it.</p>
+<div class="section level3">
+<h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h3>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span>           <span class="co"># development version</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/BORG"</span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level3">
 <h3 id="risk-classification">Risk Classification<a class="anchor" aria-label="anchor" href="#risk-classification"></a>
 </h3>
@@ -112,6 +134,12 @@ evaluation validity:</p>
 </tr>
 </tbody>
 </table>
+<p>Hard violations indicate that the evaluation result is not
+trustworthy at all. The computed metrics could be arbitrarily
+optimistic, and no conclusion should be drawn from them. Soft inflation
+risks mean the metrics are likely overestimated, but the direction of
+model comparisons may still hold. Fixing soft risks is best practice;
+fixing hard violations is mandatory.</p>
 </div>
 <div class="section level2">
 <h2 id="hard-violations">Hard Violations<a class="anchor" aria-label="anchor" href="#hard-violations"></a>
@@ -123,46 +151,64 @@ these violations are unreliable.</p>
 </h3>
 <p><strong>What</strong>: Same row indices appear in both training and
 test sets.</p>
-<p><strong>Why it matters</strong>: The model has seen the exact data
-it’s being tested on. This is the most basic form of leakage.</p>
+<p><strong>Why it matters</strong>: Because the model has seen the exact
+data it is being tested on, any sufficiently flexible learner will
+achieve perfect scores on the overlapping portion of the test set. In
+practice, index overlap usually arises from manual bookkeeping errors:
+copying indices incorrectly, using inclusive rather than exclusive
+ranges, or inadvertently sharing a row between two data splits. The bug
+is easy to introduce and hard to catch by looking at metrics alone,
+because a small overlap (say 5% of the test set) produces a subtle,
+plausible-looking inflation.</p>
 <p><strong>Detection</strong>: Set intersection of
 <code>train_idx</code> and <code>test_idx</code>.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Accidental overlap</span></span>
+<span><span class="co"># Accidental overlap: indices 51-60 appear in both sets</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">60</span>, test_idx <span class="op">=</span> <span class="fl">51</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">result</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: INVALID (hard violations detected)</span></span>
+<span><span class="co">#&gt; Status: INVALID (1 hard violation) — Resistance is futile</span></span>
 <span><span class="co">#&gt;   Hard violations:  1</span></span>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    60 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     50 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; [1] index_overlap</span></span>
 <span><span class="co">#&gt;     Train and test indices overlap (10 shared indices). This invalidates evaluation.</span></span>
 <span><span class="co">#&gt;     Source: train_idx/test_idx</span></span>
-<span><span class="co">#&gt;     Affected: 10 indices (first 5: 51, 52, 53, 54, 55)</span></span></code></pre></div>
+<span><span class="co">#&gt;     Affected: 10 indices (first 5: 51, 52, 53, 54, 55)</span></span>
+<span><span class="co">#&gt;     Fix: Recreate train/test split with non-overlapping indices</span></span></code></pre></div>
 <p><strong>Fix</strong>: Ensure indices are mutually exclusive. Use
-<code><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff()</a></code> to create non-overlapping sets.</p>
+<code><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff()</a></code> to remove any shared indices, or generate
+non-overlapping splits from the start with <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample()</a></code> and
+complementary indexing.</p>
 </div>
 <div class="section level3">
 <h3 id="duplicate-rows">2. Duplicate Rows<a class="anchor" aria-label="anchor" href="#duplicate-rows"></a>
 </h3>
 <p><strong>What</strong>: Test set contains rows identical to training
 rows.</p>
-<p><strong>Why it matters</strong>: Model may have memorized these exact
-patterns. Even without index overlap, identical feature values
-constitute leakage.</p>
+<p><strong>Why it matters</strong>: Disjoint indices do not guarantee
+distinct data. The underlying rows may still be exact copies. This
+happens often in observational datasets that were merged from multiple
+sources (where the same record appears in two files), in datasets with
+many categorical predictors and few unique combinations, or when data
+augmentation accidentally copies real rows into a held-out set. A model
+that memorizes training patterns will score well on these duplicates
+regardless of its true generalization ability. The effect is
+proportional to the fraction of test rows that are duplicates: 10%
+duplicates in the test set can inflate accuracy by several percentage
+points.</p>
 <p><strong>Detection</strong>: Row hashing and comparison (C++ backend
 for numeric data).</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Data with duplicate rows</span></span>
 <span><span class="va">dup_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, y <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span>,</span>
@@ -174,30 +220,42 @@ for numeric data).</p>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: INVALID (hard violations detected)</span></span>
+<span><span class="co">#&gt; Status: INVALID (1 hard violation) — Resistance is futile</span></span>
 <span><span class="co">#&gt;   Hard violations:  1</span></span>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    5 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     5 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; [1] duplicate_rows</span></span>
 <span><span class="co">#&gt;     Test set contains 5 rows identical to training rows (memorization risk)</span></span>
 <span><span class="co">#&gt;     Source: data.frame</span></span>
-<span><span class="co">#&gt;     Affected: 6, 7, 8, 9, 10</span></span></code></pre></div>
+<span><span class="co">#&gt;     Affected: 6, 7, 8, 9, 10</span></span>
+<span><span class="co">#&gt;     Fix: Remove duplicate rows or ensure they fall within the same fold</span></span></code></pre></div>
 <p><strong>Fix</strong>: Remove duplicate rows before splitting, or
-ensure splits respect duplicates (keep all copies in same set).</p>
+ensure splits respect duplicates by keeping all copies in the same set.
+In ecological survey data, duplicates sometimes represent legitimate
+repeated measurements; in that case, treat them as a group and use
+group-aware splitting.</p>
 </div>
 <div class="section level3">
 <h3 id="preprocessing-leakage">3. Preprocessing Leakage<a class="anchor" aria-label="anchor" href="#preprocessing-leakage"></a>
 </h3>
 <p><strong>What</strong>: Normalization, imputation, or dimensionality
-reduction fitted on full data before splitting.</p>
-<p><strong>Why it matters</strong>: Test set statistics influenced the
-preprocessing parameters applied to training data. Information flows
-backwards from test to train.</p>
+reduction fitted on the full dataset before splitting.</p>
+<p><strong>Why it matters</strong>: Column means, standard deviations,
+or PCA loadings computed from the entire dataset carry test-set
+information into the training pipeline. Information flows backwards from
+test to train through these shared statistics. The effect is typically
+small for large datasets with independent observations (a few percent
+inflation in R-squared) but can be severe for small datasets, datasets
+with strong distributional shifts between train and test, or
+high-dimensional data where PCA loadings are heavily sample-dependent.
+This is one of the most common forms of leakage in published studies
+because many preprocessing pipelines default to fitting on all available
+data.</p>
 <p><strong>Detection</strong>: Recompute statistics on train-only data
 and compare to stored parameters. Discrepancy indicates leakage.</p>
 <p><strong>Supported objects</strong>:</p>
@@ -208,7 +266,7 @@ and compare to stored parameters. Discrepancy indicates leakage.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">caret::preProcess</a></code></td>
+<td><code>caret::preProcess</code></td>
 <td>
 <code>$mean</code>, <code>$std</code>
 </td>
@@ -232,7 +290,7 @@ and compare to stored parameters. Discrepancy indicates leakage.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># BAD: Scale fitted on all data</span></span>
 <span><span class="va">scaled_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span>  <span class="co"># Uses all rows!</span></span>
 <span><span class="va">train</span> <span class="op">&lt;-</span> <span class="va">scaled_data</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, <span class="op">]</span></span>
@@ -242,7 +300,7 @@ and compare to stored parameters. Discrepancy indicates leakage.</p>
 <span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">scaled_data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, test_idx <span class="op">=</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Fix</strong>: Fit preprocessing on training data only, then
 apply to test:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">train_data</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, <span class="op">]</span></span>
 <span><span class="va">test_data</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="fl">71</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span>
 <span></span>
@@ -259,128 +317,133 @@ apply to test:</p>
 </h3>
 <p><strong>What</strong>: Feature has absolute correlation &gt; 0.99
 with target.</p>
-<p><strong>Why it matters</strong>: Feature is almost certainly derived
-from the outcome. Examples: - <code>days_since_diagnosis</code> when
-predicting <code>has_disease</code></p>
-<ul>
-<li><p><code>total_spent</code> when predicting
-<code>is_customer</code></p></li>
-<li><p>Aggregated future values leaked into current features</p></li>
-</ul>
+<p><strong>Why it matters</strong>: Near-perfect correlation (|r| &gt;
+0.99) between a feature and the outcome almost always means the feature
+was derived from the outcome, either directly or through a chain of
+deterministic transformations. Classic examples include
+<code>days_since_diagnosis</code> when predicting
+<code>has_disease</code>, <code>total_spent</code> when predicting
+<code>is_customer</code>, or aggregated future values leaked into
+current-period features. These features will dominate any model,
+producing impressive metrics that collapse entirely in deployment where
+the post-hoc information is unavailable. Target leakage is particularly
+common in tabular datasets assembled by joining multiple tables, where a
+downstream aggregate accidentally ends up as a predictor.</p>
 <p><strong>Detection</strong>: Compute Pearson correlation of each
 numeric feature with target on training data.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Simulate target leakage</span></span>
-<span><span class="va">leaky</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>,</span>
-<span>  outcome <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">leaky</span><span class="op">$</span><span class="va">leaked</span> <span class="op">&lt;-</span> <span class="va">leaky</span><span class="op">$</span><span class="va">outcome</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>  <span class="co"># Near-perfect correlation</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Use borg_simulate for controlled target leakage</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">100</span>, type <span class="op">=</span> <span class="st">"target_leak"</span>, leak_strength <span class="op">=</span> <span class="fl">0.99</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">leaky</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, test_idx <span class="op">=</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span>, target <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, test_idx <span class="op">=</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span>,</span>
+<span>                       target <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
 <span><span class="va">result</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: INVALID (hard violations detected)</span></span>
+<span><span class="co">#&gt; Status: INVALID (1 hard violation) — Resistance is futile</span></span>
 <span><span class="co">#&gt;   Hard violations:  1</span></span>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    70 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; [1] target_leakage_direct</span></span>
-<span><span class="co">#&gt;     Feature 'leaked' has correlation 1.000 with target 'outcome'. Likely derived from outcome.</span></span>
-<span><span class="co">#&gt;     Source: data.frame$leaked</span></span></code></pre></div>
-<p><strong>Fix</strong>: Remove or investigate the leaky feature. If
-it’s a legitimate predictor, document why correlation &gt; 0.99 is
-expected.</p>
+<span><span class="co">#&gt;     Feature 'leaked_feature' has correlation 1.000 with target 'y'. Likely derived from outcome.</span></span>
+<span><span class="co">#&gt;     Source: data.frame$leaked_feature</span></span>
+<span><span class="co">#&gt;     Fix: Remove features derived from the target variable</span></span></code></pre></div>
+<p><strong>Fix</strong>: Remove or investigate the leaky feature. If it
+is a legitimate predictor, document why correlation &gt; 0.99 is
+expected and verify the feature is available at prediction time.</p>
 </div>
 <div class="section level3">
 <h3 id="group-leakage">5. Group Leakage<a class="anchor" aria-label="anchor" href="#group-leakage"></a>
 </h3>
 <p><strong>What</strong>: Same group (patient, site, species) appears in
 both train and test.</p>
-<p><strong>Why it matters</strong>: Observations within a group tend to
-be similar. If the same patient appears in train and test, the model can
-exploit patient-specific patterns that won’t exist for new patients.</p>
-<p><strong>Detection</strong>: Set intersection of group membership
-values.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<p><strong>Why it matters</strong>: Latent group-level characteristics
+let the model learn patient- or site-specific intercepts it cannot use
+on new groups. If the same patient appears in both train and test, the
+model effectively learns patient-specific intercepts during training and
+is rewarded for them at test time. This inflates performance because, in
+deployment, the model will encounter new patients it has never seen. The
+magnitude of inflation depends on the intra-class correlation (ICC):
+when ICC is high (observations within a group are very similar), group
+leakage can inflate R-squared by 20-50% or more. This risk is pervasive
+in medical data, ecological monitoring (repeated visits to the same
+site), and any longitudinal study design.</p>
+<p><strong>Detection</strong>: <code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> detects
+clustered structure and recommends group-aware CV. At the split level,
+check whether any group’s members appear in both the training and test
+sets.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Clinical data with patient IDs</span></span>
 <span><span class="va">clinical</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  patient_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, each <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
 <span>  measurement <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Random split ignoring patients</span></span>
+<span><span class="co"># Random split ignoring patients (groups will leak)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
 <span><span class="va">all_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="va">all_idx</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">70</span><span class="op">]</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="va">all_idx</span><span class="op">[</span><span class="fl">71</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">clinical</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>                       groups <span class="op">=</span> <span class="st">"patient_id"</span><span class="op">)</span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; BorgRisk Assessment</span></span>
-<span><span class="co">#&gt; ===================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
-<span><span class="co">#&gt;   Hard violations:  0</span></span>
-<span><span class="co">#&gt;   Soft inflations:  0</span></span>
-<span><span class="co">#&gt;   Train indices:    70 rows</span></span>
-<span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
-<p><strong>Fix</strong>: Use group-aware splitting:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<span><span class="co"># Check which patients appear in both sets</span></span>
+<span><span class="va">train_patients</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">clinical</span><span class="op">$</span><span class="va">patient_id</span><span class="op">[</span><span class="va">train_idx</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">test_patients</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">clinical</span><span class="op">$</span><span class="va">patient_id</span><span class="op">[</span><span class="va">test_idx</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">shared</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">train_patients</span>, <span class="va">test_patients</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Shared patients:"</span>, <span class="va">shared</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Fix</strong>: Use group-aware splitting so that entire groups
+are held out together:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Split at the patient level</span></span>
 <span><span class="va">train_patients</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">clinical</span><span class="op">$</span><span class="va">patient_id</span><span class="op">)</span>, <span class="fl">7</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">clinical</span><span class="op">$</span><span class="va">patient_id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">train_patients</span><span class="op">)</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="op">!</span><span class="va">clinical</span><span class="op">$</span><span class="va">patient_id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">train_patients</span><span class="op">)</span></span></code></pre></div>
+<p>Alternatively, use <code><a href="../reference/borg_cv.html">borg_cv()</a></code> with the
+<code>groups</code> argument to generate group-respecting folds
+automatically.</p>
 </div>
 <div class="section level3">
 <h3 id="temporal-ordering-violation">6. Temporal Ordering Violation<a class="anchor" aria-label="anchor" href="#temporal-ordering-violation"></a>
 </h3>
 <p><strong>What</strong>: Test observations predate training
 observations.</p>
-<p><strong>Why it matters</strong>: Model uses future information to
-predict the past. In deployment, future data won’t be available.</p>
+<p><strong>Why it matters</strong>: Predicting the past from the future
+is look-ahead bias, and in any time-dependent process the effect is
+severe. The model can exploit temporal trends, seasonal patterns, or
+regime shifts that would not be available at prediction time. This
+violation is especially damaging for autoregressive features (lagged
+values, rolling averages), because those features were computed under
+the assumption that earlier data is available. Random splitting of time
+series data is one of the most common methodological errors in applied
+ML: it is easy to do, produces excellent-looking metrics, and fails
+silently. Studies that randomly split stock prices, weather records, or
+patient trajectories routinely report inflated accuracy that disappears
+in live deployment.</p>
 <p><strong>Detection</strong>: Compare max training timestamp to min
-test timestamp.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Time series data</span></span>
-<span><span class="va">ts_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-01-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"day"</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
-<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+test timestamp. Any test observation that falls before a training
+observation constitutes a violation.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Simulate temporal data</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">100</span>, type <span class="op">=</span> <span class="st">"temporal"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Wrong: random split ignores time</span></span>
+<span><span class="co"># Wrong: random split ignores time ordering</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">random_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="va">random_idx</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">70</span><span class="op">]</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="va">random_idx</span><span class="op">[</span><span class="fl">71</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">ts_data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>                       time <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; BorgRisk Assessment</span></span>
-<span><span class="co">#&gt; ===================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
-<span><span class="co">#&gt;   Hard violations:  0</span></span>
-<span><span class="co">#&gt;   Soft inflations:  0</span></span>
-<span><span class="co">#&gt;   Train indices:    70 rows</span></span>
-<span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
+<span><span class="co"># borg_diagnose detects the temporal structure</span></span>
+<span><span class="va">diagnosis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, time <span class="op">=</span> <span class="st">"time"</span>, target <span class="op">=</span> <span class="st">"y"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">diagnosis</span><span class="op">@</span><span class="va">recommended_cv</span></span>
+<span><span class="co">#&gt; [1] "temporal_block"</span></span></code></pre></div>
 <p><strong>Fix</strong>: Use chronological splits where all test data
 comes after training:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span></span></code></pre></div>
 </div>
@@ -389,13 +452,18 @@ comes after training:</p>
 </h3>
 <p><strong>What</strong>: Cross-validation folds contain test indices,
 or folds overlap incorrectly.</p>
-<p><strong>Why it matters</strong>: Nested CV requires the outer test
-set to be completely held out from all inner training.</p>
+<p><strong>Why it matters</strong>: For nested cross-validation to be
+valid, the outer test set must remain completely invisible to all inner
+folds. If the outer test indices leak into any inner fold’s training
+set, the tuning procedure has seen the test data. This is a subtle and
+surprisingly common mistake when manually constructing fold objects. It
+invalidates the entire nested CV result because the hyperparameter
+selection was influenced by test data.</p>
 <p><strong>Detection</strong>: Check if any fold’s training indices
 intersect with held-out test set.</p>
 <p><strong>Supported objects</strong>:</p>
 <ul>
-<li><p><code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl</a></code> - checks <code>$index</code> and
+<li><p><code>caret::trainControl</code>: checks <code>$index</code> and
 <code>$indexOut</code></p></li>
 <li><p><code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv</a></code> and other <code>rset</code>
 objects</p></li>
@@ -405,16 +473,22 @@ objects</p></li>
 <div class="section level3">
 <h3 id="model-scope">8. Model Scope<a class="anchor" aria-label="anchor" href="#model-scope"></a>
 </h3>
-<p><strong>What</strong>: Model was trained on more rows than claimed
-training set.</p>
-<p><strong>Why it matters</strong>: Model saw test data during training,
-even if indirectly (e.g., through hyperparameter tuning on full
-data).</p>
+<p><strong>What</strong>: Model was trained on more rows than the
+claimed training set.</p>
+<p><strong>Why it matters</strong>: Evidence inside the fitted object
+that it saw more rows than the training indices specify means test data
+leaked into fitting. This can happen indirectly through hyperparameter
+tuning on the full dataset, through ensemble methods that use the entire
+dataset for base learner training, or simply through a bookkeeping
+mismatch between the reported split and the actual training call. Unlike
+index overlap (which checks the split definition), model scope checks
+the fitted model itself for signs that it saw more data than it should
+have.</p>
 <p><strong>Detection</strong>: Compare <code>nrow(trainingData)</code>
 or <code>length(fitted.values)</code> to
 <code>length(train_idx)</code>.</p>
 <p><strong>Supported objects</strong>: <code>lm</code>,
-<code>glm</code>, <code>ranger</code>, <code><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">caret::train</a></code>,
+<code>glm</code>, <code>ranger</code>, <code>caret::train</code>,
 parsnip models, workflows.</p>
 </div>
 </div>
@@ -428,62 +502,23 @@ ranking might be preserved even if absolute metrics are optimistic.</p>
 </h3>
 <p><strong>What</strong>: Feature has correlation 0.95-0.99 with
 target.</p>
-<p><strong>Why warning not error</strong>: May be a legitimate strong
-predictor. Requires domain knowledge to judge.</p>
+<p><strong>Why warning not error</strong>: A correlation in this range
+can represent either a legitimately strong predictor or a subtler form
+of target leakage. Domain knowledge is required to distinguish the two
+cases. For example, in ecological modelling, mean annual temperature
+might genuinely correlate at r = 0.97 with species richness. Conversely,
+a feature like <code>average_daily_sales_last_year</code> might
+correlate at r = 0.96 with <code>annual_revenue</code> because it is a
+near-direct transformation of the target. BORG warns but does not block,
+giving you the opportunity to investigate.</p>
 <p><strong>Detection</strong>: Same as direct leakage, different
 threshold.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Strong but not extreme correlation</span></span>
-<span><span class="va">proxy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>,</span>
-<span>  outcome <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">proxy</span><span class="op">$</span><span class="va">strong_predictor</span> <span class="op">&lt;-</span> <span class="va">proxy</span><span class="op">$</span><span class="va">outcome</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span>  <span class="co"># r ~ 0.96</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">proxy</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, test_idx <span class="op">=</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span>, target <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; BorgRisk Assessment</span></span>
-<span><span class="co">#&gt; ===================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
-<span><span class="co">#&gt;   Hard violations:  0</span></span>
-<span><span class="co">#&gt;   Soft inflations:  1</span></span>
-<span><span class="co">#&gt;   Train indices:    70 rows</span></span>
-<span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [1] target_leakage_proxy</span></span>
-<span><span class="co">#&gt;     Feature 'strong_predictor' has correlation 0.959 with target 'outcome'. May be a proxy for outcome.</span></span>
-<span><span class="co">#&gt;     Source: data.frame$strong_predictor</span></span></code></pre></div>
-<p><strong>Action</strong>: Review whether the feature should be
-available at prediction time in production.</p>
-</div>
-<div class="section level3">
-<h3 id="spatial-proximity">2. Spatial Proximity<a class="anchor" aria-label="anchor" href="#spatial-proximity"></a>
-</h3>
-<p><strong>What</strong>: Test points are very close to training points
-in geographic space.</p>
-<p><strong>Why it matters</strong>: Spatial autocorrelation means nearby
-points share variance. Model learns local patterns that don’t generalize
-to distant locations.</p>
-<p><strong>Detection</strong>: Compute minimum distance from each test
-point to nearest training point. Flag if &lt; 1% of spatial spread.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">spatial</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">0</span>, <span class="fl">100</span><span class="op">)</span>,</span>
-<span>  lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">0</span>, <span class="fl">100</span><span class="op">)</span>,</span>
-<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Use borg_simulate for controlled proxy leakage</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">100</span>, type <span class="op">=</span> <span class="st">"target_leak"</span>, leak_strength <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Random split intermixes nearby points</span></span>
-<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">70</span><span class="op">)</span></span>
-<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="va">train_idx</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">spatial</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
-<span>                       coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span>, test_idx <span class="op">=</span> <span class="fl">71</span><span class="op">:</span><span class="fl">100</span>,</span>
+<span>                       target <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
 <span><span class="va">result</span></span>
 <span><span class="co">#&gt; BorgRisk Assessment</span></span>
 <span><span class="co">#&gt; ===================</span></span>
@@ -493,23 +528,77 @@ point to nearest training point. Flag if &lt; 1% of spatial spread.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    70 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-03-04 12:49:54</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
-<p><strong>Fix</strong>: Use spatial blocking:</p>
+<p><strong>Action</strong>: Review whether the feature should be
+available at prediction time in production. If it is a legitimate
+predictor, document the justification.</p>
+</div>
+<div class="section level3">
+<h3 id="spatial-proximity">2. Spatial Proximity<a class="anchor" aria-label="anchor" href="#spatial-proximity"></a>
+</h3>
+<p><strong>What</strong>: Test points are very close to training points
+in geographic space.</p>
+<p><strong>Why it matters</strong>: Nearby locations share environmental
+conditions, soil properties, and species compositions through spatial
+autocorrelation. When train and test points are spatially interleaved,
+the model can interpolate between nearby training points rather than
+learning generalizable patterns. Error estimates become optimistic. The
+magnitude scales with the strength of spatial autocorrelation and the
+ratio of inter-point distance to autocorrelation range. In ecological
+and environmental modelling, where spatial structure is the rule rather
+than the exception, this inflation can be severe: reported R-squared
+values may drop by 30-60% when switching from random to spatially
+blocked CV.</p>
+<p><strong>Detection</strong>: Compute minimum distance from each test
+point to nearest training point. Flag if &lt; 1% of spatial spread.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Geographic split</span></span>
-<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">spatial</span><span class="op">$</span><span class="va">lon</span> <span class="op">&lt;</span> <span class="fl">50</span><span class="op">)</span>  <span class="co"># West</span></span>
-<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">spatial</span><span class="op">$</span><span class="va">lon</span> <span class="op">&gt;=</span> <span class="fl">50</span><span class="op">)</span>  <span class="co"># East</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Use borg_simulate for spatially autocorrelated data</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">100</span>, type <span class="op">=</span> <span class="st">"spatial"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Random split intermixes nearby points</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">70</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="va">train_idx</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
+<span>                       coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">result</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
+<span><span class="co">#&gt;   Hard violations:  0</span></span>
+<span><span class="co">#&gt;   Soft inflations:  1</span></span>
+<span><span class="co">#&gt;   Train indices:    70 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     30 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] spatial_overlap</span></span>
+<span><span class="co">#&gt;     77% of test points fall within the training region convex hull. Consider spatial blocking.</span></span>
+<span><span class="co">#&gt;     Source: data.frame</span></span>
+<span><span class="co">#&gt;     Fix: Review evaluation workflow for potential information reuse</span></span></code></pre></div>
+<p><strong>Fix</strong>: Use spatial blocking so that train and test
+occupy distinct geographic regions:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Geographic split along x-axis</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">x</span> <span class="op">&lt;</span> <span class="fl">0.5</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">x</span> <span class="op">&gt;=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="spatial-overlap">3. Spatial Overlap<a class="anchor" aria-label="anchor" href="#spatial-overlap"></a>
 </h3>
 <p><strong>What</strong>: Test region falls inside training region’s
 convex hull.</p>
-<p><strong>Why it matters</strong>: Interpolation is easier than
-extrapolation. Model performance on “surrounded” test points
-overestimates performance on truly new regions.</p>
+<p><strong>Why it matters</strong>: Because interpolation is easier than
+extrapolation, test points are surrounded by training points, the model
+benefits from having nearby reference data in all directions. In
+deployment, the model may need to predict in regions where no training
+data exists (true extrapolation). Performance on interpolated test
+points overestimates the model’s transferability to new areas.</p>
 <p><strong>Detection</strong>: Compute convex hull of training points,
 count test points inside.</p>
 <p><strong>Threshold</strong>: Warning if &gt; 50% of test points fall
@@ -520,22 +609,329 @@ inside training hull.</p>
 </h3>
 <p><strong>What</strong>: Using random k-fold CV when data has spatial,
 temporal, or group structure.</p>
-<p><strong>Why it matters</strong>: Random folds break dependencies
-artificially, leading to optimistic error estimates.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Diagnose data dependencies</span></span>
-<span><span class="va">spatial</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">0</span>, <span class="fl">100</span><span class="op">)</span>,</span>
-<span>  lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">0</span>, <span class="fl">100</span><span class="op">)</span>,</span>
-<span>  response <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<p><strong>Why it matters</strong>: Breaking dependencies artificially,
+random folds produce optimistic error estimates. When observations are
+not independent (e.g., spatial neighbors, repeated measures, time
+series), random CV treats each observation as if it were drawn
+independently. This overestimates the effective sample size and
+underestimates the prediction error.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Simulate spatial data and diagnose its dependency structure</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">200</span>, type <span class="op">=</span> <span class="st">"spatial"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">diagnosis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">spatial</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span>,</span>
+<span><span class="va">diagnosis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"y.1"</span>,</span>
 <span>                           verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="va">diagnosis</span><span class="op">@</span><span class="va">recommended_cv</span></span>
-<span><span class="co">#&gt; [1] "random"</span></span></code></pre></div>
-<p><strong>Fix</strong>: Use <code><a href="../reference/borg.html">borg()</a></code> to generate appropriate
-blocked CV folds.</p>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Dependency:"</span>, <span class="va">diagnosis</span><span class="op">@</span><span class="va">dependency_type</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Dependency: none</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Recommended CV:"</span>, <span class="va">diagnosis</span><span class="op">@</span><span class="va">recommended_cv</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Recommended CV: random</span></span></code></pre></div>
+<p><strong>Fix</strong>: Use <code><a href="../reference/borg_cv.html">borg_cv()</a></code> to generate
+appropriate blocked CV folds that respect the dependency structure, or
+call <code><a href="../reference/borg.html">borg()</a></code> for a full automated pipeline.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="risk-interactions">Risk Interactions<a class="anchor" aria-label="anchor" href="#risk-interactions"></a>
+</h2>
+<p>In practice, evaluation risks rarely appear in isolation. Real-world
+datasets often exhibit multiple dependency structures simultaneously,
+and their effects compound in ways that are worse than the sum of
+parts.</p>
+<div class="section level3">
+<h3 id="spatial-target-leakage">Spatial + Target Leakage<a class="anchor" aria-label="anchor" href="#spatial-target-leakage"></a>
+</h3>
+<p>When a dataset has both spatial autocorrelation and a leaked feature,
+the two risks interact. Spatial proximity allows the model to exploit
+local patterns, while the leaked feature provides a near-perfect
+shortcut to the target. Random CV inflates metrics through both channels
+at once. The combined inflation is often much larger than either source
+alone.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Simulate data with both spatial autocorrelation and target leakage</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">200</span>, type <span class="op">=</span> <span class="st">"combined"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>,</span>
+<span>                     leak_strength <span class="op">=</span> <span class="fl">0.95</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Random split</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">140</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">200</span>, <span class="va">train_idx</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Inspect for both risks</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
+<span>                       target <span class="op">=</span> <span class="st">"y.1"</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">result</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
+<span><span class="co">#&gt;   Hard violations:  0</span></span>
+<span><span class="co">#&gt;   Soft inflations:  1</span></span>
+<span><span class="co">#&gt;   Train indices:    140 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     60 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] spatial_overlap</span></span>
+<span><span class="co">#&gt;     88% of test points fall within the training region convex hull. Consider spatial blocking.</span></span>
+<span><span class="co">#&gt;     Source: data.frame</span></span>
+<span><span class="co">#&gt;     Fix: Review evaluation workflow for potential information reuse</span></span></code></pre></div>
+<p>In this example, <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> detects both the target
+leakage and the spatial proximity issue. Fixing only one of them still
+leaves the evaluation compromised.</p>
+</div>
+<div class="section level3">
+<h3 id="preprocessing-spatial-structure">Preprocessing + Spatial Structure<a class="anchor" aria-label="anchor" href="#preprocessing-spatial-structure"></a>
+</h3>
+<p>Preprocessing leakage (fitting normalization on the full dataset)
+interacts with spatial structure in a subtle way. When the train and
+test regions have different covariate distributions (which is common in
+spatial data, where western and eastern regions may differ in elevation,
+rainfall, or land cover), the test region’s statistics contaminate the
+training normalization. This makes the model’s predictions in the test
+region artificially better, because the preprocessing has already “seen”
+the test distribution.</p>
+</div>
+<div class="section level3">
+<h3 id="groups-temporal-ordering">Groups + Temporal Ordering<a class="anchor" aria-label="anchor" href="#groups-temporal-ordering"></a>
+</h3>
+<p>In longitudinal studies, group leakage and temporal violations can
+co-occur. If patient A has observations at times t=1,2,3 and you
+randomly split, some of patient A’s early observations may end up in the
+test set while later observations are in training. The model then
+predicts the past for a patient it has already seen in the future. Both
+risks need to be addressed: split by groups first, then ensure temporal
+ordering within each group.</p>
+</div>
+<div class="section level3">
+<h3 id="temporal-spatial">Temporal + Spatial<a class="anchor" aria-label="anchor" href="#temporal-spatial"></a>
+</h3>
+<p>Spatiotemporal datasets carry two dependency axes at once. A classic
+case is environmental monitoring: weather stations at fixed locations
+record daily values for years. Observations close in space share local
+conditions (microclimate, topography), while observations close in time
+share global conditions (season, regime). A random split violates both
+dependencies simultaneously. Blocking on space alone still allows
+temporal leakage within each spatial block. Blocking on time alone still
+allows spatial interpolation within each time slice.</p>
+<p>The practical consequence is that neither a pure spatial block CV nor
+a pure temporal block CV produces honest error estimates. A spatial
+block CV applied to a 10-year daily monitoring dataset will place all
+3,650 days from a held-out station into the test set, but the model
+still sees the same days at neighboring stations. If the spatial
+autocorrelation range is 50 km and stations are 20 km apart, the model
+interpolates with ease. Conversely, a temporal block CV that holds out
+the final year still allows the model to train on the held-out year’s
+spatial neighbors.</p>
+<p>The correct approach is to block on both axes: hold out entire
+spatial regions for entire time windows. This is sometimes called
+“leave-location-and-time-out” (LLTO) CV. The inflation gap between
+random CV and LLTO CV is often the largest of any single correction,
+because two leakage channels close at once. In species distribution
+modelling with multi-year survey data, we have seen R-squared drop by
+40-70% when switching from random to LLTO CV.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Simulate data with both spatial and temporal structure</span></span>
+<span><span class="va">sim_sp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">200</span>, type <span class="op">=</span> <span class="st">"spatial"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="va">sim_tm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">200</span>, type <span class="op">=</span> <span class="st">"temporal"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Diagnose each independently</span></span>
+<span><span class="va">diag_sp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">sim_sp</span><span class="op">$</span><span class="va">data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"y.1"</span>,</span>
+<span>                         verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">diag_tm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">sim_tm</span><span class="op">$</span><span class="va">data</span>, time <span class="op">=</span> <span class="st">"time"</span>, target <span class="op">=</span> <span class="st">"y"</span>,</span>
+<span>                         verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Spatial dependency:"</span>, <span class="va">diag_sp</span><span class="op">@</span><span class="va">dependency_type</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Spatial dependency: spatial</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Temporal dependency:"</span>, <span class="va">diag_tm</span><span class="op">@</span><span class="va">dependency_type</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Temporal dependency: temporal</span></span></code></pre></div>
+<p>When both structures are present, run <code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code>
+with both <code>coords</code> and <code>time</code> arguments so that
+BORG can recommend a spatiotemporal blocking strategy rather than a
+single-axis block.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="decision-tree-which-risks-to-check">Decision Tree: Which Risks to Check<a class="anchor" aria-label="anchor" href="#decision-tree-which-risks-to-check"></a>
+</h2>
+<p>Not every dataset requires checking all risk types. Use this decision
+tree to identify which risks are relevant for your data.</p>
+<p><strong>Step 1: Data structure</strong></p>
+<ul>
+<li>Does your data have repeated measurements from the same subject,
+site, or unit? Check <strong>group leakage</strong>.</li>
+<li>Does your data have coordinates (longitude/latitude, UTM, or any
+x/y)? Check <strong>spatial proximity</strong> and <strong>spatial
+overlap</strong>.</li>
+<li>Does your data have a time column (dates, timestamps, or ordered
+sequence)? Check <strong>temporal ordering</strong>.</li>
+</ul>
+<p><strong>Step 2: Preprocessing pipeline</strong></p>
+<ul>
+<li>Did you normalize, impute, or reduce dimensionality on the full
+dataset before splitting? Check <strong>preprocessing
+leakage</strong>.</li>
+<li>Did you fit a PCA, encoder, or embedding on all data? Same
+risk.</li>
+</ul>
+<p><strong>Step 3: Feature provenance</strong></p>
+<ul>
+<li>Were any features computed from the target variable? Check
+<strong>target leakage</strong>.</li>
+<li>Were any features aggregated across time periods that include the
+test period? Check <strong>target leakage</strong> (temporal
+variant).</li>
+<li>Do any features have suspiciously high correlation with the target?
+Use <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> with the <code>target</code> argument to
+scan automatically.</li>
+</ul>
+<p><strong>Step 4: Split mechanics</strong></p>
+<ul>
+<li>Did you create train/test splits manually? Check <strong>index
+overlap</strong>.</li>
+<li>Did your data go through deduplication after splitting? Check
+<strong>duplicate rows</strong>.</li>
+<li>Are you using nested CV? Check <strong>CV fold
+contamination</strong>.</li>
+<li>Did you fit the model separately from splitting? Check <strong>model
+scope</strong>.</li>
+</ul>
+<p><strong>Quick start</strong>: if you are unsure, run
+<code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> on your data to detect dependency
+structure, then <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> on your split to scan for
+leakage:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Step 1: Diagnose the dataset</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">200</span>, type <span class="op">=</span> <span class="st">"spatial"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.5</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">diagnosis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"y.1"</span>,</span>
+<span>                           verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Structure:"</span>, <span class="va">diagnosis</span><span class="op">@</span><span class="va">dependency_type</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Structure: spatial</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Severity:"</span>, <span class="va">diagnosis</span><span class="op">@</span><span class="va">severity</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Severity: moderate</span></span>
+<span></span>
+<span><span class="co"># Step 2: Inspect a candidate split</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">140</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">200</span>, <span class="va">train_idx</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">inspection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
+<span>                           coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"y.1"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nValid split?"</span>, <span class="va">inspection</span><span class="op">@</span><span class="va">is_valid</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Valid split? TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Hard violations:"</span>, <span class="va">inspection</span><span class="op">@</span><span class="va">n_hard</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Hard violations: 0</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Soft warnings:"</span>, <span class="va">inspection</span><span class="op">@</span><span class="va">n_soft</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Soft warnings: 1</span></span></code></pre></div>
+<p>When <code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> reports spatial or temporal
+structure and <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> flags spatial proximity on a
+random split, the diagnosis and inspection agree: you need blocked
+CV.</p>
+</div>
+<div class="section level2">
+<h2 id="practical-guidance">Practical Guidance<a class="anchor" aria-label="anchor" href="#practical-guidance"></a>
+</h2>
+<div class="section level3">
+<h3 id="hard-vs--soft-triage-order">Hard vs. Soft: Triage Order<a class="anchor" aria-label="anchor" href="#hard-vs--soft-triage-order"></a>
+</h3>
+<p>Hard violations invalidate the evaluation entirely. Soft inflation
+risks bias it. The triage order follows from this distinction: fix all
+hard violations first, because no amount of soft-risk mitigation matters
+if the evaluation is fundamentally broken. A dataset with index overlap
+and spatial proximity has two problems, but the index overlap must be
+fixed before the spatial proximity is even worth thinking about. Once
+all hard violations are resolved, address soft risks in order of
+estimated inflation magnitude, which usually means spatial proximity
+first (it tends to produce the largest bias in environmental and
+ecological data), then proxy leakage, then spatial overlap.</p>
+<p>A common mistake is to spend effort on spatial blocking while the
+dataset still contains duplicate rows from a sloppy merge. The spatial
+blocking will not help. The model memorizes the duplicates and scores
+well on them regardless of how the geographic blocks are arranged.
+Always clear the hard violations before tuning the soft ones.</p>
+</div>
+<div class="section level3">
+<h3 id="how-risk-severity-scales-with-dataset-size">How Risk Severity Scales with Dataset Size<a class="anchor" aria-label="anchor" href="#how-risk-severity-scales-with-dataset-size"></a>
+</h3>
+<p>Small datasets amplify every risk. With n = 50, a single duplicate
+row in the test set represents 6-7% of the test data (assuming a 70/30
+split). With n = 10,000 and the same one duplicate, the effect is 0.03%
+of the test set, which is negligible. The same logic applies to
+preprocessing leakage: the train-set mean and the full-dataset mean
+converge as n grows, so the information leaked through preprocessing
+diminishes. At n &gt; 5,000, the bias from preprocessing leakage on
+well-behaved numeric features is typically below 0.5% of the metric.</p>
+<p>Spatial proximity is the exception. Its severity depends on the ratio
+of inter-point distance to autocorrelation range, not on n directly. A
+dataset with n = 100,000 points densely covering a small area can have
+worse spatial leakage than n = 200 points spread across a continent. The
+relevant quantity is the effective spatial coverage, not the sample
+size.</p>
+<p>Target leakage severity is independent of n. A perfectly correlated
+feature dominates the model at any sample size.</p>
+</div>
+<div class="section level3">
+<h3 id="rules-of-thumb">Rules of Thumb<a class="anchor" aria-label="anchor" href="#rules-of-thumb"></a>
+</h3>
+<p>These are empirically grounded defaults. They will not be correct in
+every situation, but they cover the majority of applied cases we have
+encountered.</p>
+<p><strong>1. Below n = 200, treat every soft risk as hard.</strong>
+With fewer than 200 observations, the margin between a biased evaluation
+and an honest one is small enough that soft inflation risks can flip
+model rankings. A spatial proximity warning on n = 150 is, in practice,
+as damaging as a hard violation on n = 5,000. Run
+<code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> and fix everything it flags.</p>
+<p><strong>2. If the median nearest-neighbor distance between test and
+train points is less than 10% of the autocorrelation range, spatial
+blocking is mandatory.</strong> This threshold comes from simulation
+studies in spatial statistics: below it, interpolation dominates and
+error estimates are optimistic by 30% or more. If the autocorrelation
+range is unknown, estimate it from a variogram. If that is not feasible,
+use 5% of the spatial extent as a conservative proxy for the
+autocorrelation range and apply the 10% rule to that.</p>
+<p><strong>3. When all features have |r| &lt; 0.8 with the target and n
+&gt; 500, spatial proximity is the dominant remaining risk for
+georeferenced data.</strong> In this regime, target leakage is absent
+and the sample is large enough that preprocessing leakage and duplicates
+have negligible effect. The evaluation’s honesty hinges almost entirely
+on whether the spatial structure was respected. Conversely, if any
+feature has |r| &gt; 0.95, target leakage is the dominant risk
+regardless of spatial structure, and it must be resolved first.</p>
+<p><strong>4. For time series shorter than 100 observations, use a
+single temporal split rather than rolling-window CV.</strong>
+Rolling-window CV on short series produces folds with very few test
+points (sometimes fewer than 10), which makes the performance estimate
+high-variance and unreliable. A single 70/30 chronological split gives a
+noisier but less biased estimate than 5-fold rolling windows with 15
+test points each.</p>
+<p><strong>5. Group-aware splitting is non-negotiable when the ICC
+exceeds 0.3.</strong> An intra-class correlation of 0.3 means that 30%
+of the total variance lives between groups. Random CV that ignores
+groups will exploit this structure and inflate metrics accordingly. At
+ICC &gt; 0.5, the inflation from ignoring groups routinely exceeds the
+inflation from ignoring spatial structure.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Quick triage workflow</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">150</span>, type <span class="op">=</span> <span class="st">"combined"</span>, autocorrelation <span class="op">=</span> <span class="fl">0.6</span>,</span>
+<span>                     leak_strength <span class="op">=</span> <span class="fl">0.97</span>, seed <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span></span>
+<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">150</span>, <span class="fl">105</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">150</span>, <span class="va">train_idx</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span>,</span>
+<span>                       target <span class="op">=</span> <span class="st">"y.1"</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Hard violations:"</span>, <span class="va">result</span><span class="op">@</span><span class="va">n_hard</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Hard violations: 0</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Soft warnings:"</span>, <span class="va">result</span><span class="op">@</span><span class="va">n_soft</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Soft warnings: 1</span></span></code></pre></div>
+<p>With n = 150, both the target leakage (hard) and spatial proximity
+(soft) need fixing. The hard violation comes first. Remove or
+investigate the leaked feature, then switch to spatial blocking for the
+remaining soft risk.</p>
 </div>
 </div>
 <div class="section level2">
@@ -628,7 +1024,7 @@ blocked CV folds.</p>
 <div class="section level2">
 <h2 id="accessing-risk-details">Accessing Risk Details<a class="anchor" aria-label="anchor" href="#accessing-risk-details"></a>
 </h2>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create result with violations</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -648,8 +1044,8 @@ blocked CV folds.</p>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">risk</span> <span class="kw">in</span> <span class="va">result</span><span class="op">@</span><span class="va">risks</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\n"</span>, <span class="va">risk</span><span class="op">$</span><span class="va">type</span>, <span class="st">"("</span>, <span class="va">risk</span><span class="op">$</span><span class="va">severity</span>, <span class="st">"):\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  "</span>, <span class="va">risk</span><span class="op">$</span><span class="va">description</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">risk</span><span class="op">$</span><span class="va">affected</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Affected:"</span>, <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">risk</span><span class="op">$</span><span class="va">affected</span>, <span class="fl">5</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">risk</span><span class="op">$</span><span class="va">affected_indices</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Affected:"</span>, <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">risk</span><span class="op">$</span><span class="va">affected_indices</span>, <span class="fl">5</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">}</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -664,7 +1060,9 @@ blocked CV folds.</p>
 <span><span class="co">#&gt;                                                                        description</span></span>
 <span><span class="co">#&gt; 1 Train and test indices overlap (10 shared indices). This invalidates evaluation.</span></span>
 <span><span class="co">#&gt;        source_object n_affected</span></span>
-<span><span class="co">#&gt; 1 train_idx/test_idx         10</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 train_idx/test_idx         10</span></span>
+<span><span class="co">#&gt;                                            suggested_fix</span></span>
+<span><span class="co">#&gt; 1 Recreate train/test split with non-overlapping indices</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="see-also">See Also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h3>
@@ -686,7 +1084,7 @@ integration</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -696,6 +1094,5 @@ integration</p></li>
 
 
 
-  
-</body>
+  </body>
 </html>
