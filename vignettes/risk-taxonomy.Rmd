@@ -25,6 +25,13 @@ This document catalogs all evaluation risks that BORG detects, organized by
 severity and mechanism. Each risk type includes a description of what triggers
 it, why it matters for real-world modelling, and how to fix it.
 
+## Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 ## Risk Classification
 
 BORG classifies risks into two categories based on their impact on evaluation

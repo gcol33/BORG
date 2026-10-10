@@ -31,6 +31,13 @@ theme_set(theme_borg)
 set.seed(42)
 ```
 
+# Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 # Introduction
 
 Cross-validation is the standard technique for estimating how well a model will

@@ -33,6 +33,13 @@ has_rsample <- requireNamespace("rsample", quietly = TRUE)
 has_mlr3 <- requireNamespace("mlr3", quietly = TRUE)
 ```
 
+## Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 ## Why This Guide Exists
 
 Most R modelling frameworks provide their own cross-validation utilities:

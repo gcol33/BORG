@@ -30,6 +30,13 @@ theme_borg <- theme_minimal(base_size = 12) +
 theme_set(theme_borg)
 ```
 
+# Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 # Setup: simulating spatial data and fitting a model
 
 Before running any diagnostics, we need a dataset with known spatial structure and

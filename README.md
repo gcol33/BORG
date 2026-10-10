@@ -19,6 +19,15 @@ dependency is present, random k-fold is disabled unless you ask for it
 explicitly. The point is the number you report from CV being the number you get
 in the field.
 
+## Installation
+
+```r
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
+## Quick start
+
 ```r
 library(BORG)
 
@@ -136,13 +145,6 @@ summary(result)
 #> Model performance was evaluated using spatial block cross-validation
 #> (k = 5 folds). Spatial autocorrelation was detected (Moran's I = 0.18,
 #> p < 0.001) ...
-```
-
-## Installation
-
-```r
-install.packages("pak")           # development version
-pak::pak("gcol33/BORG")
 ```
 
 ## Documentation

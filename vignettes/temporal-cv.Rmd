@@ -30,6 +30,13 @@ theme_borg <- theme_minimal(base_size = 12) +
 theme_set(theme_borg)
 ```
 
+# Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 # Introduction
 
 Time series cross-validation is one of those techniques that most practitioners

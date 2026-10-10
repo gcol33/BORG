@@ -30,6 +30,13 @@ theme_borg <- theme_minimal(base_size = 12) +
 theme_set(theme_borg)
 ```
 
+# Installation
+
+```{r, eval = FALSE}
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
+
 # Why your test accuracy might be wrong
 
 A model shows 95% accuracy on test data, then drops to 60% in production. The
