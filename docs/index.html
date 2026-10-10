@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>BORG: Bounded Outcome Risk Guard for Model Evaluation • BORG</title>
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><link href="extra.css" rel="stylesheet">
 <meta property="og:title" content="BORG: Bounded Outcome Risk Guard for Model Evaluation">
@@ -16,9 +16,22 @@
 ">
 <meta property="og:description" content="Automatically detects and enforces valid model evaluation by identifying information reuse between training and evaluation data.
 ">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -26,7 +39,7 @@
 
     <a class="navbar-brand me-2" href="index.html">BORG</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,7 +87,17 @@
 <p><a href="https://CRAN.R-project.org/package=BORG" class="external-link"><img src="https://www.r-pkg.org/badges/version/BORG" alt="CRAN status"></a> <a href="https://cran.r-project.org/package=BORG" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/BORG" alt="CRAN downloads"></a> <a href="https://cran.r-project.org/package=BORG" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/BORG" alt="Monthly downloads"></a> <a href="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/gcol33/BORG" class="external-link"><img src="https://codecov.io/gh/gcol33/BORG/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
 <p><strong>Cross-validation that respects spatial, temporal, and grouped structure, with the dependency detected for you.</strong></p>
 <p>Hand BORG your data and the columns that carry structure (coordinates, a time stamp, a grouping ID). It tests for spatial autocorrelation (Moran’s I), temporal autocorrelation (ACF / Ljung-Box), and clustering (ICC), then builds folds that hold the structure out instead of splitting through it. When a dependency is present, random k-fold is disabled unless you ask for it explicitly. The point is the number you report from CV being the number you get in the field.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span>           <span class="co"># development version</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/BORG"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spatial_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -87,11 +110,12 @@
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">diagnosis</span><span class="op">@</span><span class="va">recommended_cv</span></span>
 <span><span class="co">#&gt; "spatial_block"</span></span></code></pre></div>
+</div>
 <div class="section level2">
 <h2 id="diagnose-first-then-enforce">Diagnose first, then enforce<a class="anchor" aria-label="anchor" href="#diagnose-first-then-enforce"></a>
 </h2>
 <p>Spatial CV tools such as <code>blockCV</code>, <code>CAST</code>, and <code>spatialsample</code> give you the blocking schemes but leave the decision to you: you have to know the data are autocorrelated, pick a block size, and choose to use it. BORG runs the diagnosis first. If it finds structure, it estimates how much random CV would inflate your metric, refuses random folds, and generates a scheme matched to the dependency it found. Overriding is one explicit argument away, and the override is logged.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dependency:  SPATIAL (moderate severity)</span></span>
 <span><span class="co">#&gt; Moran's I:   0.18 (p &lt; 0.001)</span></span>
@@ -112,7 +136,7 @@
 <strong>Mixed</strong>: spatial-temporal and spatial-group combinations.</li>
 </ul>
 <p>Output is a plain list of train/test indices by default, or an <code>rsample</code>, <code>caret</code>, or <code>mlr3</code> object for direct use in those frameworks.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># tidymodels-compatible folds</span></span>
 <span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"rsample"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -120,7 +144,7 @@
 <h2 id="show-the-inflation-not-just-the-warning">Show the inflation, not just the warning<a class="anchor" aria-label="anchor" href="#show-the-inflation-not-just-the-warning"></a>
 </h2>
 <p><code><a href="reference/borg_compare_cv.html">borg_compare_cv()</a></code> runs random and structure-aware CV on the same data and model, and reports the gap with a paired t-test. This is the evidence a reviewer asks for when you switch a paper from random to blocked CV.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg_compare_cv.html">borg_compare_cv</a></span><span class="op">(</span></span>
 <span>  <span class="va">spatial_data</span>,</span>
 <span>  formula <span class="op">=</span> <span class="va">response</span> <span class="op">~</span> <span class="va">lon</span> <span class="op">+</span> <span class="va">lat</span>,</span>
@@ -141,7 +165,7 @@
 <li>target leakage from a feature near-perfectly correlated with the outcome,</li>
 <li>group leakage and look-ahead in time.</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># scaled before splitting: the test means leaked into the scaler</span></span>
 <span><span class="va">data_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">iris</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">data_scaled</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, test_idx <span class="op">=</span> <span class="fl">101</span><span class="op">:</span><span class="fl">150</span><span class="op">)</span></span>
@@ -157,18 +181,11 @@
 <h2 id="methods-text-for-the-manuscript">Methods text for the manuscript<a class="anchor" aria-label="anchor" href="#methods-text-for-the-manuscript"></a>
 </h2>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on a BORG result writes a methods paragraph with the test statistics filled in (Moran’s I, ACF, ICC, and their p-values), in APA, Nature, or Ecology style. <code><a href="reference/borg_certificate.html">borg_certificate()</a></code> and <code><a href="reference/borg_export.html">borg_export()</a></code> write the same assessment as a machine-readable YAML or JSON record for an audit trail.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Model performance was evaluated using spatial block cross-validation</span></span>
 <span><span class="co">#&gt; (k = 5 folds). Spatial autocorrelation was detected (Moran's I = 0.18,</span></span>
 <span><span class="co">#&gt; p &lt; 0.001) ...</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span>           <span class="co"># development version</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/BORG"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
@@ -256,7 +273,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -266,6 +283,5 @@
 
 
 
-  
-</body>
+  </body>
 </html>
