@@ -22,7 +22,10 @@ borg_diagnose(
 
 - data:
 
-  A data frame to diagnose.
+  A data frame, `sf` object, or
+  [`terra::SpatVector`](https://rspatial.github.io/terra/reference/SpatVector-class.html)
+  to diagnose. For `sf` and `SpatVector` inputs, coordinates are
+  extracted automatically and the `coords` argument is not needed.
 
 - coords:
 

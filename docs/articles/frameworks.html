@@ -86,7 +86,7 @@
                         <h4 data-toc-skip class="author">Gilles
 Colling</h4>
             
-            <h4 data-toc-skip class="date">2026-10-10</h4>
+            <h4 data-toc-skip class="date">2026-10-19</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gcol33/BORG/blob/HEAD/vignettes/frameworks.Rmd" class="external-link"><code>vignettes/frameworks.Rmd</code></a></small>
       <div class="d-none name"><code>frameworks.Rmd</code></div>
@@ -105,7 +105,7 @@ Colling</h4>
 <h2 id="why-this-guide-exists">Why This Guide Exists<a class="anchor" aria-label="anchor" href="#why-this-guide-exists"></a>
 </h2>
 <p>Most R modelling frameworks provide their own cross-validation
-utilities: <code>caret::trainControl()</code>,
+utilities: <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl()</a></code>,
 <code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv()</a></code>, <code>mlr3::rsmp("cv")</code>. These
 work well when observations are independent. When they are not
 (spatially autocorrelated, temporally ordered, or clustered by group),
@@ -157,7 +157,7 @@ exists; “Generate” means BORG creates the CV folds itself.</p>
 </tr>
 <tr class="even">
 <td>caret</td>
-<td><code>trainControl()</code></td>
+<td><code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl()</a></code></td>
 <td><code>borg_inspect(preProcess)</code></td>
 <td><code><a href="../reference/borg_trainControl.html">borg_trainControl()</a></code></td>
 </tr>
@@ -199,7 +199,7 @@ exists; “Generate” means BORG creates the CV folds itself.</p>
 </tr>
 <tr class="odd">
 <td>biomod2</td>
-<td><code>BIOMOD_Modeling()</code></td>
+<td><code><a href="https://biomodhub.github.io/biomod2/reference/BIOMOD_Modeling.html" class="external-link">BIOMOD_Modeling()</a></code></td>
 <td>–</td>
 <td><code><a href="../reference/borg_to_biomod2.html">borg_to_biomod2()</a></code></td>
 </tr>
@@ -235,7 +235,7 @@ a vector of test indices.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    105 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     45 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:09</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 <div class="section level3">
@@ -267,7 +267,7 @@ evaluation is contaminated.</p>
 <div class="section level3">
 <h3 id="when-to-use-borg-with-caret">When to Use BORG with caret<a class="anchor" aria-label="anchor" href="#when-to-use-borg-with-caret"></a>
 </h3>
-<p>caret’s <code>trainControl()</code> provides
+<p>caret’s <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl()</a></code> provides
 <code>method = "cv"</code> and <code>method = "repeatedcv"</code> for
 standard cross-validation, plus <code>method = "LGOCV"</code> for
 leave-group-out. None of these account for spatial or temporal structure
@@ -284,30 +284,69 @@ folds with <code><a href="../reference/borg_cv.html">borg_cv()</a></code>.</p>
 <div class="section level3">
 <h3 id="validating-preprocess-objects">Validating preProcess Objects<a class="anchor" aria-label="anchor" href="#validating-preprocess-objects"></a>
 </h3>
-<p>caret’s <code>preProcess()</code> object stores the training-set
+<p>caret’s <code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">preProcess()</a></code> object stores the training-set
 statistics it learned. <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code> checks whether those
 statistics came from the full dataset or only from the training
 partition.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/topepo/caret/" class="external-link">caret</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'caret' was built under R version 4.6.1</span></span>
+<span><span class="co">#&gt; Loading required package: ggplot2</span></span>
+<span><span class="co">#&gt; Warning: package 'ggplot2' was built under R version 4.6.1</span></span>
+<span><span class="co">#&gt; Loading required package: lattice</span></span>
+<span><span class="co">#&gt; Warning: package 'lattice' was built under R version 4.6.1</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">25</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">26</span><span class="op">:</span><span class="fl">32</span></span>
 <span></span>
 <span><span class="co"># BAD: preProcess on full data (leaks test-set statistics)</span></span>
-<span><span class="va">pp_bad</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">pp_bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">preProcess</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp_bad</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: INVALID (2 hard violations) — Resistance is futile</span></span>
+<span><span class="co">#&gt;   Hard violations:  2</span></span>
+<span><span class="co">#&gt;   Soft inflations:  0</span></span>
+<span><span class="co">#&gt;   Train indices:    25 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     7 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] preprocessing_leak</span></span>
+<span><span class="co">#&gt;     preProcess centering parameters were computed on data beyond training set (mean difference: 16.1061)</span></span>
+<span><span class="co">#&gt;     Source: preProcess</span></span>
+<span><span class="co">#&gt;     Affected: 7 indices (first 5: 26, 27, 28, 29, 30)</span></span>
+<span><span class="co">#&gt;     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [2] preprocessing_leak</span></span>
+<span><span class="co">#&gt;     preProcess scaling parameters were computed on data beyond training set (sd difference: 9.7915)</span></span>
+<span><span class="co">#&gt;     Source: preProcess</span></span>
+<span><span class="co">#&gt;     Affected: 7 indices (first 5: 26, 27, 28, 29, 30)</span></span>
+<span><span class="co">#&gt;     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)</span></span>
 <span></span>
 <span><span class="co"># GOOD: preProcess on training data only</span></span>
-<span><span class="va">pp_good</span> <span class="op">&lt;-</span> <span class="fu">preProcess</span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">pp_good</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">preProcess</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span>, method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pp_good</span>, <span class="va">train_idx</span>, <span class="va">test_idx</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: VALID (no hard violations)</span></span>
+<span><span class="co">#&gt;   Hard violations:  0</span></span>
+<span><span class="co">#&gt;   Soft inflations:  0</span></span>
+<span><span class="co">#&gt;   Train indices:    25 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     7 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="guarded-traincontrol">Guarded trainControl<a class="anchor" aria-label="anchor" href="#guarded-traincontrol"></a>
 </h3>
 <p><code><a href="../reference/borg_trainControl.html">borg_trainControl()</a></code> accepts the same <code>method</code>
-and <code>number</code> arguments as <code>caret::trainControl()</code>,
+and <code>number</code> arguments as <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl()</a></code>,
 plus optional <code>coords</code>, <code>time</code>, and
 <code>groups</code> arguments that trigger dependency checking. When
 dependencies are found and <code>allow_override = FALSE</code> (the
@@ -335,14 +374,14 @@ complete corrected workflow:</p>
 <span>              output <span class="op">=</span> <span class="st">"caret"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use the BORG folds inside caret's trainControl</span></span>
-<span><span class="va">ctrl</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu">trainControl</span><span class="op">(</span></span>
+<span><span class="va">ctrl</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl</a></span><span class="op">(</span></span>
 <span>  method <span class="op">=</span> <span class="st">"cv"</span>,</span>
 <span>  index <span class="op">=</span> <span class="va">cv</span><span class="op">$</span><span class="va">index</span>,</span>
 <span>  indexOut <span class="op">=</span> <span class="va">cv</span><span class="op">$</span><span class="va">indexOut</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Train as usual</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu">train</span><span class="op">(</span><span class="va">y.1</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span> <span class="op">+</span> <span class="va">x3</span> <span class="op">+</span> <span class="va">x4</span> <span class="op">+</span> <span class="va">x5</span>,</span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">train</a></span><span class="op">(</span><span class="va">y.1</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span> <span class="op">+</span> <span class="va">x3</span> <span class="op">+</span> <span class="va">x4</span> <span class="op">+</span> <span class="va">x5</span>,</span>
 <span>                      data <span class="op">=</span> <span class="va">d</span>,</span>
 <span>                      method <span class="op">=</span> <span class="st">"lm"</span>,</span>
 <span>                      trControl <span class="op">=</span> <span class="va">ctrl</span><span class="op">)</span></span></code></pre></div>
@@ -354,20 +393,31 @@ object.</p>
 <div class="section level3">
 <h3 id="pipeline-level-validation-with-borg_pipeline">Pipeline-Level Validation with borg_pipeline()<a class="anchor" aria-label="anchor" href="#pipeline-level-validation-with-borg_pipeline"></a>
 </h3>
-<p>For fitted <code>caret::train</code> objects,
+<p>For fitted <code><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">caret::train</a></code> objects,
 <code><a href="../reference/borg_pipeline.html">borg_pipeline()</a></code> decomposes the pipeline into stages
 (preprocessing, resampling, tuning, model fitting) and inspects each for
 leakage independently.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
-<span><span class="va">ctrl</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu">trainControl</span><span class="op">(</span>method <span class="op">=</span> <span class="st">"cv"</span>, number <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu">train</span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">25</span>, <span class="op">]</span>, method <span class="op">=</span> <span class="st">"lm"</span>,</span>
+<span><span class="va">ctrl</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"cv"</span>, number <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">caret</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">train</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">25</span>, <span class="op">]</span>, method <span class="op">=</span> <span class="st">"lm"</span>,</span>
 <span>                      trControl <span class="op">=</span> <span class="va">ctrl</span>,</span>
 <span>                      preProcess <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center"</span>, <span class="st">"scale"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_pipeline.html">borg_pipeline</a></span><span class="op">(</span><span class="va">model</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">25</span>, test_idx <span class="op">=</span> <span class="fl">26</span><span class="op">:</span><span class="fl">32</span>,</span>
 <span>                        data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
-<span><span class="va">result</span></span></code></pre></div>
+<span><span class="va">result</span></span>
+<span><span class="co">#&gt; BORG Pipeline Validation</span></span>
+<span><span class="co">#&gt; ========================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Stages inspected: 2</span></span>
+<span><span class="co">#&gt; Overall status:   VALID</span></span>
+<span><span class="co">#&gt; Hard violations:  0</span></span>
+<span><span class="co">#&gt; Soft warnings:    0</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- Per-Stage Results ---</span></span>
+<span><span class="co">#&gt;   preprocessing        [OK] 0 issue(s)</span></span>
+<span><span class="co">#&gt;   resampling           [OK] 0 issue(s)</span></span></code></pre></div>
 <p>The output lists each stage with its status (OK or LEAK) and issue
 count. The <code>leaking_stages</code> field names the stages that need
 attention, so you can fix them individually without re-inspecting the
@@ -397,7 +447,9 @@ training partition. If the recipe was prepped on the full dataset, BORG
 flags it as a hard violation.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'recipes' was built under R version 4.6.1</span></span>
 <span><span class="co">#&gt; Loading required package: dplyr</span></span>
+<span><span class="co">#&gt; Warning: package 'dplyr' was built under R version 4.6.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
@@ -412,6 +464,12 @@ flags it as a hard violation.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     step</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rsample.tidymodels.org" class="external-link">rsample</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'rsample' was built under R version 4.6.1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'rsample'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:caret':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     calibration</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
@@ -433,7 +491,7 @@ flags it as a hard violation.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    25 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     7 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:09</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -469,7 +527,7 @@ flags it as a hard violation.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    25 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     7 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:09</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -486,15 +544,12 @@ it passes through to the standard rsample function. When structure hints
 are present, it runs <code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> and takes one of three
 actions depending on configuration:</p>
 <ol style="list-style-type: decimal">
-<li>
-<strong>Block</strong> (default): stop with an error describing the
-dependency.</li>
-<li>
-<strong>Auto-block</strong> (<code>auto_block = TRUE</code>):
-silently switch to blocked CV.</li>
-<li>
-<strong>Override</strong> (<code>allow_override = TRUE</code>): warn
-but return random folds.</li>
+<li><p><strong>Block</strong> (default): stop with an error describing
+the dependency.</p></li>
+<li><p><strong>Auto-block</strong> (<code>auto_block = TRUE</code>):
+silently switch to blocked CV.</p></li>
+<li><p><strong>Override</strong> (<code>allow_override = TRUE</code>):
+warn but return random folds.</p></li>
 </ol>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg_simulate.html">borg_simulate</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">300</span>, type <span class="op">=</span> <span class="st">"spatial"</span>, seed <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
@@ -596,7 +651,7 @@ and test windows.</p>
 </h3>
 <p>If you have an rsample object from another source (for example,
 <code><a href="https://rsample.tidymodels.org/reference/rolling_origin.html" class="external-link">rsample::rolling_origin()</a></code> or
-<code>spatialsample::spatial_block_cv()</code>), you can validate it
+<code><a href="https://spatialsample.tidymodels.org/reference/spatial_block_cv.html" class="external-link">spatialsample::spatial_block_cv()</a></code>), you can validate it
 with <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code>:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ts_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -620,7 +675,7 @@ with <code><a href="../reference/borg_inspect.html">borg_inspect()</a></code>:</
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    0 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     0 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -771,21 +826,21 @@ this format.</p>
 <span><span class="co">#&gt; [5,]  TRUE FALSE  TRUE TRUE</span></span>
 <span><span class="co">#&gt; [6,] FALSE  TRUE  TRUE TRUE</span></span></code></pre></div>
 <p>In a biomod2 workflow, pass this table to
-<code>BIOMOD_Modeling()</code> via the <code>data.split.table</code>
+<code><a href="https://biomodhub.github.io/biomod2/reference/BIOMOD_Modeling.html" class="external-link">BIOMOD_Modeling()</a></code> via the <code>data.split.table</code>
 argument:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://biomodhub.github.io/biomod2/" class="external-link">biomod2</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">bm_data</span> <span class="op">&lt;-</span> <span class="fu">BIOMOD_FormatingData</span><span class="op">(</span></span>
+<span><span class="va">bm_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://biomodhub.github.io/biomod2/reference/BIOMOD_FormatingData.html" class="external-link">BIOMOD_FormatingData</a></span><span class="op">(</span></span>
 <span>  resp.var <span class="op">=</span> <span class="va">presence_vector</span>,</span>
 <span>  expl.var <span class="op">=</span> <span class="va">env_stack</span>,</span>
 <span>  resp.xy <span class="op">=</span> <span class="va">coords_matrix</span>,</span>
 <span>  resp.name <span class="op">=</span> <span class="st">"species"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">bm_options</span> <span class="op">&lt;-</span> <span class="fu">BIOMOD_ModelingOptions</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">bm_options</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://biomodhub.github.io/biomod2/reference/biomod2-deprecated.html" class="external-link">BIOMOD_ModelingOptions</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">bm_models</span> <span class="op">&lt;-</span> <span class="fu">BIOMOD_Modeling</span><span class="op">(</span></span>
+<span><span class="va">bm_models</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://biomodhub.github.io/biomod2/reference/BIOMOD_Modeling.html" class="external-link">BIOMOD_Modeling</a></span><span class="op">(</span></span>
 <span>  bm.format <span class="op">=</span> <span class="va">bm_data</span>,</span>
 <span>  modeling.id <span class="op">=</span> <span class="st">"borg_blocked"</span>,</span>
 <span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"GLM"</span>, <span class="st">"RF"</span>, <span class="st">"MAXENT"</span><span class="op">)</span>,</span>
@@ -831,7 +886,7 @@ violation.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    252 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     113 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -859,7 +914,7 @@ leakage:</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    0 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     0 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -900,7 +955,7 @@ rather than learning generalizable relationships.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    91 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     109 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 </div>
@@ -980,7 +1035,7 @@ a data frame plus index vectors.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    105 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     45 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -1014,7 +1069,7 @@ errors corrupt index boundaries.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    100 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     100 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:10</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:38:47</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -1033,25 +1088,21 @@ errors corrupt index boundaries.</p>
 <div class="section level3">
 <h3 id="borg_pipeline-stage-by-stage-decomposition">borg_pipeline(): Stage-by-Stage Decomposition<a class="anchor" aria-label="anchor" href="#borg_pipeline-stage-by-stage-decomposition"></a>
 </h3>
-<p>For richer pipelines (a fitted <code>caret::train</code> object, a
+<p>For richer pipelines (a fitted <code><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">caret::train</a></code> object, a
 tidymodels <code>workflow</code>, or a list of named components),
 <code><a href="../reference/borg_pipeline.html">borg_pipeline()</a></code> decomposes the pipeline into stages and
 inspects each:</p>
 <ol style="list-style-type: decimal">
-<li>
-<strong>Preprocessing</strong>: recipe steps,
-<code>preProcess</code>, PCA, scaling</li>
-<li>
-<strong>Feature selection</strong>: variable importance
-filtering</li>
-<li>
-<strong>Hyperparameter tuning</strong>: inner CV resamples</li>
-<li>
-<strong>Model fitting</strong>: training data scope and row
-counts</li>
-<li>
-<strong>Post-processing</strong>: threshold optimization,
-calibration</li>
+<li><p><strong>Preprocessing</strong>: recipe steps,
+<code>preProcess</code>, PCA, scaling</p></li>
+<li><p><strong>Feature selection</strong>: variable importance
+filtering</p></li>
+<li><p><strong>Hyperparameter tuning</strong>: inner CV
+resamples</p></li>
+<li><p><strong>Model fitting</strong>: training data scope and row
+counts</p></li>
+<li><p><strong>Post-processing</strong>: threshold optimization,
+calibration</p></li>
 </ol>
 <p>Each stage receives its own BorgRisk assessment. The overall result
 aggregates all risks across stages, and the <code>leaking_stages</code>
@@ -1094,14 +1145,14 @@ resolved without user input.</p>
 follow these steps:</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>Identify the CV step.</strong> Find where your code calls
-<code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv()</a></code>, <code>trainControl()</code>,
+<code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv()</a></code>, <code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl()</a></code>,
 <code>rsmp("cv")</code>, or builds manual index vectors.</p></li>
 <li><p><strong>Add structure hints.</strong> Determine which columns
 carry spatial coordinates, time stamps, or group identifiers, and pass
 them to the corresponding BORG wrapper.</p></li>
 <li><p><strong>Replace the CV constructor.</strong> Swap
 <code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv()</a></code> for <code><a href="../reference/borg_vfold_cv.html">borg_vfold_cv()</a></code>,
-<code>trainControl()</code> for <code><a href="../reference/borg_trainControl.html">borg_trainControl()</a></code>, or
+<code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">trainControl()</a></code> for <code><a href="../reference/borg_trainControl.html">borg_trainControl()</a></code>, or
 generate folds with <code><a href="../reference/borg_cv.html">borg_cv()</a></code> and inject them via
 <code>output = "rsample"</code>, <code>"caret"</code>, or
 <code>"mlr3"</code>.</p></li>

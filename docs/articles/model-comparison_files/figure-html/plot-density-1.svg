@@ -3,15 +3,24 @@
 <g class='svglite'>
 <defs>
   <style type='text/css'><![CDATA[
-    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+    /* theme-aware-processed */
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite circle {
       fill: none;
-      stroke: #000000;
+      stroke: #3E3F3A;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite > g > rect {
+      fill: none;
+      stroke: #3E3F3A;
       stroke-linecap: round;
       stroke-linejoin: round;
       stroke-miterlimit: 10.00;
     }
     .svglite text {
       white-space: pre;
+      fill: #3E3F3A;
     }
     .svglite g.glyphgroup path {
       fill: inherit;
@@ -41,32 +50,32 @@
 <line x1='185.38' y1='286.56' x2='185.38' y2='293.76' style='stroke-width: 0.75;' />
 <line x1='282.24' y1='286.56' x2='282.24' y2='293.76' style='stroke-width: 0.75;' />
 <line x1='379.10' y1='286.56' x2='379.10' y2='293.76' style='stroke-width: 0.75;' />
-<text x='88.52' y='312.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='17.34px' lengthAdjust='spacingAndGlyphs'>-15</text>
-<text x='185.38' y='312.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='17.34px' lengthAdjust='spacingAndGlyphs'>-10</text>
-<text x='282.24' y='312.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='10.67px' lengthAdjust='spacingAndGlyphs'>-5</text>
-<text x='379.10' y='312.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='6.67px' lengthAdjust='spacingAndGlyphs'>0</text>
+<text x='88.52' y='312.48' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>-15</text>
+<text x='185.38' y='312.48' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>-10</text>
+<text x='282.24' y='312.48' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>-5</text>
+<text x='379.10' y='312.48' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>0</text>
 <line x1='59.04' y1='278.13' x2='59.04' y2='61.59' style='stroke-width: 0.75;' />
 <line x1='59.04' y1='278.13' x2='51.84' y2='278.13' style='stroke-width: 0.75;' />
 <line x1='59.04' y1='205.95' x2='51.84' y2='205.95' style='stroke-width: 0.75;' />
 <line x1='59.04' y1='133.77' x2='51.84' y2='133.77' style='stroke-width: 0.75;' />
 <line x1='59.04' y1='61.59' x2='51.84' y2='61.59' style='stroke-width: 0.75;' />
-<text transform='translate(41.76,278.13) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='6.67px' lengthAdjust='spacingAndGlyphs'>0</text>
-<text transform='translate(41.76,205.95) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>500</text>
-<text transform='translate(41.76,133.77) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1000</text>
-<text transform='translate(41.76,61.59) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1500</text>
+<text transform='translate(41.76,278.13) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>0</text>
+<text transform='translate(41.76,205.95) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>500</text>
+<text transform='translate(41.76,133.77) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1000</text>
+<text transform='translate(41.76,61.59) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1500</text>
 <polygon points='59.04,286.56 473.76,286.56 473.76,59.04 59.04,59.04 ' style='stroke-width: 0.75;' />
-<text x='266.40' y='34.67' text-anchor='middle' style='font-size: 14.40px; font-weight: bold; font-family: "Arial";' textLength='194.33px' lengthAdjust='spacingAndGlyphs'>Distribution of CV Estimates</text>
-<text x='266.40' y='341.28' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='26.00px' lengthAdjust='spacingAndGlyphs'>RSQ</text>
-<text transform='translate(12.96,172.80) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Arial";' textLength='40.02px' lengthAdjust='spacingAndGlyphs'>Density</text>
+<text x='266.40' y='34.67' text-anchor='middle' style='font-size: 1.44em; font-weight: bold; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Distribution of CV Estimates</text>
+<text x='266.40' y='341.28' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>RSQ</text>
+<text transform='translate(12.96,172.80) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Density</text>
 </g>
 <g clip-path='url(#cpNTkuMDR8NDczLjc2fDU5LjA0fDI4Ni41Ng==)'>
 <line x1='59.04' y1='278.13' x2='473.76' y2='278.13' style='stroke-width: 0.19; stroke: #BEBEBE;' />
 <polyline points='74.40,278.13 75.15,278.13 75.90,278.13 76.65,278.13 77.41,278.13 78.16,278.13 78.91,278.13 79.66,278.13 80.41,278.13 81.16,278.13 81.91,278.13 82.67,278.13 83.42,278.13 84.17,278.13 84.92,278.13 85.67,278.13 86.42,278.13 87.17,278.13 87.93,278.13 88.68,278.13 89.43,278.13 90.18,278.13 90.93,278.13 91.68,278.13 92.44,278.13 93.19,278.13 93.94,278.13 94.69,278.13 95.44,278.13 96.19,278.13 96.94,278.13 97.70,278.13 98.45,278.13 99.20,278.13 99.95,278.13 100.70,278.13 101.45,278.13 102.20,278.13 102.96,278.13 103.71,278.13 104.46,278.13 105.21,278.13 105.96,278.13 106.71,278.13 107.46,278.13 108.22,278.13 108.97,278.13 109.72,278.13 110.47,278.13 111.22,278.13 111.97,278.13 112.72,278.13 113.48,278.13 114.23,278.13 114.98,278.13 115.73,278.13 116.48,278.13 117.23,278.13 117.99,278.13 118.74,278.13 119.49,278.13 120.24,278.13 120.99,278.13 121.74,278.13 122.49,278.13 123.25,278.13 124.00,278.13 124.75,278.13 125.50,278.13 126.25,278.13 127.00,278.13 127.75,278.13 128.51,278.13 129.26,278.13 130.01,278.13 130.76,278.13 131.51,278.13 132.26,278.13 133.01,278.13 133.77,278.13 134.52,278.13 135.27,278.13 136.02,278.13 136.77,278.13 137.52,278.13 138.27,278.13 139.03,278.13 139.78,278.13 140.53,278.13 141.28,278.13 142.03,278.13 142.78,278.13 143.54,278.13 144.29,278.13 145.04,278.13 145.79,278.13 146.54,278.13 147.29,278.13 148.04,278.13 148.80,278.13 149.55,278.13 150.30,278.13 151.05,278.13 151.80,278.13 152.55,278.13 153.30,278.13 154.06,278.13 154.81,278.13 155.56,278.13 156.31,278.13 157.06,278.13 157.81,278.13 158.56,278.13 159.32,278.13 160.07,278.13 160.82,278.13 161.57,278.13 162.32,278.13 163.07,278.13 163.82,278.13 164.58,278.13 165.33,278.13 166.08,278.13 166.83,278.13 167.58,278.13 168.33,278.13 169.08,278.13 169.84,278.13 170.59,278.13 171.34,278.13 172.09,278.13 172.84,278.13 173.59,278.13 174.35,278.13 175.10,278.13 175.85,278.13 176.60,278.13 177.35,278.13 178.10,278.13 178.85,278.13 179.61,278.13 180.36,278.13 181.11,278.13 181.86,278.13 182.61,278.13 183.36,278.13 184.11,278.13 184.87,278.13 185.62,278.13 186.37,278.13 187.12,278.13 187.87,278.13 188.62,278.13 189.37,278.13 190.13,278.12 190.88,278.12 191.63,278.12 192.38,278.12 193.13,278.12 193.88,278.12 194.63,278.12 195.39,278.12 196.14,278.12 196.89,278.12 197.64,278.12 198.39,278.12 199.14,278.12 199.90,278.12 200.65,278.12 201.40,278.12 202.15,278.12 202.90,278.12 203.65,278.12 204.40,278.12 205.16,278.12 205.91,278.12 206.66,278.12 207.41,278.12 208.16,278.12 208.91,278.12 209.66,278.12 210.42,278.12 211.17,278.12 211.92,278.12 212.67,278.12 213.42,278.12 214.17,278.12 214.92,278.12 215.68,278.12 216.43,278.12 217.18,278.12 217.93,278.12 218.68,278.12 219.43,278.12 220.18,278.12 220.94,278.12 221.69,278.12 222.44,278.12 223.19,278.12 223.94,278.12 224.69,278.12 225.45,278.12 226.20,278.12 226.95,278.12 227.70,278.12 228.45,278.12 229.20,278.12 229.95,278.12 230.71,278.12 231.46,278.12 232.21,278.12 232.96,278.12 233.71,278.12 234.46,278.12 235.21,278.12 235.97,278.12 236.72,278.12 237.47,278.12 238.22,278.12 238.97,278.12 239.72,278.12 240.47,278.12 241.23,278.12 241.98,278.12 242.73,278.12 243.48,278.12 244.23,278.12 244.98,278.12 245.73,278.12 246.49,278.12 247.24,278.12 247.99,278.12 248.74,278.12 249.49,278.12 250.24,278.12 250.99,278.12 251.75,278.12 252.50,278.12 253.25,278.12 254.00,278.12 254.75,278.12 255.50,278.12 256.26,278.12 257.01,278.12 257.76,278.12 258.51,278.12 259.26,278.12 260.01,278.12 260.76,278.12 261.52,278.12 262.27,278.12 263.02,278.12 263.77,278.12 264.52,278.12 265.27,278.12 266.02,278.12 266.78,278.12 267.53,278.12 268.28,278.12 269.03,278.12 269.78,278.12 270.53,278.12 271.28,278.12 272.04,278.12 272.79,278.12 273.54,278.12 274.29,278.12 275.04,278.12 275.79,278.12 276.54,278.12 277.30,278.12 278.05,278.12 278.80,278.12 279.55,278.12 280.30,278.12 281.05,278.12 281.81,278.12 282.56,278.12 283.31,278.12 284.06,278.12 284.81,278.12 285.56,278.12 286.31,278.12 287.07,278.12 287.82,278.12 288.57,278.12 289.32,278.12 290.07,278.12 290.82,278.12 291.57,278.12 292.33,278.12 293.08,278.12 293.83,278.12 294.58,278.12 295.33,278.12 296.08,278.12 296.83,278.12 297.59,278.12 298.34,278.12 299.09,278.12 299.84,278.12 300.59,278.12 301.34,278.12 302.09,278.12 302.85,278.12 303.60,278.12 304.35,278.12 305.10,278.12 305.85,278.12 306.60,278.12 307.35,278.12 308.11,278.12 308.86,278.12 309.61,278.12 310.36,278.12 311.11,278.12 311.86,278.12 312.62,278.12 313.37,278.12 314.12,278.12 314.87,278.12 315.62,278.12 316.37,278.12 317.12,278.12 317.88,278.12 318.63,278.12 319.38,278.12 320.13,278.12 320.88,278.12 321.63,278.12 322.38,278.12 323.14,278.12 323.89,278.12 324.64,278.12 325.39,278.12 326.14,278.12 326.89,278.12 327.64,278.12 328.40,278.12 329.15,278.12 329.90,278.12 330.65,278.12 331.40,278.12 332.15,278.12 332.90,278.12 333.66,278.12 334.41,278.12 335.16,278.12 335.91,278.12 336.66,278.12 337.41,278.12 338.17,278.12 338.92,278.12 339.67,278.12 340.42,278.12 341.17,278.12 341.92,278.12 342.67,278.12 343.43,278.13 344.18,278.13 344.93,278.13 345.68,278.13 346.43,278.13 347.18,278.13 347.93,278.13 348.69,278.13 349.44,278.13 350.19,278.13 350.94,278.13 351.69,278.13 352.44,278.13 353.19,278.13 353.95,278.13 354.70,278.13 355.45,278.13 356.20,278.13 356.95,278.13 357.70,278.13 358.45,278.13 359.21,278.13 359.96,278.13 360.71,278.13 361.46,278.13 362.21,278.13 362.96,278.13 363.72,278.13 364.47,278.13 365.22,278.13 365.97,278.13 366.72,278.13 367.47,278.13 368.22,278.13 368.98,278.13 369.73,278.13 370.48,278.13 371.23,278.13 371.98,278.13 372.73,278.13 373.48,278.13 374.24,278.13 374.99,278.13 375.74,278.13 376.49,278.13 377.24,278.13 377.99,278.13 378.74,278.13 379.50,278.13 380.25,278.13 381.00,278.13 381.75,278.13 382.50,278.13 383.25,278.13 384.00,278.13 384.76,278.13 385.51,278.13 386.26,278.13 387.01,278.13 387.76,278.13 388.51,278.13 389.26,278.13 390.02,278.13 390.77,278.13 391.52,278.13 392.27,278.13 393.02,278.13 393.77,278.13 394.53,278.13 395.28,278.13 396.03,278.13 396.78,278.13 397.53,278.13 398.28,278.13 399.03,278.13 399.79,278.13 400.54,278.13 401.29,278.13 402.04,278.13 402.79,278.13 403.54,278.13 404.29,278.13 405.05,278.13 405.80,278.13 406.55,278.13 407.30,278.13 408.05,278.13 408.80,278.13 409.55,278.13 410.31,278.13 411.06,278.13 411.81,278.13 412.56,278.13 413.31,278.13 414.06,278.13 414.81,278.13 415.57,278.13 416.32,278.13 417.07,278.13 417.82,278.13 418.57,278.13 419.32,278.13 420.08,278.13 420.83,278.13 421.58,278.13 422.33,278.13 423.08,278.13 423.83,278.13 424.58,278.13 425.34,278.13 426.09,278.13 426.84,278.13 427.59,278.13 428.34,278.13 429.09,278.13 429.84,278.13 430.60,278.13 431.35,278.13 432.10,278.13 432.85,278.13 433.60,278.13 434.35,278.13 435.10,278.13 435.86,278.13 436.61,278.13 437.36,278.13 438.11,278.13 438.86,278.13 439.61,278.13 440.36,278.13 441.12,278.13 441.87,278.13 442.62,278.13 443.37,278.13 444.12,278.13 444.87,278.13 445.63,278.13 446.38,278.13 447.13,278.13 447.88,278.13 448.63,278.13 449.38,278.13 450.13,278.13 450.89,278.13 451.64,278.13 452.39,278.13 453.14,278.13 453.89,278.13 454.64,278.13 455.39,278.13 456.15,278.13 456.90,278.13 457.65,278.13 458.40,278.13 ' style='stroke-width: 1.50; stroke: #27AE60;' />
-<rect x='359.80' y='59.04' width='113.96' height='43.20' style='stroke-width: 0.75; fill: #F5F6F8;' />
+<rect class='legend-bg' x='359.80' y='59.04' width='113.96' height='43.20' style='stroke-width: 0.75; fill: #F5F6F8;' />
 <line x1='370.60' y1='73.44' x2='392.20' y2='73.44' style='stroke-width: 1.50; stroke: #E74C3C;' />
 <line x1='370.60' y1='87.84' x2='392.20' y2='87.84' style='stroke-width: 1.50; stroke: #27AE60;' />
-<text x='403.00' y='77.74' style='font-size: 12.00px; font-family: "Arial";' textLength='65.36px' lengthAdjust='spacingAndGlyphs'>Random CV</text>
-<text x='403.00' y='92.14' style='font-size: 12.00px; font-family: "Arial";' textLength='62.69px' lengthAdjust='spacingAndGlyphs'>Blocked CV</text>
+<text x='403.00' y='77.74' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Random CV</text>
+<text x='403.00' y='92.14' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Blocked CV</text>
 </g>
 </g>
 </svg>

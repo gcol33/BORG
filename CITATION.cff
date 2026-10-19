@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+type: software
+title: 'BORG: Bounded Outcome Risk Guard for Model Evaluation'
+version: 0.3.2
+authors:
+- family-names: Colling
+  given-names: Gilles
+  orcid: https://orcid.org/0000-0003-3070-6066
+license: MIT
+repository-code: https://github.com/gcol33/BORG
+url: https://gillescolling.com/BORG/
+preferred-citation:
+  type: software
+  title: 'BORG: Bounded Outcome Risk Guard for Model Evaluation'
+  authors:
+  - family-names: Colling
+    given-names: Gilles
+  year: 2026
+  url: https://github.com/gcol33/BORG
+  notes: R package version 0.2.3

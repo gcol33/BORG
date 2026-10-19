@@ -515,6 +515,7 @@ How to choose the right embargo:
 - Set it to the decorrelation lag from `borg_diagnose()`. This is the default
   when you let BORG choose automatically.
 - For daily financial data, 1-5 days is typical.
+
 - For monthly ecological monitoring, 2-6 months covers most autocorrelation
   structures.
 - For annual data with low sample sizes, an embargo of 1-2 years may consume
@@ -727,7 +728,9 @@ for the new regime.
 The practical workflow is:
 
 1. Train your model and evaluate it with temporal CV.
+
 2. Before deploying, run `borg_drift()` on the deployment data.
+
 3. If severity is "none" or "mild", proceed. If "moderate" or "severe",
    retrain on more recent data or investigate which features changed and why.
 
@@ -763,8 +766,11 @@ applications where even small leakage has large dollar consequences.
 A decision tree:
 
 - Fewer than 100 observations -> expanding window with v = 3.
+
 - 100-300 observations -> expanding window with v = 5.
+
 - 300+ observations, stationary process -> temporal block with v = 5.
+
 - 300+ observations, suspected drift -> expanding window with v = 5-10,
   then plot per-fold performance to detect degradation.
 - Financial time series -> purged CV with appropriate embargo.

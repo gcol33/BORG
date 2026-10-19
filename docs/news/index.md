@@ -1,5 +1,133 @@
 # Changelog
 
+## BORG 0.3.2 (development)
+
+### Correctness fixes
+
+- `borg_cv(strategy = "group_fold")` now assigns groups to folds by
+  their label rather than by position. Numeric group identifiers whose
+  values were not `1:n_groups` (e.g. site codes) previously produced
+  empty test folds and full-data training sets.
+- Stochastic fold generators (`spatial_block`, `environmental_block`,
+  `leave_location_out`, `llto`, `knndm`, `custom_block`, random) now
+  accept a `seed` argument threaded from `borg_cv(seed = )` and
+  [`borg_repeated_cv()`](https://gillescolling.com/BORG/reference/borg_repeated_cv.md)
+  instead of a hardcoded internal seed. Repeated CV now produces
+  genuinely distinct fold sets across repeats for every strategy.
+- [`borg_block_size()`](https://gillescolling.com/BORG/reference/borg_block_size.md)
+  now varies the folds with the candidate block size (the block size
+  drives the number of spatial clusters), so the reported optimum
+  reflects the data rather than the search grid.
+- Temporal block CV no longer backfills small early folds with future
+  observations. Training is strictly past-only; the first block (with no
+  prior data) is dropped, so `v` test blocks yield up to `v - 1` usable
+  folds.
+- `borg_conformal(method = "split")` refits the model on the complement
+  of the calibration set so the nonconformity scores are genuinely
+  out-of-sample, and uses the conformal order statistic (`type = 1`) for
+  the quantile. Split intervals now reach their nominal coverage.
+- [`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md) /
+  [`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md)
+  follow Meyer & Pebesma (2021): the dissimilarity index is normalized
+  by the mean pairwise training distance, and the applicability
+  threshold is the outlier-adjusted maximum (Q75 + 1.5 \* IQR) of the
+  cross-validated training DI.
+- Spatial buffering and distance-based diagnostics use Haversine
+  distance when a geographic CRS is available.
+  [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) now
+  threads the CRS to the buffer, and
+  [`borg_block_size()`](https://gillescolling.com/BORG/reference/borg_block_size.md)
+  /
+  [`borg_check_residuals()`](https://gillescolling.com/BORG/reference/borg_check_residuals.md)
+  accept a `crs` argument.
+- [`borg_willmott()`](https://gillescolling.com/BORG/reference/borg_willmott.md)
+  computes the refined index `d1` with the correct denominator;
+  [`borg_local_moran()`](https://gillescolling.com/BORG/reference/borg_local_moran.md)
+  uses conditional permutation for its pseudo p-values.
+- The C++ duplicate-row check compares rows at full double precision
+  instead of truncating to six decimals, and the compiled leakage checks
+  validate their index arguments before dereferencing.
+
+### Internal
+
+- Added parameter-recovery and coverage tests for the statistical
+  estimators (`borg_conformal`, `borg_aoa`, `borg_willmott`,
+  `borg_calibration`, `borg_bootstrap`, `borg_debias`).
+- Consolidated the two metric dispatchers into a single implementation
+  and the train-scope leak check into a shared helper; removed dead
+  code.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
+  [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+  for `borg_result` now offer the same set of plot types (`split`,
+  `risk`, `spatial`, `temporal`, `groups`).
+
+## BORG 0.3.1
+
+CRAN release: 2026-03-29
+
+### Nearest-neighbour distance matching (NNDM)
+
+- New `borg_cv(strategy = "nndm", prediction_points = ...)` implements
+  the leave-one-out NNDM scheme of Mila et al. (2022): each held-out
+  point grows an exclusion radius until the test-to-train
+  nearest-neighbour distance distribution matches the
+  prediction-to-sample distribution, retaining at least half the data
+  per fold. Complements the existing `"knndm"` k-fold form.
+- Prediction-coordinate handling for `"knndm"` and `"nndm"` now shares
+  one internal helper.
+
+### Clustered spatial sampling
+
+- New
+  [`borg_clustered_sample()`](https://gillescolling.com/BORG/reference/borg_clustered_sample.md)
+  draws parent-offspring clustered point samples over a bounding box,
+  coordinate frame, `sf` polygon, or `SpatVector`. Useful for
+  simulations and for reproducing the spatial dependence that random CV
+  understates.
+
+### Normalized dissimilarity index
+
+- `borg_aoa(normalize = TRUE)` adds a `di_norm` column rescaling the
+  dissimilarity index by the AOA threshold, so `di_norm = 1` marks the
+  applicability boundary and values are comparable across models.
+
+## BORG 0.2.7
+
+### Suggested fixes in risk reports
+
+- `show(BorgRisk)` now prints actionable suggested fixes for each
+  detected risk
+- `as.data.frame(BorgRisk)` includes a `suggested_fix` column
+- Risks fixable by
+  [`borg_assimilate()`](https://gillescolling.com/BORG/reference/borg_assimilate.md)
+  are labeled with the auto-fix call
+- Manual-intervention risks provide specific guidance (e.g., “use
+  spatial block CV”)
+
+### Improved ggplot2 autoplot methods
+
+- `autoplot(BorgRisk)`: Lollipop chart with fix annotations, point size
+  encodes affected indices
+- `autoplot(borg_result, type = "temporal")`: New temporal split
+  visualization with look-ahead violation detection
+- `autoplot(borg_result, type = "groups")`: New group assignment bar
+  chart with overlap highlighting
+- `autoplot(BorgDiagnosis)`: Richer panel with detection threshold gauge
+  bars
+
+### Better terra/sf spatial integration
+
+- Spatial autoplot now uses
+  [`tidyterra::geom_spatvector()`](https://dieghernan.github.io/tidyterra/reference/ggspatvector.html)
+  for native SpatVector rendering when available
+- `sf` objects preserve geometry directly (no coordinate extraction +
+  reconstruction round-trip)
+- Faceted spatial CV plots work natively with both sf and SpatVector
+  inputs
+- Added `tidyterra` to Suggests
+
+------------------------------------------------------------------------
+
 ## BORG 0.2.3
 
 ### Native R Integration
@@ -32,8 +160,8 @@ more idiomatic interface.
 
 - `borg_plot()` - use
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html) instead
-- `borg_report()` - use
-  [`summary()`](https://rdrr.io/r/base/summary.html),
+- [`borg_report()`](https://gillescolling.com/BORG/reference/borg_report.md) -
+  use [`summary()`](https://rdrr.io/r/base/summary.html),
   [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md),
   or
   [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
@@ -254,8 +382,8 @@ Initial release.
   - `prcomp` PCA objects
 
   - rsample resampling objects
-- [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md):
-  Attempts automatic fixes for detected violations
+- [`borg_assimilate()`](https://gillescolling.com/BORG/reference/borg_assimilate.md):
+  Assimilates leaky pipelines into compliance (auto-fix)
 - `BorgRisk` S4 class for structured risk assessment reports
 
 ### Performance

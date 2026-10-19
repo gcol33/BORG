@@ -574,9 +574,11 @@ identify which risks are relevant for your data.
 **Step 4: Split mechanics**
 
 - Did you create train/test splits manually? Check **index overlap**.
+
 - Did your data go through deduplication after splitting? Check **duplicate
   rows**.
 - Are you using nested CV? Check **CV fold contamination**.
+
 - Did you fit the model separately from splitting? Check **model scope**.
 
 **Quick start**: if you are unsure, run `borg_diagnose()` on your data to

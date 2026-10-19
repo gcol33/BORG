@@ -64,6 +64,8 @@ reference:
   contents:
   - borg
   - borg_workflow
+  - borg_check
+  - borg_pipeline
 - title: Core Functions
   desc: Detailed validation functions
   contents:
@@ -71,6 +73,8 @@ reference:
   - borg_validate
   - borg_certificate
   - borg_export
+  - borg_explain_risk
+  - borg_cache
 - title: Remediation
   desc: Automatic pipeline correction
   contents: borg_assimilate
@@ -84,6 +88,51 @@ reference:
   - borg_leaflet
   - borg_prediction_map
   - borg_importance
+  - borg_geodist
+  - borg_clustered_sample
+  - borg_sample_design
+  - borg_predict_raster
+  - borg_stability_map
+  - borg_check_residuals
+  - borg_local_moran
+  - borg_debias
+- title: Cross-Validation Schemes
+  desc: Blocked, buffered and repeated resampling designs
+  contents:
+  - borg_spatial_loo
+  - borg_disc_cv
+  - borg_repeated_cv
+  - borg_global_validation
+  - borg_bootstrap
+- title: Applicability & Transfer
+  desc: Area of applicability, extrapolation and distribution shift
+  contents:
+  - borg_aoa
+  - borg_di
+  - borg_error_profile
+  - borg_extrapolation
+  - borg_fold_similarity
+  - borg_transferability
+  - borg_drift
+  - borg_adversarial
+- title: Model Evaluation
+  desc: Metrics, calibration, uncertainty and model comparison
+  contents:
+  - borg_metrics
+  - borg_willmott
+  - borg_calibration
+  - borg_conformal
+  - borg_compare_models
+  - borg_ensemble
+  - borg_multiscale
+  - borg_null_test
+  - borg_fairness
+  - borg_shap
+- title: Feature Selection
+  desc: Variable selection under blocked CV
+  contents:
+  - borg_forward_selection
+  - borg_best_subset
 - title: Visualization
   desc: Plot and summary methods for BORG objects
   contents:
@@ -94,6 +143,14 @@ reference:
   - summary.BorgRisk
   - summary.BorgDiagnosis
   - summary.borg_result
+  - summary.borg_cv
+  - summary.borg_pipeline
+  - summary.borg_power
+  - autoplot.BorgRisk
+  - autoplot.BorgDiagnosis
+  - autoplot.borg_result
+  - autoplot.borg_comparison
+  - autoplot.borg_cv
 - title: Diagnosis & Evidence
   desc: Dependency detection, CV comparison, and power analysis
   contents:
@@ -117,6 +174,10 @@ reference:
   - audit_predictions
   - audit_importance
   - cv_leakage_report
+  - borg_literature_check
+- title: Simulation
+  desc: Synthetic data with known leakage
+  contents: borg_simulate
 - title: SDM Integration
   desc: Species distribution modelling frameworks
   contents:
@@ -134,6 +195,8 @@ reference:
   - borg_trainControl
   - borg_register_hooks
   - borg_unregister_hooks
+  - borg_rset
+  - borg_to_mlr3
 - title: Configuration
   desc: Options and settings
   contents:
@@ -143,7 +206,9 @@ reference:
   desc: Result objects
   contents:
   - BorgRisk-class
+  - BorgRisk
   - as.data.frame.BorgRisk
+  - as.data.frame.BorgDiagnosis
   - print.borg_cv_report
 articles:
 - title: Getting Started

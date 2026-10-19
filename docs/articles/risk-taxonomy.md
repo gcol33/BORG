@@ -1,7 +1,16 @@
 # Risk Taxonomy
 
 This document catalogs all evaluation risks that BORG detects, organized
-by severity and mechanism.
+by severity and mechanism. Each risk type includes a description of what
+triggers it, why it matters for real-world modelling, and how to fix it.
+
+### Installation
+
+``` r
+
+install.packages("pak")           # development version
+pak::pak("gcol33/BORG")
+```
 
 ### Risk Classification
 
@@ -13,6 +22,13 @@ evaluation validity:
 | **Hard Violation** | Results are invalid | Blocks evaluation, requires fix |
 | **Soft Inflation** | Results are biased  | Warns, allows with caution      |
 
+Hard violations indicate that the evaluation result is not trustworthy
+at all. The computed metrics could be arbitrarily optimistic, and no
+conclusion should be drawn from them. Soft inflation risks mean the
+metrics are likely overestimated, but the direction of model comparisons
+may still hold. Fixing soft risks is best practice; fixing hard
+violations is mandatory.
+
 ## Hard Violations
 
 These make your evaluation results invalid. Any metrics computed with
@@ -22,8 +38,15 @@ these violations are unreliable.
 
 **What**: Same row indices appear in both training and test sets.
 
-**Why it matters**: The model has seen the exact data it’s being tested
-on. This is the most basic form of leakage.
+**Why it matters**: Because the model has seen the exact data it is
+being tested on, any sufficiently flexible learner will achieve perfect
+scores on the overlapping portion of the test set. In practice, index
+overlap usually arises from manual bookkeeping errors: copying indices
+incorrectly, using inclusive rather than exclusive ranges, or
+inadvertently sharing a row between two data splits. The bug is easy to
+introduce and hard to catch by looking at metrics alone, because a small
+overlap (say 5% of the test set) produces a subtle, plausible-looking
+inflation.
 
 **Detection**: Set intersection of `train_idx` and `test_idx`.
 
@@ -31,18 +54,18 @@ on. This is the most basic form of leakage.
 
 data <- data.frame(x = 1:100, y = rnorm(100))
 
-# Accidental overlap
+# Accidental overlap: indices 51-60 appear in both sets
 result <- borg_inspect(data, train_idx = 1:60, test_idx = 51:100)
 result
 #> BorgRisk Assessment
 #> ===================
 #> 
-#> Status: INVALID (hard violations detected)
+#> Status: INVALID (1 hard violation) — Resistance is futile
 #>   Hard violations:  1
 #>   Soft inflations:  0
 #>   Train indices:    60 rows
 #>   Test indices:     50 rows
-#>   Inspected at:     2026-03-04 12:49:54
+#>   Inspected at:     2026-10-19 17:39:20
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -50,18 +73,30 @@ result
 #>     Train and test indices overlap (10 shared indices). This invalidates evaluation.
 #>     Source: train_idx/test_idx
 #>     Affected: 10 indices (first 5: 51, 52, 53, 54, 55)
+#>     Fix: Recreate train/test split with non-overlapping indices
 ```
 
 **Fix**: Ensure indices are mutually exclusive. Use
 [`setdiff()`](https://generics.r-lib.org/reference/setops.html) to
-create non-overlapping sets.
+remove any shared indices, or generate non-overlapping splits from the
+start with [`sample()`](https://rdrr.io/r/base/sample.html) and
+complementary indexing.
 
 ### 2. Duplicate Rows
 
 **What**: Test set contains rows identical to training rows.
 
-**Why it matters**: Model may have memorized these exact patterns. Even
-without index overlap, identical feature values constitute leakage.
+**Why it matters**: Disjoint indices do not guarantee distinct data. The
+underlying rows may still be exact copies. This happens often in
+observational datasets that were merged from multiple sources (where the
+same record appears in two files), in datasets with many categorical
+predictors and few unique combinations, or when data augmentation
+accidentally copies real rows into a held-out set. A model that
+memorizes training patterns will score well on these duplicates
+regardless of its true generalization ability. The effect is
+proportional to the fraction of test rows that are duplicates: 10%
+duplicates in the test set can inflate accuracy by several percentage
+points.
 
 **Detection**: Row hashing and comparison (C++ backend for numeric
 data).
@@ -79,12 +114,12 @@ result
 #> BorgRisk Assessment
 #> ===================
 #> 
-#> Status: INVALID (hard violations detected)
+#> Status: INVALID (1 hard violation) — Resistance is futile
 #>   Hard violations:  1
 #>   Soft inflations:  0
 #>   Train indices:    5 rows
 #>   Test indices:     5 rows
-#>   Inspected at:     2026-03-04 12:49:54
+#>   Inspected at:     2026-10-19 17:39:20
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -92,19 +127,30 @@ result
 #>     Test set contains 5 rows identical to training rows (memorization risk)
 #>     Source: data.frame
 #>     Affected: 6, 7, 8, 9, 10
+#>     Fix: Remove duplicate rows or ensure they fall within the same fold
 ```
 
 **Fix**: Remove duplicate rows before splitting, or ensure splits
-respect duplicates (keep all copies in same set).
+respect duplicates by keeping all copies in the same set. In ecological
+survey data, duplicates sometimes represent legitimate repeated
+measurements; in that case, treat them as a group and use group-aware
+splitting.
 
 ### 3. Preprocessing Leakage
 
 **What**: Normalization, imputation, or dimensionality reduction fitted
-on full data before splitting.
+on the full dataset before splitting.
 
-**Why it matters**: Test set statistics influenced the preprocessing
-parameters applied to training data. Information flows backwards from
-test to train.
+**Why it matters**: Column means, standard deviations, or PCA loadings
+computed from the entire dataset carry test-set information into the
+training pipeline. Information flows backwards from test to train
+through these shared statistics. The effect is typically small for large
+datasets with independent observations (a few percent inflation in
+R-squared) but can be severe for small datasets, datasets with strong
+distributional shifts between train and test, or high-dimensional data
+where PCA loadings are heavily sample-dependent. This is one of the most
+common forms of leakage in published studies because many preprocessing
+pipelines default to fitting on all available data.
 
 **Detection**: Recompute statistics on train-only data and compare to
 stored parameters. Discrepancy indicates leakage.
@@ -149,58 +195,73 @@ test_scaled <- scale(test_data, center = means, scale = sds)
 
 **What**: Feature has absolute correlation \> 0.99 with target.
 
-**Why it matters**: Feature is almost certainly derived from the
-outcome. Examples: - `days_since_diagnosis` when predicting
-`has_disease`
-
-- `total_spent` when predicting `is_customer`
-
-- Aggregated future values leaked into current features
+**Why it matters**: Near-perfect correlation (\|r\| \> 0.99) between a
+feature and the outcome almost always means the feature was derived from
+the outcome, either directly or through a chain of deterministic
+transformations. Classic examples include `days_since_diagnosis` when
+predicting `has_disease`, `total_spent` when predicting `is_customer`,
+or aggregated future values leaked into current-period features. These
+features will dominate any model, producing impressive metrics that
+collapse entirely in deployment where the post-hoc information is
+unavailable. Target leakage is particularly common in tabular datasets
+assembled by joining multiple tables, where a downstream aggregate
+accidentally ends up as a predictor.
 
 **Detection**: Compute Pearson correlation of each numeric feature with
 target on training data.
 
 ``` r
 
-# Simulate target leakage
-leaky <- data.frame(
-  x = rnorm(100),
-  outcome = rnorm(100)
-)
-leaky$leaked <- leaky$outcome + rnorm(100, sd = 0.01)  # Near-perfect correlation
+# Use borg_simulate for controlled target leakage
+sim <- borg_simulate(n = 100, type = "target_leak", leak_strength = 0.99, seed = 1)
 
-result <- borg_inspect(leaky, train_idx = 1:70, test_idx = 71:100, target = "outcome")
+result <- borg_inspect(sim$data, train_idx = 1:70, test_idx = 71:100,
+                       target = "y")
 result
 #> BorgRisk Assessment
 #> ===================
 #> 
-#> Status: INVALID (hard violations detected)
+#> Status: INVALID (1 hard violation) — Resistance is futile
 #>   Hard violations:  1
 #>   Soft inflations:  0
 #>   Train indices:    70 rows
 #>   Test indices:     30 rows
-#>   Inspected at:     2026-03-04 12:49:54
+#>   Inspected at:     2026-10-19 17:39:20
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
 #> [1] target_leakage_direct
-#>     Feature 'leaked' has correlation 1.000 with target 'outcome'. Likely derived from outcome.
-#>     Source: data.frame$leaked
+#>     Feature 'leaked_feature' has correlation 1.000 with target 'y'. Likely derived from outcome.
+#>     Source: data.frame$leaked_feature
+#>     Fix: Remove features derived from the target variable
 ```
 
-**Fix**: Remove or investigate the leaky feature. If it’s a legitimate
-predictor, document why correlation \> 0.99 is expected.
+**Fix**: Remove or investigate the leaky feature. If it is a legitimate
+predictor, document why correlation \> 0.99 is expected and verify the
+feature is available at prediction time.
 
 ### 5. Group Leakage
 
 **What**: Same group (patient, site, species) appears in both train and
 test.
 
-**Why it matters**: Observations within a group tend to be similar. If
-the same patient appears in train and test, the model can exploit
-patient-specific patterns that won’t exist for new patients.
+**Why it matters**: Latent group-level characteristics let the model
+learn patient- or site-specific intercepts it cannot use on new groups.
+If the same patient appears in both train and test, the model
+effectively learns patient-specific intercepts during training and is
+rewarded for them at test time. This inflates performance because, in
+deployment, the model will encounter new patients it has never seen. The
+magnitude of inflation depends on the intra-class correlation (ICC):
+when ICC is high (observations within a group are very similar), group
+leakage can inflate R-squared by 20-50% or more. This risk is pervasive
+in medical data, ecological monitoring (repeated visits to the same
+site), and any longitudinal study design.
 
-**Detection**: Set intersection of group membership values.
+**Detection**:
+[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+detects clustered structure and recommends group-aware CV. At the split
+level, check whether any group’s members appear in both the training and
+test sets.
 
 ``` r
 
@@ -210,29 +271,21 @@ clinical <- data.frame(
   measurement = rnorm(100)
 )
 
-# Random split ignoring patients
+# Random split ignoring patients (groups will leak)
 set.seed(123)
 all_idx <- sample(100)
 train_idx <- all_idx[1:70]
 test_idx <- all_idx[71:100]
 
-result <- borg_inspect(clinical, train_idx = train_idx, test_idx = test_idx,
-                       groups = "patient_id")
-result
-#> BorgRisk Assessment
-#> ===================
-#> 
-#> Status: VALID (no hard violations)
-#>   Hard violations:  0
-#>   Soft inflations:  0
-#>   Train indices:    70 rows
-#>   Test indices:     30 rows
-#>   Inspected at:     2026-03-04 12:49:54
-#> 
-#> No risks detected.
+# Check which patients appear in both sets
+train_patients <- unique(clinical$patient_id[train_idx])
+test_patients <- unique(clinical$patient_id[test_idx])
+shared <- intersect(train_patients, test_patients)
+cat("Shared patients:", shared, "\n")
 ```
 
-**Fix**: Use group-aware splitting:
+**Fix**: Use group-aware splitting so that entire groups are held out
+together:
 
 ``` r
 
@@ -242,43 +295,45 @@ train_idx <- which(clinical$patient_id %in% train_patients)
 test_idx <- which(!clinical$patient_id %in% train_patients)
 ```
 
+Alternatively, use
+[`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) with
+the `groups` argument to generate group-respecting folds automatically.
+
 ### 6. Temporal Ordering Violation
 
 **What**: Test observations predate training observations.
 
-**Why it matters**: Model uses future information to predict the past.
-In deployment, future data won’t be available.
+**Why it matters**: Predicting the past from the future is look-ahead
+bias, and in any time-dependent process the effect is severe. The model
+can exploit temporal trends, seasonal patterns, or regime shifts that
+would not be available at prediction time. This violation is especially
+damaging for autoregressive features (lagged values, rolling averages),
+because those features were computed under the assumption that earlier
+data is available. Random splitting of time series data is one of the
+most common methodological errors in applied ML: it is easy to do,
+produces excellent-looking metrics, and fails silently. Studies that
+randomly split stock prices, weather records, or patient trajectories
+routinely report inflated accuracy that disappears in live deployment.
 
-**Detection**: Compare max training timestamp to min test timestamp.
+**Detection**: Compare max training timestamp to min test timestamp. Any
+test observation that falls before a training observation constitutes a
+violation.
 
 ``` r
 
-# Time series data
-ts_data <- data.frame(
-  date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
-  value = cumsum(rnorm(100))
-)
+# Simulate temporal data
+sim <- borg_simulate(n = 100, type = "temporal", autocorrelation = 0.7, seed = 1)
 
-# Wrong: random split ignores time
+# Wrong: random split ignores time ordering
 set.seed(42)
 random_idx <- sample(100)
 train_idx <- random_idx[1:70]
 test_idx <- random_idx[71:100]
 
-result <- borg_inspect(ts_data, train_idx = train_idx, test_idx = test_idx,
-                       time = "date")
-result
-#> BorgRisk Assessment
-#> ===================
-#> 
-#> Status: VALID (no hard violations)
-#>   Hard violations:  0
-#>   Soft inflations:  0
-#>   Train indices:    70 rows
-#>   Test indices:     30 rows
-#>   Inspected at:     2026-03-04 12:49:54
-#> 
-#> No risks detected.
+# borg_diagnose detects the temporal structure
+diagnosis <- borg_diagnose(sim$data, time = "time", target = "y", verbose = FALSE)
+diagnosis@recommended_cv
+#> [1] "temporal_block"
 ```
 
 **Fix**: Use chronological splits where all test data comes after
@@ -295,15 +350,20 @@ test_idx <- 71:100
 **What**: Cross-validation folds contain test indices, or folds overlap
 incorrectly.
 
-**Why it matters**: Nested CV requires the outer test set to be
-completely held out from all inner training.
+**Why it matters**: For nested cross-validation to be valid, the outer
+test set must remain completely invisible to all inner folds. If the
+outer test indices leak into any inner fold’s training set, the tuning
+procedure has seen the test data. This is a subtle and surprisingly
+common mistake when manually constructing fold objects. It invalidates
+the entire nested CV result because the hyperparameter selection was
+influenced by test data.
 
 **Detection**: Check if any fold’s training indices intersect with
 held-out test set.
 
 **Supported objects**:
 
-- [`caret::trainControl`](https://rdrr.io/pkg/caret/man/trainControl.html) -
+- [`caret::trainControl`](https://rdrr.io/pkg/caret/man/trainControl.html):
   checks `$index` and `$indexOut`
 
 - [`rsample::vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)
@@ -313,10 +373,16 @@ held-out test set.
 
 ### 8. Model Scope
 
-**What**: Model was trained on more rows than claimed training set.
+**What**: Model was trained on more rows than the claimed training set.
 
-**Why it matters**: Model saw test data during training, even if
-indirectly (e.g., through hyperparameter tuning on full data).
+**Why it matters**: Evidence inside the fitted object that it saw more
+rows than the training indices specify means test data leaked into
+fitting. This can happen indirectly through hyperparameter tuning on the
+full dataset, through ensemble methods that use the entire dataset for
+base learner training, or simply through a bookkeeping mismatch between
+the reported split and the actual training call. Unlike index overlap
+(which checks the split definition), model scope checks the fitted model
+itself for signs that it saw more data than it should have.
 
 **Detection**: Compare `nrow(trainingData)` or `length(fitted.values)`
 to `length(train_idx)`.
@@ -334,69 +400,25 @@ might be preserved even if absolute metrics are optimistic.
 
 **What**: Feature has correlation 0.95-0.99 with target.
 
-**Why warning not error**: May be a legitimate strong predictor.
-Requires domain knowledge to judge.
+**Why warning not error**: A correlation in this range can represent
+either a legitimately strong predictor or a subtler form of target
+leakage. Domain knowledge is required to distinguish the two cases. For
+example, in ecological modelling, mean annual temperature might
+genuinely correlate at r = 0.97 with species richness. Conversely, a
+feature like `average_daily_sales_last_year` might correlate at r = 0.96
+with `annual_revenue` because it is a near-direct transformation of the
+target. BORG warns but does not block, giving you the opportunity to
+investigate.
 
 **Detection**: Same as direct leakage, different threshold.
 
 ``` r
 
-# Strong but not extreme correlation
-proxy <- data.frame(
-  x = rnorm(100),
-  outcome = rnorm(100)
-)
-proxy$strong_predictor <- proxy$outcome + rnorm(100, sd = 0.3)  # r ~ 0.96
+# Use borg_simulate for controlled proxy leakage
+sim <- borg_simulate(n = 100, type = "target_leak", leak_strength = 0.7, seed = 1)
 
-result <- borg_inspect(proxy, train_idx = 1:70, test_idx = 71:100, target = "outcome")
-result
-#> BorgRisk Assessment
-#> ===================
-#> 
-#> Status: VALID (no hard violations)
-#>   Hard violations:  0
-#>   Soft inflations:  1
-#>   Train indices:    70 rows
-#>   Test indices:     30 rows
-#>   Inspected at:     2026-03-04 12:49:54
-#> 
-#> --- SOFT INFLATIONS (warnings) ---
-#> 
-#> [1] target_leakage_proxy
-#>     Feature 'strong_predictor' has correlation 0.959 with target 'outcome'. May be a proxy for outcome.
-#>     Source: data.frame$strong_predictor
-```
-
-**Action**: Review whether the feature should be available at prediction
-time in production.
-
-### 2. Spatial Proximity
-
-**What**: Test points are very close to training points in geographic
-space.
-
-**Why it matters**: Spatial autocorrelation means nearby points share
-variance. Model learns local patterns that don’t generalize to distant
-locations.
-
-**Detection**: Compute minimum distance from each test point to nearest
-training point. Flag if \< 1% of spatial spread.
-
-``` r
-
-set.seed(42)
-spatial <- data.frame(
-  lon = runif(100, 0, 100),
-  lat = runif(100, 0, 100),
-  value = rnorm(100)
-)
-
-# Random split intermixes nearby points
-train_idx <- sample(100, 70)
-test_idx <- setdiff(1:100, train_idx)
-
-result <- borg_inspect(spatial, train_idx = train_idx, test_idx = test_idx,
-                       coords = c("lon", "lat"))
+result <- borg_inspect(sim$data, train_idx = 1:70, test_idx = 71:100,
+                       target = "y")
 result
 #> BorgRisk Assessment
 #> ===================
@@ -406,27 +428,86 @@ result
 #>   Soft inflations:  0
 #>   Train indices:    70 rows
 #>   Test indices:     30 rows
-#>   Inspected at:     2026-03-04 12:49:54
+#>   Inspected at:     2026-10-19 17:39:20
 #> 
 #> No risks detected.
 ```
 
-**Fix**: Use spatial blocking:
+**Action**: Review whether the feature should be available at prediction
+time in production. If it is a legitimate predictor, document the
+justification.
+
+### 2. Spatial Proximity
+
+**What**: Test points are very close to training points in geographic
+space.
+
+**Why it matters**: Nearby locations share environmental conditions,
+soil properties, and species compositions through spatial
+autocorrelation. When train and test points are spatially interleaved,
+the model can interpolate between nearby training points rather than
+learning generalizable patterns. Error estimates become optimistic. The
+magnitude scales with the strength of spatial autocorrelation and the
+ratio of inter-point distance to autocorrelation range. In ecological
+and environmental modelling, where spatial structure is the rule rather
+than the exception, this inflation can be severe: reported R-squared
+values may drop by 30-60% when switching from random to spatially
+blocked CV.
+
+**Detection**: Compute minimum distance from each test point to nearest
+training point. Flag if \< 1% of spatial spread.
 
 ``` r
 
-# Geographic split
-train_idx <- which(spatial$lon < 50)  # West
-test_idx <- which(spatial$lon >= 50)  # East
+# Use borg_simulate for spatially autocorrelated data
+sim <- borg_simulate(n = 100, type = "spatial", autocorrelation = 0.7, seed = 42)
+
+# Random split intermixes nearby points
+set.seed(42)
+train_idx <- sample(100, 70)
+test_idx <- setdiff(1:100, train_idx)
+
+result <- borg_inspect(sim$data, train_idx = train_idx, test_idx = test_idx,
+                       coords = c("x", "y"))
+result
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: VALID (no hard violations)
+#>   Hard violations:  0
+#>   Soft inflations:  1
+#>   Train indices:    70 rows
+#>   Test indices:     30 rows
+#>   Inspected at:     2026-10-19 17:39:20
+#> 
+#> --- SOFT INFLATIONS (warnings) ---
+#> 
+#> [1] spatial_overlap
+#>     77% of test points fall within the training region convex hull. Consider spatial blocking.
+#>     Source: data.frame
+#>     Fix: Review evaluation workflow for potential information reuse
+```
+
+**Fix**: Use spatial blocking so that train and test occupy distinct
+geographic regions:
+
+``` r
+
+# Geographic split along x-axis
+train_idx <- which(sim$data$x < 0.5)
+test_idx <- which(sim$data$x >= 0.5)
 ```
 
 ### 3. Spatial Overlap
 
 **What**: Test region falls inside training region’s convex hull.
 
-**Why it matters**: Interpolation is easier than extrapolation. Model
-performance on “surrounded” test points overestimates performance on
-truly new regions.
+**Why it matters**: Because interpolation is easier than extrapolation,
+test points are surrounded by training points, the model benefits from
+having nearby reference data in all directions. In deployment, the model
+may need to predict in regions where no training data exists (true
+extrapolation). Performance on interpolated test points overestimates
+the model’s transferability to new areas.
 
 **Detection**: Compute convex hull of training points, count test points
 inside.
@@ -439,27 +520,353 @@ hull.
 **What**: Using random k-fold CV when data has spatial, temporal, or
 group structure.
 
-**Why it matters**: Random folds break dependencies artificially,
-leading to optimistic error estimates.
+**Why it matters**: Breaking dependencies artificially, random folds
+produce optimistic error estimates. When observations are not
+independent (e.g., spatial neighbors, repeated measures, time series),
+random CV treats each observation as if it were drawn independently.
+This overestimates the effective sample size and underestimates the
+prediction error.
 
 ``` r
 
-# Diagnose data dependencies
-spatial <- data.frame(
-  lon = runif(200, 0, 100),
-  lat = runif(200, 0, 100),
-  response = rnorm(200)
-)
+# Simulate spatial data and diagnose its dependency structure
+sim <- borg_simulate(n = 200, type = "spatial", autocorrelation = 0.7, seed = 42)
 
-diagnosis <- borg_diagnose(spatial, coords = c("lon", "lat"), target = "response",
+diagnosis <- borg_diagnose(sim$data, coords = c("x", "y"), target = "y.1",
                            verbose = FALSE)
-diagnosis@recommended_cv
-#> [1] "random"
+cat("Dependency:", diagnosis@dependency_type, "\n")
+#> Dependency: none
+cat("Recommended CV:", diagnosis@recommended_cv, "\n")
+#> Recommended CV: random
 ```
 
 **Fix**: Use
-[`borg()`](https://gillescolling.com/BORG/reference/borg.md) to generate
-appropriate blocked CV folds.
+[`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) to
+generate appropriate blocked CV folds that respect the dependency
+structure, or call
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) for a full
+automated pipeline.
+
+## Risk Interactions
+
+In practice, evaluation risks rarely appear in isolation. Real-world
+datasets often exhibit multiple dependency structures simultaneously,
+and their effects compound in ways that are worse than the sum of parts.
+
+### Spatial + Target Leakage
+
+When a dataset has both spatial autocorrelation and a leaked feature,
+the two risks interact. Spatial proximity allows the model to exploit
+local patterns, while the leaked feature provides a near-perfect
+shortcut to the target. Random CV inflates metrics through both channels
+at once. The combined inflation is often much larger than either source
+alone.
+
+``` r
+
+# Simulate data with both spatial autocorrelation and target leakage
+sim <- borg_simulate(n = 200, type = "combined", autocorrelation = 0.7,
+                     leak_strength = 0.95, seed = 42)
+
+# Random split
+set.seed(1)
+train_idx <- sample(200, 140)
+test_idx <- setdiff(1:200, train_idx)
+
+# Inspect for both risks
+result <- borg_inspect(sim$data, train_idx = train_idx, test_idx = test_idx,
+                       target = "y.1", coords = c("x", "y"))
+result
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: VALID (no hard violations)
+#>   Hard violations:  0
+#>   Soft inflations:  1
+#>   Train indices:    140 rows
+#>   Test indices:     60 rows
+#>   Inspected at:     2026-10-19 17:39:20
+#> 
+#> --- SOFT INFLATIONS (warnings) ---
+#> 
+#> [1] spatial_overlap
+#>     88% of test points fall within the training region convex hull. Consider spatial blocking.
+#>     Source: data.frame
+#>     Fix: Review evaluation workflow for potential information reuse
+```
+
+In this example,
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+detects both the target leakage and the spatial proximity issue. Fixing
+only one of them still leaves the evaluation compromised.
+
+### Preprocessing + Spatial Structure
+
+Preprocessing leakage (fitting normalization on the full dataset)
+interacts with spatial structure in a subtle way. When the train and
+test regions have different covariate distributions (which is common in
+spatial data, where western and eastern regions may differ in elevation,
+rainfall, or land cover), the test region’s statistics contaminate the
+training normalization. This makes the model’s predictions in the test
+region artificially better, because the preprocessing has already “seen”
+the test distribution.
+
+### Groups + Temporal Ordering
+
+In longitudinal studies, group leakage and temporal violations can
+co-occur. If patient A has observations at times t=1,2,3 and you
+randomly split, some of patient A’s early observations may end up in the
+test set while later observations are in training. The model then
+predicts the past for a patient it has already seen in the future. Both
+risks need to be addressed: split by groups first, then ensure temporal
+ordering within each group.
+
+### Temporal + Spatial
+
+Spatiotemporal datasets carry two dependency axes at once. A classic
+case is environmental monitoring: weather stations at fixed locations
+record daily values for years. Observations close in space share local
+conditions (microclimate, topography), while observations close in time
+share global conditions (season, regime). A random split violates both
+dependencies simultaneously. Blocking on space alone still allows
+temporal leakage within each spatial block. Blocking on time alone still
+allows spatial interpolation within each time slice.
+
+The practical consequence is that neither a pure spatial block CV nor a
+pure temporal block CV produces honest error estimates. A spatial block
+CV applied to a 10-year daily monitoring dataset will place all 3,650
+days from a held-out station into the test set, but the model still sees
+the same days at neighboring stations. If the spatial autocorrelation
+range is 50 km and stations are 20 km apart, the model interpolates with
+ease. Conversely, a temporal block CV that holds out the final year
+still allows the model to train on the held-out year’s spatial
+neighbors.
+
+The correct approach is to block on both axes: hold out entire spatial
+regions for entire time windows. This is sometimes called
+“leave-location-and-time-out” (LLTO) CV. The inflation gap between
+random CV and LLTO CV is often the largest of any single correction,
+because two leakage channels close at once. In species distribution
+modelling with multi-year survey data, we have seen R-squared drop by
+40-70% when switching from random to LLTO CV.
+
+``` r
+
+# Simulate data with both spatial and temporal structure
+sim_sp <- borg_simulate(n = 200, type = "spatial", autocorrelation = 0.7, seed = 10)
+sim_tm <- borg_simulate(n = 200, type = "temporal", autocorrelation = 0.7, seed = 10)
+
+# Diagnose each independently
+diag_sp <- borg_diagnose(sim_sp$data, coords = c("x", "y"), target = "y.1",
+                         verbose = FALSE)
+diag_tm <- borg_diagnose(sim_tm$data, time = "time", target = "y",
+                         verbose = FALSE)
+
+cat("Spatial dependency:", diag_sp@dependency_type, "\n")
+#> Spatial dependency: spatial
+cat("Temporal dependency:", diag_tm@dependency_type, "\n")
+#> Temporal dependency: temporal
+```
+
+When both structures are present, run
+[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+with both `coords` and `time` arguments so that BORG can recommend a
+spatiotemporal blocking strategy rather than a single-axis block.
+
+## Decision Tree: Which Risks to Check
+
+Not every dataset requires checking all risk types. Use this decision
+tree to identify which risks are relevant for your data.
+
+**Step 1: Data structure**
+
+- Does your data have repeated measurements from the same subject, site,
+  or unit? Check **group leakage**.
+- Does your data have coordinates (longitude/latitude, UTM, or any x/y)?
+  Check **spatial proximity** and **spatial overlap**.
+- Does your data have a time column (dates, timestamps, or ordered
+  sequence)? Check **temporal ordering**.
+
+**Step 2: Preprocessing pipeline**
+
+- Did you normalize, impute, or reduce dimensionality on the full
+  dataset before splitting? Check **preprocessing leakage**.
+- Did you fit a PCA, encoder, or embedding on all data? Same risk.
+
+**Step 3: Feature provenance**
+
+- Were any features computed from the target variable? Check **target
+  leakage**.
+- Were any features aggregated across time periods that include the test
+  period? Check **target leakage** (temporal variant).
+- Do any features have suspiciously high correlation with the target?
+  Use
+  [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+  with the `target` argument to scan automatically.
+
+**Step 4: Split mechanics**
+
+- Did you create train/test splits manually? Check **index overlap**.
+
+- Did your data go through deduplication after splitting? Check
+  **duplicate rows**.
+
+- Are you using nested CV? Check **CV fold contamination**.
+
+- Did you fit the model separately from splitting? Check **model
+  scope**.
+
+**Quick start**: if you are unsure, run
+[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+on your data to detect dependency structure, then
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+on your split to scan for leakage:
+
+``` r
+
+# Step 1: Diagnose the dataset
+sim <- borg_simulate(n = 200, type = "spatial", autocorrelation = 0.5, seed = 1)
+
+diagnosis <- borg_diagnose(sim$data, coords = c("x", "y"), target = "y.1",
+                           verbose = FALSE)
+cat("Structure:", diagnosis@dependency_type, "\n")
+#> Structure: spatial
+cat("Severity:", diagnosis@severity, "\n")
+#> Severity: moderate
+
+# Step 2: Inspect a candidate split
+set.seed(1)
+train_idx <- sample(200, 140)
+test_idx <- setdiff(1:200, train_idx)
+
+inspection <- borg_inspect(sim$data, train_idx = train_idx, test_idx = test_idx,
+                           coords = c("x", "y"), target = "y.1")
+cat("\nValid split?", inspection@is_valid, "\n")
+#> 
+#> Valid split? TRUE
+cat("Hard violations:", inspection@n_hard, "\n")
+#> Hard violations: 0
+cat("Soft warnings:", inspection@n_soft, "\n")
+#> Soft warnings: 1
+```
+
+When
+[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+reports spatial or temporal structure and
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+flags spatial proximity on a random split, the diagnosis and inspection
+agree: you need blocked CV.
+
+## Practical Guidance
+
+### Hard vs. Soft: Triage Order
+
+Hard violations invalidate the evaluation entirely. Soft inflation risks
+bias it. The triage order follows from this distinction: fix all hard
+violations first, because no amount of soft-risk mitigation matters if
+the evaluation is fundamentally broken. A dataset with index overlap and
+spatial proximity has two problems, but the index overlap must be fixed
+before the spatial proximity is even worth thinking about. Once all hard
+violations are resolved, address soft risks in order of estimated
+inflation magnitude, which usually means spatial proximity first (it
+tends to produce the largest bias in environmental and ecological data),
+then proxy leakage, then spatial overlap.
+
+A common mistake is to spend effort on spatial blocking while the
+dataset still contains duplicate rows from a sloppy merge. The spatial
+blocking will not help. The model memorizes the duplicates and scores
+well on them regardless of how the geographic blocks are arranged.
+Always clear the hard violations before tuning the soft ones.
+
+### How Risk Severity Scales with Dataset Size
+
+Small datasets amplify every risk. With n = 50, a single duplicate row
+in the test set represents 6-7% of the test data (assuming a 70/30
+split). With n = 10,000 and the same one duplicate, the effect is 0.03%
+of the test set, which is negligible. The same logic applies to
+preprocessing leakage: the train-set mean and the full-dataset mean
+converge as n grows, so the information leaked through preprocessing
+diminishes. At n \> 5,000, the bias from preprocessing leakage on
+well-behaved numeric features is typically below 0.5% of the metric.
+
+Spatial proximity is the exception. Its severity depends on the ratio of
+inter-point distance to autocorrelation range, not on n directly. A
+dataset with n = 100,000 points densely covering a small area can have
+worse spatial leakage than n = 200 points spread across a continent. The
+relevant quantity is the effective spatial coverage, not the sample
+size.
+
+Target leakage severity is independent of n. A perfectly correlated
+feature dominates the model at any sample size.
+
+### Rules of Thumb
+
+These are empirically grounded defaults. They will not be correct in
+every situation, but they cover the majority of applied cases we have
+encountered.
+
+**1. Below n = 200, treat every soft risk as hard.** With fewer than 200
+observations, the margin between a biased evaluation and an honest one
+is small enough that soft inflation risks can flip model rankings. A
+spatial proximity warning on n = 150 is, in practice, as damaging as a
+hard violation on n = 5,000. Run
+[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+and fix everything it flags.
+
+**2. If the median nearest-neighbor distance between test and train
+points is less than 10% of the autocorrelation range, spatial blocking
+is mandatory.** This threshold comes from simulation studies in spatial
+statistics: below it, interpolation dominates and error estimates are
+optimistic by 30% or more. If the autocorrelation range is unknown,
+estimate it from a variogram. If that is not feasible, use 5% of the
+spatial extent as a conservative proxy for the autocorrelation range and
+apply the 10% rule to that.
+
+**3. When all features have \|r\| \< 0.8 with the target and n \> 500,
+spatial proximity is the dominant remaining risk for georeferenced
+data.** In this regime, target leakage is absent and the sample is large
+enough that preprocessing leakage and duplicates have negligible effect.
+The evaluation’s honesty hinges almost entirely on whether the spatial
+structure was respected. Conversely, if any feature has \|r\| \> 0.95,
+target leakage is the dominant risk regardless of spatial structure, and
+it must be resolved first.
+
+**4. For time series shorter than 100 observations, use a single
+temporal split rather than rolling-window CV.** Rolling-window CV on
+short series produces folds with very few test points (sometimes fewer
+than 10), which makes the performance estimate high-variance and
+unreliable. A single 70/30 chronological split gives a noisier but less
+biased estimate than 5-fold rolling windows with 15 test points each.
+
+**5. Group-aware splitting is non-negotiable when the ICC exceeds 0.3.**
+An intra-class correlation of 0.3 means that 30% of the total variance
+lives between groups. Random CV that ignores groups will exploit this
+structure and inflate metrics accordingly. At ICC \> 0.5, the inflation
+from ignoring groups routinely exceeds the inflation from ignoring
+spatial structure.
+
+``` r
+
+# Quick triage workflow
+sim <- borg_simulate(n = 150, type = "combined", autocorrelation = 0.6,
+                     leak_strength = 0.97, seed = 7)
+
+set.seed(7)
+train_idx <- sample(150, 105)
+test_idx <- setdiff(1:150, train_idx)
+
+result <- borg_inspect(sim$data, train_idx = train_idx, test_idx = test_idx,
+                       target = "y.1", coords = c("x", "y"))
+cat("Hard violations:", result@n_hard, "\n")
+#> Hard violations: 0
+cat("Soft warnings:", result@n_soft, "\n")
+#> Soft warnings: 1
+```
+
+With n = 150, both the target leakage (hard) and spatial proximity
+(soft) need fixing. The hard violation comes first. Remove or
+investigate the leaked feature, then switch to spatial blocking for the
+remaining soft risk.
 
 ## Quick Reference
 
@@ -500,8 +907,8 @@ cat("Soft warnings:", result@n_soft, "\n")
 for (risk in result@risks) {
   cat("\n", risk$type, "(", risk$severity, "):\n", sep = "")
   cat("  ", risk$description, "\n")
-  if (!is.null(risk$affected)) {
-    cat("  Affected:", head(risk$affected, 5), "...\n")
+  if (!is.null(risk$affected_indices)) {
+    cat("  Affected:", head(risk$affected_indices, 5), "...\n")
   }
 }
 #> 
@@ -517,6 +924,8 @@ as.data.frame(result)
 #> 1 Train and test indices overlap (10 shared indices). This invalidates evaluation.
 #>        source_object n_affected
 #> 1 train_idx/test_idx         10
+#>                                            suggested_fix
+#> 1 Recreate train/test split with non-overlapping indices
 ```
 
 ### See Also

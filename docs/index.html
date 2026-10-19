@@ -161,7 +161,7 @@
 <p>Before structure, BORG checks the split itself. <code><a href="reference/borg.html">borg()</a></code> in validation mode and <code><a href="reference/borg_inspect.html">borg_inspect()</a></code> catch the leaks that quietly inflate a held-out score:</p>
 <ul>
 <li>index overlap and duplicate rows across train and test (fast hash-based checks in C++),</li>
-<li>preprocessing fitted on the full data (<code>scale</code>, <code>prcomp</code>, <code>caret::preProcess</code>, <code>recipes</code> steps),</li>
+<li>preprocessing fitted on the full data (<code>scale</code>, <code>prcomp</code>, <code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">caret::preProcess</a></code>, <code>recipes</code> steps),</li>
 <li>target leakage from a feature near-perfectly correlated with the outcome,</li>
 <li>group leakage and look-ahead in time.</li>
 </ul>

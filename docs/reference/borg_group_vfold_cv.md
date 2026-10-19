@@ -61,13 +61,15 @@ An `rset` object from rsample.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Clustered data - group CV is appropriate
-data <- data.frame(
-  site = rep(1:20, each = 5),
-  x = rnorm(100),
-  y = rnorm(100)
-)
-folds <- borg_group_vfold_cv(data, group = "site", v = 5)
-} # }
+# \donttest{
+if (requireNamespace("rsample", quietly = TRUE)) {
+  # Clustered data - group CV is appropriate
+  data <- data.frame(
+    site = rep(1:20, each = 5),
+    x = rnorm(100),
+    y = rnorm(100)
+  )
+  folds <- borg_group_vfold_cv(data, group = "site", v = 5)
+}
+# }
 ```

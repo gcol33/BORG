@@ -18,3 +18,8 @@ print(x, ...)
 - ...:
 
   Additional arguments (ignored).
+
+## Value
+
+The `borg_cv_report` object `x`, returned invisibly. Called for the side
+effect of printing a human-readable leakage summary to the console.

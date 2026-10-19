@@ -67,12 +67,14 @@ data, it warns if random splitting may cause issues.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Temporal data - ensures chronological split
-ts_data <- data.frame(
-  date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
-  value = cumsum(rnorm(100))
-)
-split <- borg_initial_split(ts_data, prop = 0.8, time = "date")
-} # }
+# \donttest{
+if (requireNamespace("rsample", quietly = TRUE)) {
+  # Temporal data - ensures chronological split
+  ts_data <- data.frame(
+    date = seq(as.Date("2020-01-01"), by = "day", length.out = 100),
+    value = cumsum(rnorm(100))
+  )
+  split <- borg_initial_split(ts_data, prop = 0.8, time = "date")
+}
+# }
 ```

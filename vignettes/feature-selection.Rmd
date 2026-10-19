@@ -152,6 +152,7 @@ than across individual rows. BORG's implementation works as follows:
    individual values. Each observation receives the variable value from the
    corresponding position in a different block.
 3. Predict with the modified dataset and record the change in error.
+
 4. Repeat the permutation multiple times to estimate variability.
 
 The block permutation preserves within-block spatial structure while breaking
@@ -275,9 +276,11 @@ ffs
 This returns an object of class `borg_ffs` containing:
 
 - `selected`: the variables chosen, in the order they were added.
+
 - `history`: a data frame recording each step's metric value and which variable
   was added.
 - `best_metric`: the best CV metric achieved by the final selected set.
+
 - `all_vars`: all candidate variables that were considered.
 
 ```{r ffs-history}
@@ -442,7 +445,9 @@ association between the focal variable and the response.
 The algorithm proceeds as follows for each observation and each feature:
 
 1. Identify the spatial block containing the observation.
+
 2. Sample background points from other blocks.
+
 3. Replace the focal feature's value with background values while keeping all
    other features fixed.
 4. Compute the difference between the original prediction and the mean
@@ -788,7 +793,9 @@ cannot reliably identify the useful variables.
 When reporting results from spatial feature selection, include:
 
 1. The CV strategy used (spatial blocking, KNNDM, etc.) and the number of folds.
+
 2. Which selection method was applied.
+
 3. The variables selected, the order in which they were added (for FFS), and
    whether any candidates were pre-screened before selection.
 4. The metric used (RMSE, MAE, R-squared) and whether it was minimized or
@@ -828,6 +835,7 @@ the training set.
 # References
 
 - Breiman, L. (2001). Random forests. *Machine Learning*, 45(1), 5--32.
+
 - Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating
   the area of applicability of spatial prediction models.
   *Methods in Ecology and Evolution*, 12(9), 1620--1633.

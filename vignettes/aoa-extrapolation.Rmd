@@ -823,9 +823,13 @@ variables) before running `borg_extrapolation()`, or rely on the AOA instead.
 When including AOA results in a manuscript, report at minimum:
 
 1. The number and identity of predictors used.
+
 2. Whether variable importance weights were applied and how they were derived.
+
 3. The threshold method (default, CV-based, or manual) and the threshold value.
+
 4. What fraction of the prediction area falls inside the AOA.
+
 5. How predictions outside the AOA were handled in the accuracy assessment (excluded, reported separately, or flagged).
 
 If possible, include the AOA map as a figure panel alongside the prediction map

@@ -86,7 +86,7 @@
                         <h4 data-toc-skip class="author">Gilles
 Colling</h4>
             
-            <h4 data-toc-skip class="date">2026-10-10</h4>
+            <h4 data-toc-skip class="date">2026-10-19</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gcol33/BORG/blob/HEAD/vignettes/risk-taxonomy.Rmd" class="external-link"><code>vignettes/risk-taxonomy.Rmd</code></a></small>
       <div class="d-none name"><code>risk-taxonomy.Rmd</code></div>
@@ -176,7 +176,7 @@ plausible-looking inflation.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    60 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     50 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -225,7 +225,7 @@ for numeric data).</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    5 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     5 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -266,7 +266,7 @@ and compare to stored parameters. Discrepancy indicates leakage.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>caret::preProcess</code></td>
+<td><code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">caret::preProcess</a></code></td>
 <td>
 <code>$mean</code>, <code>$std</code>
 </td>
@@ -346,7 +346,7 @@ numeric feature with target on training data.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    70 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -463,7 +463,7 @@ selection was influenced by test data.</p>
 intersect with held-out test set.</p>
 <p><strong>Supported objects</strong>:</p>
 <ul>
-<li><p><code>caret::trainControl</code>: checks <code>$index</code> and
+<li><p><code><a href="https://rdrr.io/pkg/caret/man/trainControl.html" class="external-link">caret::trainControl</a></code>: checks <code>$index</code> and
 <code>$indexOut</code></p></li>
 <li><p><code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv</a></code> and other <code>rset</code>
 objects</p></li>
@@ -488,7 +488,7 @@ have.</p>
 or <code>length(fitted.values)</code> to
 <code>length(train_idx)</code>.</p>
 <p><strong>Supported objects</strong>: <code>lm</code>,
-<code>glm</code>, <code>ranger</code>, <code>caret::train</code>,
+<code>glm</code>, <code>ranger</code>, <code><a href="https://rdrr.io/pkg/caret/man/train.html" class="external-link">caret::train</a></code>,
 parsnip models, workflows.</p>
 </div>
 </div>
@@ -528,7 +528,7 @@ threshold.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    70 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 <p><strong>Action</strong>: Review whether the feature should be
@@ -573,7 +573,7 @@ point to nearest training point. Flag if &lt; 1% of spatial spread.</p>
 <span><span class="co">#&gt;   Soft inflations:  1</span></span>
 <span><span class="co">#&gt;   Train indices:    70 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     30 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -668,7 +668,7 @@ alone.</p>
 <span><span class="co">#&gt;   Soft inflations:  1</span></span>
 <span><span class="co">#&gt;   Train indices:    140 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     60 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-10 15:35:43</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:20</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -787,14 +787,14 @@ scan automatically.</li>
 </ul>
 <p><strong>Step 4: Split mechanics</strong></p>
 <ul>
-<li>Did you create train/test splits manually? Check <strong>index
-overlap</strong>.</li>
-<li>Did your data go through deduplication after splitting? Check
-<strong>duplicate rows</strong>.</li>
-<li>Are you using nested CV? Check <strong>CV fold
-contamination</strong>.</li>
-<li>Did you fit the model separately from splitting? Check <strong>model
-scope</strong>.</li>
+<li><p>Did you create train/test splits manually? Check <strong>index
+overlap</strong>.</p></li>
+<li><p>Did your data go through deduplication after splitting? Check
+<strong>duplicate rows</strong>.</p></li>
+<li><p>Are you using nested CV? Check <strong>CV fold
+contamination</strong>.</p></li>
+<li><p>Did you fit the model separately from splitting? Check
+<strong>model scope</strong>.</p></li>
 </ul>
 <p><strong>Quick start</strong>: if you are unsure, run
 <code><a href="../reference/borg_diagnose.html">borg_diagnose()</a></code> on your data to detect dependency

@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/gcol33/BORG/blob/HEAD/DESCRIPTION)
+[`inst/CITATION`](https://github.com/gcol33/BORG/blob/HEAD/inst/CITATION)
 
 Colling G (2026). *BORG: Bounded Outcome Risk Guard for Model
 Evaluation*. R package version 0.2.3, <https://github.com/gcol33/BORG>.
@@ -17,6 +17,6 @@ Evaluation*. R package version 0.2.3, <https://github.com/gcol33/BORG>.
       title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},
       author = {Gilles Colling},
       year = {2026},
-      note = {R package version 0.2.3},
       url = {https://github.com/gcol33/BORG},
+      note = {R package version 0.2.3},
     }

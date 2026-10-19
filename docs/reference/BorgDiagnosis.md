@@ -18,6 +18,11 @@ show(object)
 
   A `BorgDiagnosis` object to be printed.
 
+## Value
+
+The `BorgDiagnosis` object, returned invisibly. Called for the side
+effect of printing a diagnostic summary to the console.
+
 ## Slots
 
 - `dependency_type`:

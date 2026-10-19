@@ -64,11 +64,17 @@ model will perform on genuinely new data.
 This vignette walks through the core workflow:
 
 1. **Simulate** data with known dependencies so we can verify BORG's detection.
+
 2. **Diagnose** the dependency structure (spatial, temporal, grouped, or mixed).
+
 3. **Generate** CV folds that respect the detected dependencies.
+
 4. **Validate** existing train/test splits for leakage.
+
 5. **Fit a model** inside a guarded pipeline that checks every fold.
+
 6. **Compare** random vs blocked CV empirically to quantify the inflation.
+
 7. **Check power** to confirm the dataset is large enough for blocked CV.
 
 After the core workflow, short taste tests demonstrate additional features: area
@@ -598,6 +604,7 @@ If `sufficient` is `FALSE`, the dataset is too small for blocked CV to detect
 meaningful effects. Options in that case:
 
 - **Collect more data.** The most reliable fix.
+
 - **Reduce the number of folds.** Fewer folds means more training data per fold,
   which can restore power at the cost of higher variance in the CV estimate.
 - **Use leave-one-block-out** instead of k-fold, if the number of natural blocks
@@ -979,6 +986,7 @@ scope:
 - Image or text data where spatial/temporal structure is internal to each
   observation rather than between observations.
 - Unsupervised learning (no target variable to evaluate).
+
 - Reinforcement learning or online learning settings.
 
 ## Rules of thumb

@@ -1,165 +1,43 @@
 # BORG
 
+*cross-validation for data that isn’t independent*
+
+[![CRAN
+status](https://www.r-pkg.org/badges/version/BORG)](https://CRAN.R-project.org/package=BORG)
+[![CRAN
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/BORG)](https://cran.r-project.org/package=BORG)
+[![Monthly
+downloads](https://cranlogs.r-pkg.org/badges/BORG)](https://cran.r-project.org/package=BORG)
 [![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/gcol33/BORG/graph/badge.svg)](https://app.codecov.io/gh/gcol33/BORG)
 [![License:
 MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Bounded Outcome Risk Guard for Model Evaluation**
+**Cross-validation that respects spatial, temporal, and grouped
+structure, with the dependency detected for you.**
 
-BORG detects data leakage and invalid cross-validation setups before you
-compute performance metrics. It checks for information reuse between
-training and test data, and blocks evaluation when problems are found.
-
-## Quick Start
-
-``` r
-
-library(BORG)
-
-# Validate a train/test split
-data <- iris
-train_idx <- 1:100
-test_idx <- 101:150
-
-borg(data, train_idx = train_idx, test_idx = test_idx)
-
-# Detect overlapping indices
-borg(data, train_idx = 1:100, test_idx = 51:150)
-#> Error: index_overlap - Train and test indices overlap (50 shared indices)
-```
-
-## Statement of Need
-
-A model shows 95% accuracy on test data, then drops to 60% in
-production. The usual cause: data leakage. Information from the test set
-contaminated training, and the reported metrics were wrong.
-
-A [Princeton meta-analysis](https://reproducible.cs.princeton.edu/)
-found leakage errors in **648 published papers across 30 fields**. In
-civil war prediction research, correcting leakage revealed that “complex
-ML models do not perform substantively better than decades-old Logistic
-Regression.” The reported gains were artifacts.
-
-BORG catches these errors before metrics are computed.
-
-## Features
-
-### Core Validation
-
-- **[`borg()`](https://gillescolling.com/BORG/reference/borg.md)**: Main
-  entry point for all validation
-  - Validates train/test splits against data
-  - Detects preprocessing leakage (scaling, PCA fitted on full data)
-  - Checks for target leakage (features derived from outcome)
-  - Validates grouped data (same patient in train and test)
-  - Validates temporal data (test predates training)
-  - Validates spatial data (test points too close to training)
-- **[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)**:
-  Detailed inspection of specific objects
-  - Works with
-    [`caret::preProcess`](https://rdrr.io/pkg/caret/man/preProcess.html),
-    [`recipes::recipe`](https://recipes.tidymodels.org/reference/recipe.html),
-    `prcomp`
-  - Checks `rsample` resampling objects
-  - Validates fitted models (`lm`, `glm`, `ranger`, etc.)
-- **[`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)**:
-  Analyze data for dependency structure
-  - Detects spatial autocorrelation (Moran’s I)
-  - Detects temporal autocorrelation (ACF/Ljung-Box)
-  - Detects clustered structure (ICC)
-  - Recommends appropriate CV strategy
-
-### Risk Categories
-
-| Category           | Impact          | Response                   |
-|--------------------|-----------------|----------------------------|
-| **Hard Violation** | Results invalid | Blocks evaluation          |
-| **Soft Inflation** | Results biased  | Warns, allows with caution |
-
-**Hard Violations:** - `index_overlap` - Same row in train and test -
-`duplicate_rows` - Identical observations across sets -
-`preprocessing_leak` - Scaler/PCA fitted on full data -
-`target_leakage` - Feature with \|r\| \> 0.99 with target -
-`group_leakage` - Same group in train and test - `temporal_leak` - Test
-data predates training
-
-**Soft Inflation:** - `proxy_leakage` - Feature with \|r\| 0.95-0.99
-with target - `spatial_proximity` - Test points close to training -
-`spatial_overlap` - Test inside training convex hull
+Hand BORG your data and the columns that carry structure (coordinates, a
+time stamp, a grouping ID). It tests for spatial autocorrelation
+(Moran’s I), temporal autocorrelation (ACF / Ljung-Box), and clustering
+(ICC), then builds folds that hold the structure out instead of
+splitting through it. When a dependency is present, random k-fold is
+disabled unless you ask for it explicitly. The point is the number you
+report from CV being the number you get in the field.
 
 ## Installation
 
 ``` r
 
-# Install from GitHub
-# install.packages("pak")
+install.packages("pak")           # development version
 pak::pak("gcol33/BORG")
 ```
 
-## Usage Examples
-
-### Basic Validation
+## Quick start
 
 ``` r
 
 library(BORG)
-data <- iris
-train_idx <- 1:100
-test_idx <- 101:150
-
-# Returns BorgRisk object with validation results
-result <- borg(data, train_idx = train_idx, test_idx = test_idx)
-result
-```
-
-### Detecting Preprocessing Leakage
-
-``` r
-
-# BAD: scale() fitted on all data before splitting
-data_scaled <- scale(iris[, 1:4])
-borg_inspect(data_scaled, train_idx = 1:100, test_idx = 101:150)
-#> Hard violation: preprocessing_leak
-```
-
-### Target Leakage Detection
-
-``` r
-
-# Feature highly correlated with outcome
-leaky_data <- data.frame(
- x = rnorm(100),
- outcome = rnorm(100)
-)
-leaky_data$leaked <- leaky_data$outcome + rnorm(100, sd = 0.01)
-
-borg_inspect(leaky_data, train_idx = 1:70, test_idx = 71:100, target = "outcome")
-#> Hard violation: target_leakage_direct
-```
-
-### Grouped Data Validation
-
-``` r
-
-# Clinical data with patient IDs
-clinical <- data.frame(
-  patient_id = rep(1:10, each = 10),
-  measurement = rnorm(100)
-)
-
-# Random split ignoring patients
-set.seed(123)
-idx <- sample(100)
-train_idx <- idx[1:70]
-test_idx <- idx[71:100]
-
-borg_inspect(clinical, train_idx, test_idx, groups = "patient_id")
-#> Hard violation: group_leakage
-```
-
-### Spatial Data Validation
-
-``` r
 
 spatial_data <- data.frame(
   lon = runif(200, -10, 10),
@@ -167,56 +45,174 @@ spatial_data <- data.frame(
   response = rnorm(200)
 )
 
-# Let BORG diagnose and generate appropriate CV folds
-result <- borg(spatial_data, coords = c("lon", "lat"), target = "response", v = 5)
+# diagnose the dependency and get folds that respect it
+result <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
 result$diagnosis@recommended_cv
 #> "spatial_block"
 ```
 
-### Framework Integration
+## Diagnose first, then enforce
 
-BORG works with common ML frameworks:
+Spatial CV tools such as `blockCV`, `CAST`, and `spatialsample` give you
+the blocking schemes but leave the decision to you: you have to know the
+data are autocorrelated, pick a block size, and choose to use it. BORG
+runs the diagnosis first. If it finds structure, it estimates how much
+random CV would inflate your metric, refuses random folds, and generates
+a scheme matched to the dependency it found. Overriding is one explicit
+argument away, and the override is logged.
 
 ``` r
 
-# caret
-library(caret)
-pp <- preProcess(mtcars[, -1], method = c("center", "scale"))
-borg_inspect(pp, train_idx = 1:25, test_idx = 26:32, data = mtcars)
-
-# tidymodels
-library(recipes)
-rec <- recipe(mpg ~ ., data = mtcars) |>
-  step_normalize(all_numeric_predictors()) |>
-  prep()
-borg_inspect(rec, train_idx = 1:25, test_idx = 26:32, data = mtcars)
+borg_diagnose(spatial_data, coords = c("lon", "lat"), target = "response")
+#> Dependency:  SPATIAL (moderate severity)
+#> Moran's I:   0.18 (p < 0.001)
+#> Strategy:    spatial_block
 ```
 
-## Interface Summary
+## Cross-validation schemes
 
-| Function | Purpose |
-|----|----|
-| [`borg()`](https://gillescolling.com/BORG/reference/borg.md) | Main entry point - diagnose data or validate splits |
-| [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md) | Detailed inspection of objects |
-| [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md) | Analyze data dependencies |
-| [`borg_validate()`](https://gillescolling.com/BORG/reference/borg_validate.md) | Validate complete workflow |
-| [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md) | Attempt automatic repair |
-| [`plot()`](https://rdrr.io/r/graphics/plot.default.html) | Visualize results |
-| [`summary()`](https://rdrr.io/r/base/summary.html) | Generate methods text |
-| [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md) | Create validation certificate |
-| [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md) | Export certificate to YAML/JSON |
+[`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md)
+covers the schemes used in dependent-data evaluation:
+
+- **Spatial**: spatial blocking, environmental blocking, checkerboard,
+  hexagonal, leave-location-out, spatial-plus (buffered), and KNNDM
+  matched to prediction points.
+- **Temporal**: chronological splits with an embargo, expanding and
+  sliding windows, and de Prado’s purged CV.
+- **Grouped**: leave-group-out, so no cluster appears in both train and
+  test.
+- **Mixed**: spatial-temporal and spatial-group combinations.
+
+Output is a plain list of train/test indices by default, or an
+`rsample`, `caret`, or `mlr3` object for direct use in those frameworks.
+
+``` r
+
+# tidymodels-compatible folds
+folds <- borg(spatial_data, coords = c("lon", "lat"), output = "rsample")
+```
+
+## Show the inflation, not just the warning
+
+[`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md)
+runs random and structure-aware CV on the same data and model, and
+reports the gap with a paired t-test. This is the evidence a reviewer
+asks for when you switch a paper from random to blocked CV.
+
+``` r
+
+comparison <- borg_compare_cv(
+  spatial_data,
+  formula = response ~ lon + lat,
+  coords  = c("lon", "lat"),
+  repeats = 10
+)
+print(comparison)
+plot(comparison)
+```
+
+[`borg_power()`](https://gillescolling.com/BORG/reference/borg_power.md)
+answers the other half of that conversation: blocking costs you
+effective sample size, so it reports the design effect, the effective n,
+and the minimum effect you can still detect.
+
+## Leakage detection
+
+Before structure, BORG checks the split itself.
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) in
+validation mode and
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+catch the leaks that quietly inflate a held-out score:
+
+- index overlap and duplicate rows across train and test (fast
+  hash-based checks in C++),
+- preprocessing fitted on the full data (`scale`, `prcomp`,
+  [`caret::preProcess`](https://rdrr.io/pkg/caret/man/preProcess.html),
+  `recipes` steps),
+- target leakage from a feature near-perfectly correlated with the
+  outcome,
+- group leakage and look-ahead in time.
+
+``` r
+
+# scaled before splitting: the test means leaked into the scaler
+data_scaled <- scale(iris[, 1:4])
+borg_inspect(data_scaled, train_idx = 1:100, test_idx = 101:150)
+#> INVALID — Hard violation: preprocessing_leak
+```
+
+Hard violations (overlap, duplicates, preprocessing leak, target leak,
+group leak, look-ahead) invalidate the result and block it. Soft
+inflations (a near-threshold proxy feature, test points close to
+training) warn and let you proceed with the caveat recorded.
+
+## Area of applicability and prediction maps
+
+[`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md) and
+[`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md) flag
+prediction locations that sit outside the feature space the model was
+trained on, following Meyer & Pebesma (2021).
+[`borg_extract()`](https://gillescolling.com/BORG/reference/borg_extract.md),
+[`borg_thin()`](https://gillescolling.com/BORG/reference/borg_thin.md),
+[`borg_predict_raster()`](https://gillescolling.com/BORG/reference/borg_predict_raster.md),
+and
+[`borg_leaflet()`](https://gillescolling.com/BORG/reference/borg_leaflet.md)
+cover the surrounding spatial workflow, from raster extraction to an
+interactive map of folds.
+
+## Methods text for the manuscript
+
+[`summary()`](https://rdrr.io/r/base/summary.html) on a BORG result
+writes a methods paragraph with the test statistics filled in (Moran’s
+I, ACF, ICC, and their p-values), in APA, Nature, or Ecology style.
+[`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md)
+and
+[`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
+write the same assessment as a machine-readable YAML or JSON record for
+an audit trail.
+
+``` r
+
+summary(result)
+#> Model performance was evaluated using spatial block cross-validation
+#> (k = 5 folds). Spatial autocorrelation was detected (Moran's I = 0.18,
+#> p < 0.001) ...
+```
 
 ## Documentation
 
-- [Quick Start](https://gcol33.github.io/BORG/articles/quickstart.html)
-- [Risk
-  Taxonomy](https://gcol33.github.io/BORG/articles/risk-taxonomy.html)
-- [Framework
-  Integration](https://gcol33.github.io/BORG/articles/frameworks.html)
+- [BORG website](https://gillescolling.com/BORG/)
+- [Function reference](https://gillescolling.com/BORG/reference/)
+- [Source on GitHub](https://github.com/gcol33/BORG)
+
+## Support
+
+> “Software is like sex: it’s better when it’s free.” — Linus Torvalds
+
+I’m a PhD student who builds R packages in my free time because I
+believe good tools should be free and open. I started these projects for
+my own work and figured others might find them useful too.
+
+If this package saved you some time, buying me a coffee is a nice way to
+say thanks. It helps with my coffee addiction.
+
+[![Buy Me A
+Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/gcol33)
 
 ## License
 
 MIT (see the LICENSE.md file)
+
+## Citation
+
+``` bibtex
+@software{BORG,
+  author = {Colling, Gilles},
+  title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},
+  year = {2026},
+  url = {https://github.com/gcol33/BORG}
+}
+```
 
 # Package index
 
@@ -226,6 +222,12 @@ Start here
 
 - [`borg()`](https://gillescolling.com/BORG/reference/borg.md) : BORG:
   Guard Your Model Evaluation
+- [`borg_workflow()`](https://gillescolling.com/BORG/reference/borg_workflow.md)
+  : Create a BORG Validation Workflow
+- [`borg_check()`](https://gillescolling.com/BORG/reference/borg_check.md)
+  : Quick Leakage Check (Pipe-Friendly)
+- [`borg_pipeline()`](https://gillescolling.com/BORG/reference/borg_pipeline.md)
+  : Validate an Entire Modeling Pipeline
 
 ## Core Functions
 
@@ -239,13 +241,125 @@ Detailed validation functions
   : Create Validation Certificate
 - [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
   : Export Validation Certificate
+- [`borg_explain_risk()`](https://gillescolling.com/BORG/reference/borg_explain_risk.md)
+  : Explain Risks in Plain Language with Actionable Recommendations
+- [`borg_cache_get()`](https://gillescolling.com/BORG/reference/borg_cache.md)
+  [`borg_cache_set()`](https://gillescolling.com/BORG/reference/borg_cache.md)
+  [`borg_cache_clear()`](https://gillescolling.com/BORG/reference/borg_cache.md)
+  [`borg_cache_info()`](https://gillescolling.com/BORG/reference/borg_cache.md)
+  : Cache and Retrieve BORG Diagnoses
 
 ## Remediation
 
 Automatic pipeline correction
 
-- [`borg_rewrite()`](https://gillescolling.com/BORG/reference/borg_rewrite.md)
-  : Automatically Rewrite Leaky Evaluation Pipelines
+- [`borg_assimilate()`](https://gillescolling.com/BORG/reference/borg_assimilate.md)
+  : Assimilate Leaky Evaluation Pipelines
+
+## Spatial Tools
+
+Raster extraction, thinning, blocking, and geographic analysis
+
+- [`borg_extract()`](https://gillescolling.com/BORG/reference/borg_extract.md)
+  : Extract Raster Values at Point Locations for BORG
+- [`borg_thin()`](https://gillescolling.com/BORG/reference/borg_thin.md)
+  : Spatially Thin Occurrence Data
+- [`borg_block_size()`](https://gillescolling.com/BORG/reference/borg_block_size.md)
+  : Optimize Spatial Block Size
+- [`borg_check_coverage()`](https://gillescolling.com/BORG/reference/borg_check_coverage.md)
+  : Check Geographic Representativeness of CV Folds
+- [`borg_leaflet()`](https://gillescolling.com/BORG/reference/borg_leaflet.md)
+  : Interactive Leaflet Map of Spatial CV Folds
+- [`borg_prediction_map()`](https://gillescolling.com/BORG/reference/borg_prediction_map.md)
+  : Spatial Prediction Uncertainty Map
+- [`borg_importance()`](https://gillescolling.com/BORG/reference/borg_importance.md)
+  : Block-Permutation Variable Importance
+- [`borg_geodist()`](https://gillescolling.com/BORG/reference/borg_geodist.md)
+  : Distance Distribution Diagnostics
+- [`borg_clustered_sample()`](https://gillescolling.com/BORG/reference/borg_clustered_sample.md)
+  : Draw a Clustered Spatial Sample
+- [`borg_sample_design()`](https://gillescolling.com/BORG/reference/borg_sample_design.md)
+  : Suggest Sampling Locations to Improve AOA
+- [`borg_predict_raster()`](https://gillescolling.com/BORG/reference/borg_predict_raster.md)
+  : Predict onto a SpatRaster with AOA Masking
+- [`borg_stability_map()`](https://gillescolling.com/BORG/reference/borg_stability_map.md)
+  : Prediction Stability Map
+- [`borg_check_residuals()`](https://gillescolling.com/BORG/reference/borg_check_residuals.md)
+  : Check Residual Spatial Autocorrelation
+- [`borg_local_moran()`](https://gillescolling.com/BORG/reference/borg_local_moran.md)
+  : Local Moran's I for Residuals
+- [`borg_debias()`](https://gillescolling.com/BORG/reference/borg_debias.md)
+  : Spatial+ Debiasing for Spatial Confounding
+
+## Cross-Validation Schemes
+
+Blocked, buffered and repeated resampling designs
+
+- [`borg_spatial_loo()`](https://gillescolling.com/BORG/reference/borg_spatial_loo.md)
+  : Buffered Leave-One-Out Cross-Validation
+- [`borg_disc_cv()`](https://gillescolling.com/BORG/reference/borg_disc_cv.md)
+  : Leave-Disc-Out Cross-Validation
+- [`borg_repeated_cv()`](https://gillescolling.com/BORG/reference/borg_repeated_cv.md)
+  : Repeated Blocked Cross-Validation
+- [`borg_global_validation()`](https://gillescolling.com/BORG/reference/borg_global_validation.md)
+  : Global (Pooled) Cross-Validation Metrics
+- [`borg_bootstrap()`](https://gillescolling.com/BORG/reference/borg_bootstrap.md)
+  : Block Bootstrap Confidence Intervals for CV Metrics
+
+## Applicability & Transfer
+
+Area of applicability, extrapolation and distribution shift
+
+- [`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md) :
+  Area of Applicability
+- [`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md) :
+  Dissimilarity Index
+- [`borg_error_profile()`](https://gillescolling.com/BORG/reference/borg_error_profile.md)
+  : Calibrate Dissimilarity Index to Prediction Error
+- [`borg_extrapolation()`](https://gillescolling.com/BORG/reference/borg_extrapolation.md)
+  : Detect Model Extrapolation
+- [`borg_fold_similarity()`](https://gillescolling.com/BORG/reference/borg_fold_similarity.md)
+  : Per-Fold Environmental Similarity (MESS)
+- [`borg_transferability()`](https://gillescolling.com/BORG/reference/borg_transferability.md)
+  : Assess Geographic Transferability
+- [`borg_drift()`](https://gillescolling.com/BORG/reference/borg_drift.md)
+  : Detect Distribution Shift Between Training and Deployment Data
+- [`borg_adversarial()`](https://gillescolling.com/BORG/reference/borg_adversarial.md)
+  : Adversarial Validation
+
+## Model Evaluation
+
+Metrics, calibration, uncertainty and model comparison
+
+- [`borg_metrics()`](https://gillescolling.com/BORG/reference/borg_metrics.md)
+  : Available Classification Metrics
+- [`borg_willmott()`](https://gillescolling.com/BORG/reference/borg_willmott.md)
+  : Willmott's Index of Agreement
+- [`borg_calibration()`](https://gillescolling.com/BORG/reference/borg_calibration.md)
+  : Model Calibration Diagnostics
+- [`borg_conformal()`](https://gillescolling.com/BORG/reference/borg_conformal.md)
+  : Conformal Prediction with Spatial Dependence
+- [`borg_compare_models()`](https://gillescolling.com/BORG/reference/borg_compare_models.md)
+  : Compare Multiple Models with Spatial CV
+- [`borg_ensemble()`](https://gillescolling.com/BORG/reference/borg_ensemble.md)
+  : Ensemble Predictions from CV Fold Models
+- [`borg_multiscale()`](https://gillescolling.com/BORG/reference/borg_multiscale.md)
+  : Multi-Scale Performance Assessment
+- [`borg_null_test()`](https://gillescolling.com/BORG/reference/borg_null_test.md)
+  : Null Model Significance Test
+- [`borg_fairness()`](https://gillescolling.com/BORG/reference/borg_fairness.md)
+  : Detect Performance Disparities Across Subgroups Under Blocked CV
+- [`borg_shap()`](https://gillescolling.com/BORG/reference/borg_shap.md)
+  : Spatial SHAP Values
+
+## Feature Selection
+
+Variable selection under blocked CV
+
+- [`borg_forward_selection()`](https://gillescolling.com/BORG/reference/borg_forward_selection.md)
+  : Forward Feature Selection with Spatial/Blocked CV
+- [`borg_best_subset()`](https://gillescolling.com/BORG/reference/borg_best_subset.md)
+  : Best Subset Variable Selection with Blocked CV
 
 ## Visualization
 
@@ -257,12 +371,62 @@ Plot and summary methods for BORG objects
   : Plot BORG Result Objects
 - [`plot(`*`<borg_comparison>`*`)`](https://gillescolling.com/BORG/reference/plot.borg_comparison.md)
   : Plot CV Comparison Results
+- [`autoplot(`*`<borg_fold_perf>`*`)`](https://gillescolling.com/BORG/reference/autoplot.borg_fold_perf.md)
+  : Autoplot Method for borg_fold_perf Objects
 - [`summary(`*`<BorgRisk>`*`)`](https://gillescolling.com/BORG/reference/summary.BorgRisk.md)
   : Summarize BORG Risk Assessment
 - [`summary(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/summary.BorgDiagnosis.md)
   : Summarize BORG Diagnosis
 - [`summary(`*`<borg_result>`*`)`](https://gillescolling.com/BORG/reference/summary.borg_result.md)
   : Summarize BORG Result
+- [`summary(`*`<borg_cv>`*`)`](https://gillescolling.com/BORG/reference/summary.borg_cv.md)
+  : Summarize BORG Cross-Validation
+- [`summary(`*`<borg_pipeline>`*`)`](https://gillescolling.com/BORG/reference/summary.borg_pipeline.md)
+  : Summarize BORG Pipeline Validation
+- [`summary(`*`<borg_power>`*`)`](https://gillescolling.com/BORG/reference/summary.borg_power.md)
+  : Summarize BORG Power Analysis
+- [`autoplot(`*`<BorgRisk>`*`)`](https://gillescolling.com/BORG/reference/autoplot.BorgRisk.md)
+  : Autoplot Method for BorgRisk Objects
+- [`autoplot(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/autoplot.BorgDiagnosis.md)
+  : Autoplot Method for BorgDiagnosis Objects
+- [`autoplot(`*`<borg_result>`*`)`](https://gillescolling.com/BORG/reference/autoplot.borg_result.md)
+  : Autoplot Method for borg_result Objects
+- [`autoplot(`*`<borg_comparison>`*`)`](https://gillescolling.com/BORG/reference/autoplot.borg_comparison.md)
+  : Autoplot Method for borg_comparison Objects
+- [`autoplot(`*`<borg_cv>`*`)`](https://gillescolling.com/BORG/reference/autoplot.borg_cv.md)
+  : Autoplot Method for borg_cv Objects
+
+## Diagnosis & Evidence
+
+Dependency detection, CV comparison, and power analysis
+
+- [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
+  : Diagnose Data Dependency Structure
+- [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md)
+  : Compare Random vs Blocked Cross-Validation
+- [`borg_power()`](https://gillescolling.com/BORG/reference/borg_power.md)
+  : Estimate Statistical Power After Blocking
+- [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) :
+  Generate Valid Cross-Validation Scheme
+- [`borg_fold_performance()`](https://gillescolling.com/BORG/reference/borg_fold_performance.md)
+  : Evaluate Per-Fold Model Performance
+- [`borg_stability()`](https://gillescolling.com/BORG/reference/borg_stability.md)
+  : Analyze CV Fold Stability Across Repeats
+- [`borg_check_nested_cv()`](https://gillescolling.com/BORG/reference/borg_check_nested_cv.md)
+  : Check Nested CV for Leakage
+- [`show(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/BorgDiagnosis.md)
+  : BorgDiagnosis S4 Class
+
+## Reporting
+
+HTML reports and certificates
+
+- [`borg_report()`](https://gillescolling.com/BORG/reference/borg_report.md)
+  : Generate BORG HTML Diagnostic Report
+- [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md)
+  : Create Validation Certificate
+- [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
+  : Export Validation Certificate
 
 ## Audit Functions
 
@@ -274,19 +438,33 @@ Prediction and CV auditing
   : Audit Feature Importance Calculations
 - [`cv_leakage_report()`](https://gillescolling.com/BORG/reference/cv_leakage_report.md)
   : Generate CV Leakage Report
-- [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) :
-  Generate Valid Cross-Validation Scheme
-- [`borg_diagnose()`](https://gillescolling.com/BORG/reference/borg_diagnose.md)
-  : Diagnose Data Dependency Structure
-- [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md)
-  : Compare Random vs Blocked Cross-Validation
-- [`show(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/BorgDiagnosis.md)
-  : BorgDiagnosis S4 Class
+- [`borg_literature_check()`](https://gillescolling.com/BORG/reference/borg_literature_check.md)
+  : Scan Methods Text for Common Leakage Patterns
+
+## Simulation
+
+Synthetic data with known leakage
+
+- [`borg_simulate()`](https://gillescolling.com/BORG/reference/borg_simulate.md)
+  : Generate Synthetic Data with Known Leakage
+
+## SDM Integration
+
+Species distribution modelling frameworks
+
+- [`borg_to_enmeval()`](https://gillescolling.com/BORG/reference/borg_to_enmeval.md)
+  : Convert BORG Folds to ENMeval Partition Format
+- [`borg_to_biomod2()`](https://gillescolling.com/BORG/reference/borg_to_biomod2.md)
+  : Convert BORG Folds to biomod2 Format
 
 ## Framework Integration
 
-Wrappers for ML frameworks
+Wrappers for ML frameworks (tidymodels, caret, mlr3)
 
+- [`borg_spatial_cv()`](https://gillescolling.com/BORG/reference/borg_spatial_cv.md)
+  : Spatial Block Cross-Validation (rsample-compatible)
+- [`borg_temporal_cv()`](https://gillescolling.com/BORG/reference/borg_temporal_cv.md)
+  : Temporal Block Cross-Validation (rsample-compatible)
 - [`borg-wrappers`](https://gillescolling.com/BORG/reference/borg-wrappers.md)
   : BORG-Guarded Cross-Validation Functions
 - [`borg_initial_split()`](https://gillescolling.com/BORG/reference/borg_initial_split.md)
@@ -301,6 +479,10 @@ Wrappers for ML frameworks
   : Register BORG Hooks
 - [`borg_unregister_hooks()`](https://gillescolling.com/BORG/reference/borg_unregister_hooks.md)
   : Unregister BORG Hooks
+- [`borg_rset()`](https://gillescolling.com/BORG/reference/borg_rset.md)
+  : Convert BORG Folds to an rsample rset Object
+- [`borg_to_mlr3()`](https://gillescolling.com/BORG/reference/borg_to_mlr3.md)
+  : mlr3 Resampling for BORG Cross-Validation
 
 ## Configuration
 
@@ -319,6 +501,8 @@ Result objects
   : BorgRisk S4 Class
 - [`as.data.frame(`*`<BorgRisk>`*`)`](https://gillescolling.com/BORG/reference/as.data.frame.BorgRisk.md)
   : Coerce BorgRisk to Data Frame
+- [`as.data.frame(`*`<BorgDiagnosis>`*`)`](https://gillescolling.com/BORG/reference/as.data.frame.BorgDiagnosis.md)
+  : Coerce BorgDiagnosis to Data Frame
 - [`print(`*`<borg_cv_report>`*`)`](https://gillescolling.com/BORG/reference/print.borg_cv_report.md)
   : Print CV Leakage Report
 
@@ -334,3 +518,15 @@ Result objects
   Taxonomy](https://gillescolling.com/BORG/articles/risk-taxonomy.md):
 - [Framework
   Integration](https://gillescolling.com/BORG/articles/frameworks.md):
+- [Area of Applicability and Extrapolation
+  Detection](https://gillescolling.com/BORG/articles/aoa-extrapolation.md):
+- [Post-Fit
+  Diagnostics](https://gillescolling.com/BORG/articles/diagnostics.md):
+- [Feature Selection with Blocked
+  Cross-Validation](https://gillescolling.com/BORG/articles/feature-selection.md):
+- [Model Comparison with Blocked
+  Cross-Validation](https://gillescolling.com/BORG/articles/model-comparison.md):
+- [Spatial
+  Cross-Validation](https://gillescolling.com/BORG/articles/spatial-cv.md):
+- [Temporal
+  Cross-Validation](https://gillescolling.com/BORG/articles/temporal-cv.md):

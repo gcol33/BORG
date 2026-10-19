@@ -24,6 +24,11 @@ show(object)
 
   A `BorgRisk` object to be printed.
 
+## Value
+
+The `BorgRisk` object, returned invisibly. Called for the side effect of
+printing a risk assessment summary to the console.
+
 ## Slots
 
 - `risks`:

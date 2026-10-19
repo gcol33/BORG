@@ -15,8 +15,15 @@ borg_cv(
   time = NULL,
   groups = NULL,
   target = NULL,
+  env = NULL,
+  dist_mat = NULL,
+  prediction_points = NULL,
   block_size = NULL,
   embargo = NULL,
+  buffer = NULL,
+  strategy = NULL,
+  repeats = 1L,
+  seed = NULL,
   output = c("list", "rsample", "caret", "mlr3"),
   allow_random = FALSE,
   verbose = FALSE
@@ -60,6 +67,24 @@ borg_cv(
 
   Character string specifying the response variable column name.
 
+- env:
+
+  Environmental covariates for environmental blocking. A `SpatRaster`,
+  data frame, or matrix with one row per observation. Required when
+  `strategy = "environmental_block"` or `"spatial_plus"`.
+
+- dist_mat:
+
+  A distance matrix or `dist` object for custom blocking. Must be an
+  `n x n` matrix matching `nrow(data)`. Required when
+  `strategy = "custom_block"`.
+
+- prediction_points:
+
+  Data frame, matrix, `SpatVector`, or `sf` object with coordinates of
+  prediction locations. Required when `strategy = "knndm"` or `"nndm"`,
+  which match cross-validation fold geometry to the prediction task.
+
 - block_size:
 
   Numeric. For spatial blocking, the minimum block size. If NULL,
@@ -70,6 +95,31 @@ borg_cv(
 
   Integer. For temporal blocking, minimum gap between train and test. If
   NULL, automatically determined from diagnosis.
+
+- buffer:
+
+  Numeric. Spatial buffer distance (in coordinate units). Training
+  points within this distance of any test-fold point are removed to
+  reduce autocorrelation leakage. Default: NULL (no buffer).
+
+- strategy:
+
+  Character. Override the auto-detected CV strategy. Use
+  `"temporal_expanding"` for expanding window (forward-chaining) or
+  `"temporal_sliding"` for fixed-size sliding window. Default: NULL
+  (auto-detect from diagnosis).
+
+- repeats:
+
+  Integer. Number of times to repeat CV fold generation with different
+  random seeds. Default: 1 (no repetition).
+
+- seed:
+
+  Integer or NULL. Random seed for stochastic fold generators. When
+  `NULL` (default), a fixed internal seed is used so single runs are
+  reproducible. With `repeats > 1`, successive repeats derive distinct
+  seeds from this value.
 
 - output:
 
@@ -91,9 +141,9 @@ Depending on `output`:
 
 - "list":
 
-  A list with elements: `folds` (list of train/test index vectors),
-  `diagnosis` (the BorgDiagnosis used), `strategy` (CV strategy name),
-  `params` (parameters used).
+  A list with elements: `folds` (list of train/test index vectors), `n`
+  (number of observations), `diagnosis` (the BorgDiagnosis used),
+  `strategy` (CV strategy name), `params` (parameters used).
 
 - "rsample":
 
@@ -140,6 +190,19 @@ information from future observations leaking into training.
 When clustered structure is detected, entire groups (clusters) are held
 out together. No group appears in both train and test within a fold.
 
+### Distance Matching (kNNDM and NNDM)
+
+With `strategy = "knndm"` or `"nndm"` and `prediction_points`, folds are
+shaped so the distribution of test-to-train nearest-neighbour distances
+matches the prediction-to-sample nearest-neighbour distribution.
+`"knndm"` (Linnenbrink et al. 2024) produces `v` folds and scales to
+large samples; `"nndm"` (Mila et al. 2022) is the leave-one-out form,
+growing an exclusion radius around each held-out point until the two
+distance distributions align, subject to retaining at least `min_train`
+(default 0.5) of the data per fold. NNDM builds an `n x n` distance
+matrix and is best suited to samples up to a few thousand points; prefer
+`"knndm"` beyond that.
+
 ## See also
 
 [`borg_diagnose`](https://gillescolling.com/BORG/reference/borg_diagnose.md),
@@ -170,7 +233,7 @@ cv <- borg_cv(clustered_data, groups = "site", target = "value")
 cv$strategy  # "group_fold"
 
 # Get rsample-compatible output for tidymodels
-if (FALSE) { # \dontrun{
+# \donttest{
 cv_rsample <- borg_cv(spatial_data, coords = c("x", "y"), output = "rsample")
-} # }
+# }
 ```

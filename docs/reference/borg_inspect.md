@@ -12,8 +12,8 @@ borg_inspect(
   train_idx = NULL,
   test_idx = NULL,
   data = NULL,
-  target_col = NULL,
-  spatial_cols = NULL,
+  target = NULL,
+  coords = NULL,
   ...
 )
 ```
@@ -47,12 +47,12 @@ borg_inspect(
   Optional data frame. Required when inspecting preprocessing objects to
   compare parameters against train-only statistics.
 
-- target_col:
+- target:
 
   Optional name of the target/outcome column. If provided, checks for
   target leakage (features highly correlated with target).
 
-- spatial_cols:
+- coords:
 
   Optional character vector of coordinate column names. If provided,
   checks spatial separation between train and test.

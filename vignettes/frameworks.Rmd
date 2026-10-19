@@ -292,7 +292,9 @@ structure hints are present, it runs `borg_diagnose()` and takes one of
 three actions depending on configuration:
 
 1. **Block** (default): stop with an error describing the dependency.
+
 2. **Auto-block** (`auto_block = TRUE`): silently switch to blocked CV.
+
 3. **Override** (`allow_override = TRUE`): warn but return random folds.
 
 ```{r borg-vfold-example, eval = FALSE}
@@ -746,9 +748,13 @@ For richer pipelines (a fitted `caret::train` object, a tidymodels
 pipeline into stages and inspects each:
 
 1. **Preprocessing**: recipe steps, `preProcess`, PCA, scaling
+
 2. **Feature selection**: variable importance filtering
+
 3. **Hyperparameter tuning**: inner CV resamples
+
 4. **Model fitting**: training data scope and row counts
+
 5. **Post-processing**: threshold optimization, calibration
 
 Each stage receives its own BorgRisk assessment. The overall result

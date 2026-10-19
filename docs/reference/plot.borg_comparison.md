@@ -23,3 +23,8 @@ plot(x, type = c("boxplot", "density", "paired"), ...)
 - ...:
 
   Additional arguments passed to plotting functions.
+
+## Value
+
+The `borg_comparison` object `x`, returned invisibly. Called for the
+side effect of producing a plot.

@@ -3,15 +3,24 @@
 <g class='svglite'>
 <defs>
   <style type='text/css'><![CDATA[
-    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+    /* theme-aware-processed */
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite circle {
       fill: none;
-      stroke: #000000;
+      stroke: #3E3F3A;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite > g > rect {
+      fill: none;
+      stroke: #3E3F3A;
       stroke-linecap: round;
       stroke-linejoin: round;
       stroke-miterlimit: 10.00;
     }
     .svglite text {
       white-space: pre;
+      fill: #3E3F3A;
     }
     .svglite g.glyphgroup path {
       fill: inherit;
@@ -26,12 +35,12 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
-<rect x='0.00' y='0.00' width='504.00' height='288.00' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect rx='4' x='0.00' y='0.00' width='504.00' height='288.00' style='stroke-width: 1.07; stroke: none; fill: #F5F6F8;' />
 <rect x='45.21' y='42.79' width='418.94' height='209.23' style='stroke-width: 1.07; stroke: none; fill: #FCFCFC;' />
-<polyline points='64.25,252.02 64.25,42.79 ' style='stroke-width: 0.64; stroke: #EBEBEB; stroke-linecap: butt;' />
-<polyline points='190.10,252.02 190.10,42.79 ' style='stroke-width: 0.64; stroke: #EBEBEB; stroke-linecap: butt;' />
-<polyline points='315.94,252.02 315.94,42.79 ' style='stroke-width: 0.64; stroke: #EBEBEB; stroke-linecap: butt;' />
-<polyline points='441.79,252.02 441.79,42.79 ' style='stroke-width: 0.64; stroke: #EBEBEB; stroke-linecap: butt;' />
+<polyline points='64.25,252.02 64.25,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline points='190.10,252.02 190.10,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline points='315.94,252.02 315.94,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline points='441.79,252.02 441.79,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
 <rect x='64.25' y='62.41' width='221.86' height='39.23' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #2C3E50; fill-opacity: 0.80;' />
 <rect x='64.25' y='127.79' width='226.67' height='39.23' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #2C3E50; fill-opacity: 0.80;' />
 <rect x='64.25' y='193.17' width='288.75' height='39.23' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #2C3E50; fill-opacity: 0.80;' />
@@ -44,19 +53,19 @@
 <polyline points='445.11,219.33 445.11,206.25 ' style='stroke-width: 1.07; stroke: #666666; stroke-linecap: butt;' />
 <polyline points='445.11,212.79 260.89,212.79 ' style='stroke-width: 1.07; stroke: #666666; stroke-linecap: butt;' />
 <polyline points='260.89,219.33 260.89,206.25 ' style='stroke-width: 1.07; stroke: #666666; stroke-linecap: butt;' />
-<text x='292.19' y='85.59' style='font-size: 9.96px; font-family: "Arial";' textLength='30.42px' lengthAdjust='spacingAndGlyphs'>1.7629</text>
-<text x='297.01' y='150.97' style='font-size: 9.96px; font-family: "Arial";' textLength='30.42px' lengthAdjust='spacingAndGlyphs'>1.8012</text>
-<text x='359.08' y='216.35' style='font-size: 9.96px; font-family: "Arial";' textLength='30.42px' lengthAdjust='spacingAndGlyphs'>2.2945</text>
-<text x='40.28' y='215.94' text-anchor='end' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='25.42px' lengthAdjust='spacingAndGlyphs'>simple</text>
-<text x='40.28' y='150.56' text-anchor='end' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='30.31px' lengthAdjust='spacingAndGlyphs'>additive</text>
-<text x='40.28' y='85.17' text-anchor='end' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='11.23px' lengthAdjust='spacingAndGlyphs'>full</text>
-<text x='64.25' y='263.25' text-anchor='middle' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='4.89px' lengthAdjust='spacingAndGlyphs'>0</text>
-<text x='190.10' y='263.25' text-anchor='middle' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='4.89px' lengthAdjust='spacingAndGlyphs'>1</text>
-<text x='315.94' y='263.25' text-anchor='middle' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='4.89px' lengthAdjust='spacingAndGlyphs'>2</text>
-<text x='441.79' y='263.25' text-anchor='middle' style='font-size: 8.80px;fill: #4D4D4D; font-family: "Arial";' textLength='4.89px' lengthAdjust='spacingAndGlyphs'>3</text>
-<text x='254.68' y='275.72' text-anchor='middle' style='font-size: 11.00px; font-family: "Arial";' textLength='31.78px' lengthAdjust='spacingAndGlyphs'>RMSE</text>
-<text x='45.21' y='32.85' style='font-size: 9.35px;fill: #666666; font-family: "Arial";' textLength='146.50px' lengthAdjust='spacingAndGlyphs'>Metric: RMSE | Error bars: +/- 1 SD</text>
-<text x='45.21' y='19.41' style='font-size: 13.20px; font-weight: bold; font-family: "Arial";' textLength='196.33px' lengthAdjust='spacingAndGlyphs'>Model Comparison (Spatial CV)</text>
+<text class='preserve-color' x='292.19' y='85.59' style='font-size: 0.996em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1.7629</text>
+<text class='preserve-color' x='297.01' y='150.97' style='font-size: 0.996em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1.8012</text>
+<text class='preserve-color' x='359.08' y='216.35' style='font-size: 0.996em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>2.2945</text>
+<text x='40.28' y='215.94' text-anchor='end' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>simple</text>
+<text x='40.28' y='150.56' text-anchor='end' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>additive</text>
+<text x='40.28' y='85.17' text-anchor='end' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>full</text>
+<text x='64.25' y='263.25' text-anchor='middle' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>0</text>
+<text x='190.10' y='263.25' text-anchor='middle' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1</text>
+<text x='315.94' y='263.25' text-anchor='middle' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>2</text>
+<text x='441.79' y='263.25' text-anchor='middle' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>3</text>
+<text x='254.68' y='275.72' text-anchor='middle' style='font-size: 1.1em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>RMSE</text>
+<text x='45.21' y='32.85' style='font-size: 0.935em;fill: #666666; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Metric: RMSE | Error bars: +/- 1 SD</text>
+<text x='45.21' y='19.41' style='font-size: 1.32em; font-weight: bold; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Model Comparison (Spatial CV)</text>
 </g>
 </g>
 </svg>

@@ -1,10 +1,26 @@
 # BORG: Bounded Outcome Risk Guard for Model Evaluation
 
-Automatically detects and enforces valid model evaluation by identifying
-information reuse between training and evaluation data. Guards against
-data leakage, look-ahead bias, and invalid cross-validation schemes that
-inflate performance estimates. Supports temporal, spatial, and grouped
-evaluation structures.
+Comprehensive toolkit for valid spatial, temporal, and grouped model
+evaluation. Automatically detects data dependencies (spatial
+autocorrelation, temporal structure, clustered observations), generates
+appropriate cross-validation schemes (spatial blocking, checkerboard,
+hexagonal, KNNDM, environmental blocking, leave-location-out, purged
+CV), and validates evaluation pipelines for leakage. Includes area of
+applicability (AOA) assessment following Meyer & Pebesma (2021)
+[doi:10.1111/2041-210X.13650](https://doi.org/10.1111/2041-210X.13650) ,
+forward feature selection with blocked CV, spatial thinning,
+block-permutation variable importance, extrapolation detection, and
+interactive visualizations. Integrates with 'tidymodels', 'caret',
+'mlr3', 'ENMeval', and 'biomod2'. Based on evaluation principles
+described in Roberts et al. (2017)
+[doi:10.1111/ecog.02881](https://doi.org/10.1111/ecog.02881) , Kaufman
+et al. (2012)
+[doi:10.1145/2382577.2382579](https://doi.org/10.1145/2382577.2382579) ,
+Kapoor & Narayanan (2023)
+[doi:10.1016/j.patter.2023.100804](https://doi.org/10.1016/j.patter.2023.100804)
+, and Linnenbrink et al. (2024)
+[doi:10.5194/gmd-17-5897-2024](https://doi.org/10.5194/gmd-17-5897-2024)
+.
 
 BORG automatically detects and enforces valid model evaluation by
 identifying information reuse between training and evaluation data. It
@@ -19,6 +35,10 @@ guards against:
 - Target leakage through features derived from outcomes
 
 - Train-test contamination through shared identifiers
+
+## Value
+
+No return value. This is a package-level documentation page.
 
 ## Main Functions
 
@@ -42,9 +62,9 @@ guards against:
 
   Validate a complete evaluation workflow
 
-- [`borg_rewrite`](https://gillescolling.com/BORG/reference/borg_rewrite.md):
+- [`borg_assimilate`](https://gillescolling.com/BORG/reference/borg_assimilate.md):
 
-  Automatically rewrite leaky pipelines
+  Assimilate leaky pipelines into compliance
 
 ## Risk Classification
 
@@ -99,8 +119,16 @@ Useful links:
 
 - <https://github.com/gcol33/BORG>
 
+- <https://gillescolling.com/BORG/>
+
 - Report bugs at <https://github.com/gcol33/BORG/issues>
 
 ## Author
 
 **Maintainer**: Gilles Colling <gilles.colling051@gmail.com>
+([ORCID](https://orcid.org/0000-0003-3070-6066)) \[copyright holder\]
+
+Authors:
+
+- Gilles Colling <gilles.colling051@gmail.com>
+  ([ORCID](https://orcid.org/0000-0003-3070-6066)) \[copyright holder\]

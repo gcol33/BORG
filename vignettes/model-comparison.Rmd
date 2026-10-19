@@ -709,9 +709,13 @@ fold2
 The full pipeline produces five pieces of evidence:
 
 1. The inflation test justifies the use of blocked CV.
+
 2. The model ranking identifies the best candidate on fair folds.
+
 3. The null test confirms that the best model captures real signal.
+
 4. The bootstrap CI quantifies uncertainty in the reported metric.
+
 5. The per-fold breakdown reveals spatial heterogeneity in performance.
 
 Together, these form a complete reporting package. A reviewer can verify
@@ -818,8 +822,11 @@ A methods section should include:
    justification (e.g., "Moran's I = 0.45, p < 0.001; inflation test
    showed 23% R-squared inflation under random CV").
 2. The number of repeats and the metric.
+
 3. The model ranking table with mean and SD across folds.
+
 4. A null test p-value for the selected model.
+
 5. Block bootstrap 95% CI for the reported metric.
 
 This gives reviewers everything they need to assess whether the model
