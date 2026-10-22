@@ -84,117 +84,218 @@
 <div class="page-header"><h1 id="borg">BORG<a class="anchor" aria-label="anchor" href="#borg"></a>
 </h1></div>
 <p><em>cross-validation for data that isn’t independent</em></p>
-<p><a href="https://CRAN.R-project.org/package=BORG" class="external-link"><img src="https://www.r-pkg.org/badges/version/BORG" alt="CRAN status"></a> <a href="https://cran.r-project.org/package=BORG" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/BORG" alt="CRAN downloads"></a> <a href="https://cran.r-project.org/package=BORG" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/BORG" alt="Monthly downloads"></a> <a href="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/gcol33/BORG" class="external-link"><img src="https://codecov.io/gh/gcol33/BORG/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
-<p><strong>Cross-validation that respects spatial, temporal, and grouped structure, with the dependency detected for you.</strong></p>
-<p>Hand BORG your data and the columns that carry structure (coordinates, a time stamp, a grouping ID). It tests for spatial autocorrelation (Moran’s I), temporal autocorrelation (ACF / Ljung-Box), and clustering (ICC), then builds folds that hold the structure out instead of splitting through it. When a dependency is present, random k-fold is disabled unless you ask for it explicitly. The point is the number you report from CV being the number you get in the field.</p>
+<!-- badges: start -->
+
+<p>BORG (Bounded Outcome Risk Guard) checks how a model is evaluated on spatial, temporal and grouped data: it tests whether observations depend on each other, builds cross-validation folds that keep dependent observations apart, and checks train/test splits for leakage, such as preprocessing fitted on the test rows.</p>
+<p>Dependence is tested from the columns that carry structure: Moran’s I on the coordinates for spatial autocorrelation, the autocorrelation function and the Ljung-Box test on a time column, and the intraclass correlation for groups. The result is a diagnosis with a severity and a recommended fold scheme, and the folds are built from that scheme. When dependence is found, random k-fold cross-validation is switched off unless you request it, and the override is recorded in the result. You can then use the folds directly or compare them with random folds before deciding which estimate to report.</p>
+<p>BORG supports:</p>
+<ul>
+<li>
+<strong>Fold schemes for dependent data.</strong> <a href="https://gillescolling.com/BORG/reference/borg_cv.html"><code>borg_cv()</code></a> builds spatial blocks, environmental blocks, checkerboard and hexagonal blocks, leave-location-out, buffered spatial folds, KNNDM folds matched to prediction points, chronological splits with an embargo, expanding and sliding windows, purged cross-validation, leave-group-out and spatial-temporal combinations.</li>
+<li>
+<strong>Folds for modelling frameworks.</strong> The folds come as a list of train and test indices, or as objects for <a href="https://rsample.tidymodels.org" class="external-link">rsample</a>, <a href="https://github.com/topepo/caret/" class="external-link">caret</a> and <a href="https://cran.r-project.org/package=mlr3" class="external-link">mlr3</a>.</li>
+<li>
+<strong>Random against blocked cross-validation.</strong> <a href="https://gillescolling.com/BORG/reference/borg_compare_cv.html"><code>borg_compare_cv()</code></a> runs both on the same data and model and tests the difference with a paired t-test; <a href="https://gillescolling.com/BORG/reference/borg_power.html"><code>borg_power()</code></a> reports the effective sample size after blocking and the smallest effect still detectable.</li>
+<li>
+<strong>Leakage checks.</strong> <a href="https://gillescolling.com/BORG/reference/borg_inspect.html"><code>borg_inspect()</code></a> checks splits and fitted objects for overlapping indices, duplicate rows (hash-based checks in C++), preprocessing fitted beyond the training rows, target leakage, group leakage and look-ahead in time.</li>
+<li>
+<strong>Area of applicability.</strong> <code><a href="reference/borg_aoa.html">borg_aoa()</a></code> and <code><a href="reference/borg_di.html">borg_di()</a></code> mark prediction locations outside the predictor space of the training data, following Meyer and Pebesma (2021).</li>
+<li>
+<strong>Methods text.</strong> <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on a result writes a methods paragraph with the test statistics filled in, in APA, Nature or Ecology style, and <code><a href="reference/borg_certificate.html">borg_certificate()</a></code> and <code><a href="reference/borg_export.html">borg_export()</a></code> write the assessment as YAML or JSON.</li>
+</ul>
+<p>The diagnostics follow evaluation principles described by Roberts et al. (2017), Kaufman et al. (2012), Kapoor and Narayanan (2023) and Linnenbrink et al. (2024), with the references in the DESCRIPTION. <a href="https://gillescolling.com/BORG/articles/risk-taxonomy.html">Risk Taxonomy</a> lists each check, what it detects and how to fix it.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the released version from CRAN. Windows and macOS get a binary package and need no build tools:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span>           <span class="co"># development version</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"BORG"</span><span class="op">)</span></span></code></pre></div>
+<p>The development version compiles C++ code. Install the build tools for your operating system first:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr>
+<th>Operating system</th>
+<th>Build tools</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td>
+<a href="https://cran.r-project.org/bin/windows/Rtools/" class="external-link">Rtools</a> matching your R version</td>
+</tr>
+<tr>
+<td>macOS</td>
+<td>Run <code>xcode-select --install</code> in Terminal</td>
+</tr>
+<tr>
+<td>Debian / Ubuntu</td>
+<td>Install <code>r-base-dev</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Check that R can find the compiler:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">pkgbuild</span><span class="fu">::</span><span class="fu"><a href="https://pkgbuild.r-lib.org/reference/has_build_tools.html" class="external-link">has_build_tools</a></span><span class="op">(</span>debug <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Then install BORG from GitHub:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/BORG"</span><span class="op">)</span></span></code></pre></div>
+<p>BORG needs no system libraries beyond the compiler. Its C++ code links only to Rcpp, which is installed from CRAN with the package.</p>
 </div>
 <div class="section level2">
-<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<ol style="list-style-type: decimal">
+<li>Diagnose the data and build folds with <code><a href="reference/borg.html">borg()</a></code>.</li>
+<li>Compare random and blocked cross-validation with <code><a href="reference/borg_compare_cv.html">borg_compare_cv()</a></code>.</li>
+<li>Check an existing split or fitted preprocessing with <code><a href="reference/borg_inspect.html">borg_inspect()</a></code>.</li>
+</ol>
+<p>The input is a data frame, an sf object or a terra <code>SpatVector</code>. <code>coords</code> names the two coordinate columns, <code>time</code> the time column and <code>groups</code> the grouping column; <code>target</code> names the response. With an sf or <code>SpatVector</code> input the coordinates are taken from the geometry.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/BORG" class="external-link">BORG</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">spatial_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span>, <span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span><span class="op">)</span>,</span>
-<span>  lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span>, <span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span><span class="op">)</span>,</span>
-<span>  response <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">200</span></span>
+<span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0</span>, <span class="fl">20</span><span class="op">)</span>, lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">d</span><span class="op">$</span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">lon</span> <span class="op">/</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">cos</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">lat</span> <span class="op">/</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span>, sd <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># diagnose the dependency and get folds that respect it</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">diagnosis</span><span class="op">@</span><span class="va">recommended_cv</span></span>
-<span><span class="co">#&gt; "spatial_block"</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="diagnose-first-then-enforce">Diagnose first, then enforce<a class="anchor" aria-label="anchor" href="#diagnose-first-then-enforce"></a>
-</h2>
-<p>Spatial CV tools such as <code>blockCV</code>, <code>CAST</code>, and <code>spatialsample</code> give you the blocking schemes but leave the decision to you: you have to know the data are autocorrelated, pick a block size, and choose to use it. BORG runs the diagnosis first. If it finds structure, it estimates how much random CV would inflate your metric, refuses random folds, and generates a scheme matched to the dependency it found. Overriding is one explicit argument away, and the override is logged.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/borg_diagnose.html">borg_diagnose</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">d</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
+<span><span class="va">result</span></span>
+<span><span class="co">#&gt; BORG Result</span></span>
+<span><span class="co">#&gt; ===========</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Dependency:  SPATIAL (moderate severity)</span></span>
-<span><span class="co">#&gt; Moran's I:   0.18 (p &lt; 0.001)</span></span>
-<span><span class="co">#&gt; Strategy:    spatial_block</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="cross-validation-schemes">Cross-validation schemes<a class="anchor" aria-label="anchor" href="#cross-validation-schemes"></a>
-</h2>
-<p><code><a href="reference/borg_cv.html">borg_cv()</a></code> covers the schemes used in dependent-data evaluation:</p>
-<ul>
-<li>
-<strong>Spatial</strong>: spatial blocking, environmental blocking, checkerboard, hexagonal, leave-location-out, spatial-plus (buffered), and KNNDM matched to prediction points.</li>
-<li>
-<strong>Temporal</strong>: chronological splits with an embargo, expanding and sliding windows, and de Prado’s purged CV.</li>
-<li>
-<strong>Grouped</strong>: leave-group-out, so no cluster appears in both train and test.</li>
-<li>
-<strong>Mixed</strong>: spatial-temporal and spatial-group combinations.</li>
-</ul>
-<p>Output is a plain list of train/test indices by default, or an <code>rsample</code>, <code>caret</code>, or <code>mlr3</code> object for direct use in those frameworks.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># tidymodels-compatible folds</span></span>
-<span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">spatial_data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"rsample"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="show-the-inflation-not-just-the-warning">Show the inflation, not just the warning<a class="anchor" aria-label="anchor" href="#show-the-inflation-not-just-the-warning"></a>
-</h2>
-<p><code><a href="reference/borg_compare_cv.html">borg_compare_cv()</a></code> runs random and structure-aware CV on the same data and model, and reports the gap with a paired t-test. This is the evidence a reviewer asks for when you switch a paper from random to blocked CV.</p>
+<span><span class="co">#&gt; Strategy:    spatial_block</span></span>
+<span><span class="co">#&gt; Folds:       5</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Random CV would inflate metrics by ~8%</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Fold sizes:  train 148-174, test 26-52</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Access components:</span></span>
+<span><span class="co">#&gt;   $diagnosis  - BorgDiagnosis object</span></span>
+<span><span class="co">#&gt;   $folds      - List of train/test index vectors</span></span>
+<span><span class="co">#&gt;   $cv         - Full borg_cv object</span></span></code></pre></div>
+<p>The response varies smoothly in space, so the diagnosis finds spatial autocorrelation and builds five spatial blocks instead of random folds.</p>
+<p><code><a href="reference/borg_compare_cv.html">borg_compare_cv()</a></code> fits the same model on random and on blocked folds and reports the gap:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg_compare_cv.html">borg_compare_cv</a></span><span class="op">(</span></span>
-<span>  <span class="va">spatial_data</span>,</span>
+<code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg_compare_cv.html">borg_compare_cv</a></span><span class="op">(</span></span>
+<span>  <span class="va">d</span>,</span>
 <span>  formula <span class="op">=</span> <span class="va">response</span> <span class="op">~</span> <span class="va">lon</span> <span class="op">+</span> <span class="va">lat</span>,</span>
-<span>  coords  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>,</span>
-<span>  repeats <span class="op">=</span> <span class="fl">10</span></span>
+<span>  coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>,</span>
+<span>  repeats <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/borg_power.html">borg_power()</a></code> answers the other half of that conversation: blocking costs you effective sample size, so it reports the design effect, the effective n, and the minimum effect you can still detect.</p>
+<span><span class="va">cmp</span></span>
+<span><span class="co">#&gt; CV Comparison Results</span></span>
+<span><span class="co">#&gt; =====================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Metric: rmse</span></span>
+<span><span class="co">#&gt; Random CV:  0.8806 (SD: 0.0040)</span></span>
+<span><span class="co">#&gt; Blocked CV: 1.2735 (SD: 0.0000)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Inflation: 30.8% deflated***</span></span>
+<span><span class="co">#&gt; p-value: 2.522e-09 (paired t-test, n=5 repeats)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Random CV significantly deflates rmse estimates.</span></span></code></pre></div>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> turns the diagnosis into a paragraph for the methods section:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Spatial autocorrelation was detected in the data (Moran's I = 0.29, p &lt; 0.001) with an estimated autocorrelation range of 10.9 units. Model performance was evaluated using spatial block cross-validation (k = 5 folds). Random cross-validation was avoided as it would be expected to inflate performance estimates by approximately 8%. Cross-validation strategy was determined using the BORG package (version 0.3.2) for R.</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="leakage-detection">Leakage detection<a class="anchor" aria-label="anchor" href="#leakage-detection"></a>
+<h2 id="fold-schemes-and-modelling-frameworks">Fold schemes and modelling frameworks<a class="anchor" aria-label="anchor" href="#fold-schemes-and-modelling-frameworks"></a>
 </h2>
-<p>Before structure, BORG checks the split itself. <code><a href="reference/borg.html">borg()</a></code> in validation mode and <code><a href="reference/borg_inspect.html">borg_inspect()</a></code> catch the leaks that quietly inflate a held-out score:</p>
-<ul>
-<li>index overlap and duplicate rows across train and test (fast hash-based checks in C++),</li>
-<li>preprocessing fitted on the full data (<code>scale</code>, <code>prcomp</code>, <code><a href="https://rdrr.io/pkg/caret/man/preProcess.html" class="external-link">caret::preProcess</a></code>, <code>recipes</code> steps),</li>
-<li>target leakage from a feature near-perfectly correlated with the outcome,</li>
-<li>group leakage and look-ahead in time.</li>
-</ul>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># scaled before splitting: the test means leaked into the scaler</span></span>
-<span><span class="va">data_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">iris</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">data_scaled</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, test_idx <span class="op">=</span> <span class="fl">101</span><span class="op">:</span><span class="fl">150</span><span class="op">)</span></span>
-<span><span class="co">#&gt; INVALID — Hard violation: preprocessing_leak</span></span></code></pre></div>
-<p>Hard violations (overlap, duplicates, preprocessing leak, target leak, group leak, look-ahead) invalidate the result and block it. Soft inflations (a near-threshold proxy feature, test points close to training) warn and let you proceed with the caveat recorded.</p>
+<p><code><a href="reference/borg.html">borg()</a></code> chooses the scheme from the diagnosis, and <code><a href="reference/borg_cv.html">borg_cv()</a></code> takes a scheme by name through <code>strategy</code>. <code>output = "rsample"</code> returns folds that tidymodels functions accept:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">folds</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/borg.html">borg</a></span><span class="op">(</span><span class="va">d</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>, <span class="st">"lat"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"response"</span>,</span>
+<span>              output <span class="op">=</span> <span class="st">"rsample"</span><span class="op">)</span></span></code></pre></div>
+<p><a href="https://gillescolling.com/BORG/articles/spatial-cv.html">Spatial Cross-Validation</a> and <a href="https://gillescolling.com/BORG/articles/temporal-cv.html">Temporal Cross-Validation</a> go through each scheme, and <a href="https://gillescolling.com/BORG/articles/frameworks.html">Framework Integration</a> covers caret, mlr3, <a href="https://cran.r-project.org/package=ENMeval" class="external-link">ENMeval</a> and <a href="https://cran.r-project.org/package=biomod2" class="external-link">biomod2</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="checking-a-split-for-leakage">Checking a split for leakage<a class="anchor" aria-label="anchor" href="#checking-a-split-for-leakage"></a>
+</h2>
+<p>With <code>train_idx</code> and <code>test_idx</code>, <code><a href="reference/borg.html">borg()</a></code> and <code><a href="reference/borg_inspect.html">borg_inspect()</a></code> check an existing split. Passed a fitted preprocessing object and the data, <code><a href="reference/borg_inspect.html">borg_inspect()</a></code> checks whether its parameters were estimated on rows beyond the training set. Here a principal component analysis was fitted on all rows:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="va">iris</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span></span>
+<span><span class="va">pca</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/prcomp.html" class="external-link">prcomp</a></span><span class="op">(</span><span class="va">x</span>, scale. <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/borg_inspect.html">borg_inspect</a></span><span class="op">(</span><span class="va">pca</span>, train_idx <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, test_idx <span class="op">=</span> <span class="fl">101</span><span class="op">:</span><span class="fl">150</span>, data <span class="op">=</span> <span class="va">x</span><span class="op">)</span></span>
+<span><span class="co">#&gt; BorgRisk Assessment</span></span>
+<span><span class="co">#&gt; ===================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Status: INVALID (3 hard violations) — Resistance is futile</span></span>
+<span><span class="co">#&gt;   Hard violations:  3</span></span>
+<span><span class="co">#&gt;   Soft inflations:  0</span></span>
+<span><span class="co">#&gt;   Train indices:    100 rows</span></span>
+<span><span class="co">#&gt;   Test indices:     50 rows</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-23 01:28:36</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] preprocessing_leak</span></span>
+<span><span class="co">#&gt;     PCA centering was computed on data beyond training set (mean difference: 0.897)</span></span>
+<span><span class="co">#&gt;     Source: prcomp</span></span>
+<span><span class="co">#&gt;     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)</span></span>
+<span><span class="co">#&gt;     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [2] preprocessing_leak</span></span>
+<span><span class="co">#&gt;     PCA scaling was computed on data beyond training set (sd difference: 0.31575)</span></span>
+<span><span class="co">#&gt;     Source: prcomp</span></span>
+<span><span class="co">#&gt;     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)</span></span>
+<span><span class="co">#&gt;     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [3] preprocessing_leak</span></span>
+<span><span class="co">#&gt;     PCA loadings were computed on data beyond training set (max loading difference: 0.1729)</span></span>
+<span><span class="co">#&gt;     Source: prcomp</span></span>
+<span><span class="co">#&gt;     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)</span></span>
+<span><span class="co">#&gt;     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)</span></span></code></pre></div>
+<p>Hard violations (overlap, duplicates, preprocessing leakage, target leakage, group leakage, look-ahead) mark the evaluation invalid. Soft inflations, such as a predictor close to the threshold for target leakage or test points close to training points, give a warning and are recorded.</p>
 </div>
 <div class="section level2">
 <h2 id="area-of-applicability-and-prediction-maps">Area of applicability and prediction maps<a class="anchor" aria-label="anchor" href="#area-of-applicability-and-prediction-maps"></a>
 </h2>
-<p><code><a href="reference/borg_aoa.html">borg_aoa()</a></code> and <code><a href="reference/borg_di.html">borg_di()</a></code> flag prediction locations that sit outside the feature space the model was trained on, following Meyer &amp; Pebesma (2021). <code><a href="reference/borg_extract.html">borg_extract()</a></code>, <code><a href="reference/borg_thin.html">borg_thin()</a></code>, <code><a href="reference/borg_predict_raster.html">borg_predict_raster()</a></code>, and <code><a href="reference/borg_leaflet.html">borg_leaflet()</a></code> cover the surrounding spatial workflow, from raster extraction to an interactive map of folds.</p>
-</div>
-<div class="section level2">
-<h2 id="methods-text-for-the-manuscript">Methods text for the manuscript<a class="anchor" aria-label="anchor" href="#methods-text-for-the-manuscript"></a>
-</h2>
-<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on a BORG result writes a methods paragraph with the test statistics filled in (Moran’s I, ACF, ICC, and their p-values), in APA, Nature, or Ecology style. <code><a href="reference/borg_certificate.html">borg_certificate()</a></code> and <code><a href="reference/borg_export.html">borg_export()</a></code> write the same assessment as a machine-readable YAML or JSON record for an audit trail.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Model performance was evaluated using spatial block cross-validation</span></span>
-<span><span class="co">#&gt; (k = 5 folds). Spatial autocorrelation was detected (Moran's I = 0.18,</span></span>
-<span><span class="co">#&gt; p &lt; 0.001) ...</span></span></code></pre></div>
+<p><code><a href="reference/borg_aoa.html">borg_aoa()</a></code> and <code><a href="reference/borg_di.html">borg_di()</a></code> compute the dissimilarity index and the area of applicability of Meyer and Pebesma (2021) for prediction locations. <code><a href="reference/borg_extract.html">borg_extract()</a></code>, <code><a href="reference/borg_thin.html">borg_thin()</a></code>, <code><a href="reference/borg_predict_raster.html">borg_predict_raster()</a></code> and <code><a href="reference/borg_leaflet.html">borg_leaflet()</a></code> cover raster extraction, spatial thinning, prediction maps and an interactive map of the folds. <a href="https://gillescolling.com/BORG/articles/aoa-extrapolation.html">Area of Applicability and Extrapolation Detection</a> shows them on simulated data.</p>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
+<p>Start with <a href="https://gillescolling.com/BORG/articles/quickstart.html">Quick Start</a>: simulated data with known dependence, from the diagnosis to folds, leakage checks and the comparison of random and blocked cross-validation.</p>
 <ul>
-<li><a href="https://gillescolling.com/BORG/">BORG website</a></li>
-<li><a href="https://gillescolling.com/BORG/reference/">Function reference</a></li>
-<li><a href="https://github.com/gcol33/BORG" class="external-link">Source on GitHub</a></li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/spatial-cv.html">Spatial Cross-Validation</a>: spatial blocks, block size optimization, environmental blocking, buffered folds and KNNDM.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/temporal-cv.html">Temporal Cross-Validation</a>: temporal blocks, expanding windows, embargo periods and concept drift.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/risk-taxonomy.html">Risk Taxonomy</a>: each leakage check, what it detects and how to fix it.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/frameworks.html">Framework Integration</a>: folds for tidymodels, caret, mlr3, ENMeval and biomod2.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/model-comparison.html">Model Comparison with Blocked Cross-Validation</a>: the inflation from random folds, model ranking, confidence intervals and null tests.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/feature-selection.html">Feature Selection with Blocked Cross-Validation</a>: block-permutation importance and forward selection.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/aoa-extrapolation.html">Area of Applicability and Extrapolation Detection</a>: where predictions leave the training data.</li>
+<li>
+<a href="https://gillescolling.com/BORG/articles/diagnostics.html">Post-Fit Diagnostics</a>: residual structure, calibration, null tests, conformal prediction and bootstrap uncertainty.</li>
+<li>
+<a href="https://gillescolling.com/BORG/reference/">Full reference</a>: every function.</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="getting-help">Getting help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
+</h2>
+<p>Questions and bug reports go to the <a href="https://github.com/gcol33/BORG/issues" class="external-link">GitHub issues</a>. A bug report is easiest to act on with a small reproducible example, for instance made with <a href="https://reprex.tidyverse.org/" class="external-link">reprex</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
+</h2>
+<p>Pull requests are welcome; see the <a href="https://gillescolling.com/BORG/CONTRIBUTING.html">contributing guide</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="support">Support<a class="anchor" aria-label="anchor" href="#support"></a>
@@ -209,17 +310,26 @@
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT (see the LICENSE.md file)</p>
+<p>BORG is licensed under MIT.</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co">@software{BORG,</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">  author = {Colling, Gilles},</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">  title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">  year = {2026},</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">  url = {https://github.com/gcol33/BORG}</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
+<p>To cite BORG in publications use:</p>
+<pre class="text"><code>Colling G (2026). _BORG: Bounded Outcome Risk Guard for Model
+Evaluation_. doi:10.32614/CRAN.package.BORG
+&lt;https://doi.org/10.32614/CRAN.package.BORG&gt;. R package version 0.3.2,
+&lt;https://gillescolling.com/BORG/&gt;.</code></pre>
+<p>BibTeX:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="va">@Manual</span>{<span class="ot">colling2026borg</span>,</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="dt">title</span> = {BORG: Bounded Outcome Risk Guard for Model Evaluation},</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="dt">author</span> = {Gilles Colling},</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="dt">year</span> = {2026},</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="dt">note</span> = {R package version 0.3.2},</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  <span class="dt">doi</span> = {10.32614/CRAN.package.BORG},</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="dt">url</span> = {https://gillescolling.com/BORG/},</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>}</span></code></pre></div>
+<p>Download the citation as <a href="https://gillescolling.com/BORG/BORG.bib">BibTeX</a> or <a href="https://gillescolling.com/BORG/BORG.ris">RIS</a>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -262,7 +372,15 @@
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://CRAN.R-project.org/package=BORG" class="external-link"><img src="https://www.r-pkg.org/badges/version/BORG" alt="CRAN status"></a></li>
+<li><a href="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://app.codecov.io/gh/gcol33/BORG" class="external-link"><img src="https://codecov.io/gh/gcol33/BORG/graph/badge.svg" alt="Codecov test coverage"></a></li>
+<li><a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>

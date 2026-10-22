@@ -2,7 +2,9 @@ TY  - COMP
 AU  - Colling, Gilles
 TI  - BORG: Bounded Outcome Risk Guard for Model Evaluation
 PY  - 2026
-UR  - https://github.com/gcol33/BORG
-N1  - R package version 0.2.3
+DO  - 10.32614/CRAN.package.BORG
+UR  - https://gillescolling.com/BORG/
+N1  - R package version 0.3.2
+ID  - colling2026borg
 ER  - 
 

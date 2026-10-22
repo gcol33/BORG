@@ -2,188 +2,328 @@
 
 *cross-validation for data that isn’t independent*
 
-[![CRAN
-status](https://www.r-pkg.org/badges/version/BORG)](https://CRAN.R-project.org/package=BORG)
-[![CRAN
-downloads](https://cranlogs.r-pkg.org/badges/grand-total/BORG)](https://cran.r-project.org/package=BORG)
-[![Monthly
-downloads](https://cranlogs.r-pkg.org/badges/BORG)](https://cran.r-project.org/package=BORG)
-[![R-CMD-check](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/BORG/actions/workflows/R-CMD-check.yaml)
-[![Codecov test
-coverage](https://codecov.io/gh/gcol33/BORG/graph/badge.svg)](https://app.codecov.io/gh/gcol33/BORG)
-[![License:
-MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+BORG (Bounded Outcome Risk Guard) checks how a model is evaluated on
+spatial, temporal and grouped data: it tests whether observations depend
+on each other, builds cross-validation folds that keep dependent
+observations apart, and checks train/test splits for leakage, such as
+preprocessing fitted on the test rows.
 
-**Cross-validation that respects spatial, temporal, and grouped
-structure, with the dependency detected for you.**
+Dependence is tested from the columns that carry structure: Moran’s I on
+the coordinates for spatial autocorrelation, the autocorrelation
+function and the Ljung-Box test on a time column, and the intraclass
+correlation for groups. The result is a diagnosis with a severity and a
+recommended fold scheme, and the folds are built from that scheme. When
+dependence is found, random k-fold cross-validation is switched off
+unless you request it, and the override is recorded in the result. You
+can then use the folds directly or compare them with random folds before
+deciding which estimate to report.
 
-Hand BORG your data and the columns that carry structure (coordinates, a
-time stamp, a grouping ID). It tests for spatial autocorrelation
-(Moran’s I), temporal autocorrelation (ACF / Ljung-Box), and clustering
-(ICC), then builds folds that hold the structure out instead of
-splitting through it. When a dependency is present, random k-fold is
-disabled unless you ask for it explicitly. The point is the number you
-report from CV being the number you get in the field.
+BORG supports:
+
+- **Fold schemes for dependent data.**
+  [`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.html)
+  builds spatial blocks, environmental blocks, checkerboard and
+  hexagonal blocks, leave-location-out, buffered spatial folds, KNNDM
+  folds matched to prediction points, chronological splits with an
+  embargo, expanding and sliding windows, purged cross-validation,
+  leave-group-out and spatial-temporal combinations.
+- **Folds for modelling frameworks.** The folds come as a list of train
+  and test indices, or as objects for
+  [rsample](https://rsample.tidymodels.org),
+  [caret](https://github.com/topepo/caret/) and
+  [mlr3](https://cran.r-project.org/package=mlr3).
+- **Random against blocked cross-validation.**
+  [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.html)
+  runs both on the same data and model and tests the difference with a
+  paired t-test;
+  [`borg_power()`](https://gillescolling.com/BORG/reference/borg_power.html)
+  reports the effective sample size after blocking and the smallest
+  effect still detectable.
+- **Leakage checks.**
+  [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.html)
+  checks splits and fitted objects for overlapping indices, duplicate
+  rows (hash-based checks in C++), preprocessing fitted beyond the
+  training rows, target leakage, group leakage and look-ahead in time.
+- **Area of applicability.**
+  [`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md)
+  and [`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md)
+  mark prediction locations outside the predictor space of the training
+  data, following Meyer and Pebesma (2021).
+- **Methods text.** [`summary()`](https://rdrr.io/r/base/summary.html)
+  on a result writes a methods paragraph with the test statistics filled
+  in, in APA, Nature or Ecology style, and
+  [`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md)
+  and
+  [`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
+  write the assessment as YAML or JSON.
+
+The diagnostics follow evaluation principles described by Roberts et
+al. (2017), Kaufman et al. (2012), Kapoor and Narayanan (2023) and
+Linnenbrink et al. (2024), with the references in the DESCRIPTION. [Risk
+Taxonomy](https://gillescolling.com/BORG/articles/risk-taxonomy.html)
+lists each check, what it detects and how to fix it.
 
 ## Installation
 
+Install the released version from CRAN. Windows and macOS get a binary
+package and need no build tools:
+
 ``` r
 
-install.packages("pak")           # development version
+install.packages("BORG")
+```
+
+The development version compiles C++ code. Install the build tools for
+your operating system first:
+
+| Operating system | Build tools |
+|----|----|
+| Windows | [Rtools](https://cran.r-project.org/bin/windows/Rtools/) matching your R version |
+| macOS | Run `xcode-select --install` in Terminal |
+| Debian / Ubuntu | Install `r-base-dev` |
+
+Check that R can find the compiler:
+
+``` r
+
+pkgbuild::has_build_tools(debug = TRUE)
+```
+
+Then install BORG from GitHub:
+
+``` r
+
+# install.packages("pak")
 pak::pak("gcol33/BORG")
 ```
 
-## Quick start
+BORG needs no system libraries beyond the compiler. Its C++ code links
+only to Rcpp, which is installed from CRAN with the package.
+
+## Usage
+
+1.  Diagnose the data and build folds with
+    [`borg()`](https://gillescolling.com/BORG/reference/borg.md).
+2.  Compare random and blocked cross-validation with
+    [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md).
+3.  Check an existing split or fitted preprocessing with
+    [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md).
+
+The input is a data frame, an sf object or a terra `SpatVector`.
+`coords` names the two coordinate columns, `time` the time column and
+`groups` the grouping column; `target` names the response. With an sf or
+`SpatVector` input the coordinates are taken from the geometry.
 
 ``` r
 
 library(BORG)
 
-spatial_data <- data.frame(
-  lon = runif(200, -10, 10),
-  lat = runif(200, -10, 10),
-  response = rnorm(200)
-)
+set.seed(1)
+n <- 200
+d <- data.frame(lon = runif(n, 0, 20), lat = runif(n, 0, 20))
+d$response <- sin(d$lon / 3) + cos(d$lat / 3) + rnorm(n, sd = 0.3)
 
-# diagnose the dependency and get folds that respect it
-result <- borg(spatial_data, coords = c("lon", "lat"), target = "response")
-result$diagnosis@recommended_cv
-#> "spatial_block"
-```
-
-## Diagnose first, then enforce
-
-Spatial CV tools such as `blockCV`, `CAST`, and `spatialsample` give you
-the blocking schemes but leave the decision to you: you have to know the
-data are autocorrelated, pick a block size, and choose to use it. BORG
-runs the diagnosis first. If it finds structure, it estimates how much
-random CV would inflate your metric, refuses random folds, and generates
-a scheme matched to the dependency it found. Overriding is one explicit
-argument away, and the override is logged.
-
-``` r
-
-borg_diagnose(spatial_data, coords = c("lon", "lat"), target = "response")
+result <- borg(d, coords = c("lon", "lat"), target = "response")
+result
+#> BORG Result
+#> ===========
+#> 
 #> Dependency:  SPATIAL (moderate severity)
-#> Moran's I:   0.18 (p < 0.001)
 #> Strategy:    spatial_block
+#> Folds:       5
+#> 
+#> Random CV would inflate metrics by ~8%
+#> 
+#> Fold sizes:  train 148-174, test 26-52
+#> 
+#> Access components:
+#>   $diagnosis  - BorgDiagnosis object
+#>   $folds      - List of train/test index vectors
+#>   $cv         - Full borg_cv object
 ```
 
-## Cross-validation schemes
-
-[`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md)
-covers the schemes used in dependent-data evaluation:
-
-- **Spatial**: spatial blocking, environmental blocking, checkerboard,
-  hexagonal, leave-location-out, spatial-plus (buffered), and KNNDM
-  matched to prediction points.
-- **Temporal**: chronological splits with an embargo, expanding and
-  sliding windows, and de Prado’s purged CV.
-- **Grouped**: leave-group-out, so no cluster appears in both train and
-  test.
-- **Mixed**: spatial-temporal and spatial-group combinations.
-
-Output is a plain list of train/test indices by default, or an
-`rsample`, `caret`, or `mlr3` object for direct use in those frameworks.
-
-``` r
-
-# tidymodels-compatible folds
-folds <- borg(spatial_data, coords = c("lon", "lat"), output = "rsample")
-```
-
-## Show the inflation, not just the warning
+The response varies smoothly in space, so the diagnosis finds spatial
+autocorrelation and builds five spatial blocks instead of random folds.
 
 [`borg_compare_cv()`](https://gillescolling.com/BORG/reference/borg_compare_cv.md)
-runs random and structure-aware CV on the same data and model, and
-reports the gap with a paired t-test. This is the evidence a reviewer
-asks for when you switch a paper from random to blocked CV.
+fits the same model on random and on blocked folds and reports the gap:
 
 ``` r
 
-comparison <- borg_compare_cv(
-  spatial_data,
+cmp <- borg_compare_cv(
+  d,
   formula = response ~ lon + lat,
-  coords  = c("lon", "lat"),
-  repeats = 10
+  coords = c("lon", "lat"),
+  repeats = 5,
+  seed = 1,
+  verbose = FALSE
 )
-print(comparison)
-plot(comparison)
+cmp
+#> CV Comparison Results
+#> =====================
+#> 
+#> Metric: rmse
+#> Random CV:  0.8806 (SD: 0.0040)
+#> Blocked CV: 1.2735 (SD: 0.0000)
+#> 
+#> Inflation: 30.8% deflated***
+#> p-value: 2.522e-09 (paired t-test, n=5 repeats)
+#> 
+#> Random CV significantly deflates rmse estimates.
 ```
 
-[`borg_power()`](https://gillescolling.com/BORG/reference/borg_power.md)
-answers the other half of that conversation: blocking costs you
-effective sample size, so it reports the design effect, the effective n,
-and the minimum effect you can still detect.
-
-## Leakage detection
-
-Before structure, BORG checks the split itself.
-[`borg()`](https://gillescolling.com/BORG/reference/borg.md) in
-validation mode and
-[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
-catch the leaks that quietly inflate a held-out score:
-
-- index overlap and duplicate rows across train and test (fast
-  hash-based checks in C++),
-- preprocessing fitted on the full data (`scale`, `prcomp`,
-  [`caret::preProcess`](https://rdrr.io/pkg/caret/man/preProcess.html),
-  `recipes` steps),
-- target leakage from a feature near-perfectly correlated with the
-  outcome,
-- group leakage and look-ahead in time.
-
-``` r
-
-# scaled before splitting: the test means leaked into the scaler
-data_scaled <- scale(iris[, 1:4])
-borg_inspect(data_scaled, train_idx = 1:100, test_idx = 101:150)
-#> INVALID — Hard violation: preprocessing_leak
-```
-
-Hard violations (overlap, duplicates, preprocessing leak, target leak,
-group leak, look-ahead) invalidate the result and block it. Soft
-inflations (a near-threshold proxy feature, test points close to
-training) warn and let you proceed with the caveat recorded.
-
-## Area of applicability and prediction maps
-
-[`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md) and
-[`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md) flag
-prediction locations that sit outside the feature space the model was
-trained on, following Meyer & Pebesma (2021).
-[`borg_extract()`](https://gillescolling.com/BORG/reference/borg_extract.md),
-[`borg_thin()`](https://gillescolling.com/BORG/reference/borg_thin.md),
-[`borg_predict_raster()`](https://gillescolling.com/BORG/reference/borg_predict_raster.md),
-and
-[`borg_leaflet()`](https://gillescolling.com/BORG/reference/borg_leaflet.md)
-cover the surrounding spatial workflow, from raster extraction to an
-interactive map of folds.
-
-## Methods text for the manuscript
-
-[`summary()`](https://rdrr.io/r/base/summary.html) on a BORG result
-writes a methods paragraph with the test statistics filled in (Moran’s
-I, ACF, ICC, and their p-values), in APA, Nature, or Ecology style.
-[`borg_certificate()`](https://gillescolling.com/BORG/reference/borg_certificate.md)
-and
-[`borg_export()`](https://gillescolling.com/BORG/reference/borg_export.md)
-write the same assessment as a machine-readable YAML or JSON record for
-an audit trail.
+[`summary()`](https://rdrr.io/r/base/summary.html) turns the diagnosis
+into a paragraph for the methods section:
 
 ``` r
 
 summary(result)
-#> Model performance was evaluated using spatial block cross-validation
-#> (k = 5 folds). Spatial autocorrelation was detected (Moran's I = 0.18,
-#> p < 0.001) ...
+#> 
+#> Spatial autocorrelation was detected in the data (Moran's I = 0.29, p < 0.001) with an estimated autocorrelation range of 10.9 units. Model performance was evaluated using spatial block cross-validation (k = 5 folds). Random cross-validation was avoided as it would be expected to inflate performance estimates by approximately 8%. Cross-validation strategy was determined using the BORG package (version 0.3.2) for R.
 ```
+
+## Fold schemes and modelling frameworks
+
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) chooses the
+scheme from the diagnosis, and
+[`borg_cv()`](https://gillescolling.com/BORG/reference/borg_cv.md) takes
+a scheme by name through `strategy`. `output = "rsample"` returns folds
+that tidymodels functions accept:
+
+``` r
+
+folds <- borg(d, coords = c("lon", "lat"), target = "response",
+              output = "rsample")
+```
+
+[Spatial
+Cross-Validation](https://gillescolling.com/BORG/articles/spatial-cv.html)
+and [Temporal
+Cross-Validation](https://gillescolling.com/BORG/articles/temporal-cv.html)
+go through each scheme, and [Framework
+Integration](https://gillescolling.com/BORG/articles/frameworks.html)
+covers caret, mlr3,
+[ENMeval](https://cran.r-project.org/package=ENMeval) and
+[biomod2](https://cran.r-project.org/package=biomod2).
+
+## Checking a split for leakage
+
+With `train_idx` and `test_idx`,
+[`borg()`](https://gillescolling.com/BORG/reference/borg.md) and
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+check an existing split. Passed a fitted preprocessing object and the
+data,
+[`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+checks whether its parameters were estimated on rows beyond the training
+set. Here a principal component analysis was fitted on all rows:
+
+``` r
+
+x <- iris[, 1:4]
+pca <- prcomp(x, scale. = TRUE)
+borg_inspect(pca, train_idx = 1:100, test_idx = 101:150, data = x)
+#> BorgRisk Assessment
+#> ===================
+#> 
+#> Status: INVALID (3 hard violations) — Resistance is futile
+#>   Hard violations:  3
+#>   Soft inflations:  0
+#>   Train indices:    100 rows
+#>   Test indices:     50 rows
+#>   Inspected at:     2026-10-23 01:28:36
+#> 
+#> --- HARD VIOLATIONS (must fix) ---
+#> 
+#> [1] preprocessing_leak
+#>     PCA centering was computed on data beyond training set (mean difference: 0.897)
+#>     Source: prcomp
+#>     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)
+#>     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)
+#> 
+#> [2] preprocessing_leak
+#>     PCA scaling was computed on data beyond training set (sd difference: 0.31575)
+#>     Source: prcomp
+#>     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)
+#>     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)
+#> 
+#> [3] preprocessing_leak
+#>     PCA loadings were computed on data beyond training set (max loading difference: 0.1729)
+#>     Source: prcomp
+#>     Affected: 50 indices (first 5: 101, 102, 103, 104, 105)
+#>     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)
+```
+
+Hard violations (overlap, duplicates, preprocessing leakage, target
+leakage, group leakage, look-ahead) mark the evaluation invalid. Soft
+inflations, such as a predictor close to the threshold for target
+leakage or test points close to training points, give a warning and are
+recorded.
+
+## Area of applicability and prediction maps
+
+[`borg_aoa()`](https://gillescolling.com/BORG/reference/borg_aoa.md) and
+[`borg_di()`](https://gillescolling.com/BORG/reference/borg_di.md)
+compute the dissimilarity index and the area of applicability of Meyer
+and Pebesma (2021) for prediction locations.
+[`borg_extract()`](https://gillescolling.com/BORG/reference/borg_extract.md),
+[`borg_thin()`](https://gillescolling.com/BORG/reference/borg_thin.md),
+[`borg_predict_raster()`](https://gillescolling.com/BORG/reference/borg_predict_raster.md)
+and
+[`borg_leaflet()`](https://gillescolling.com/BORG/reference/borg_leaflet.md)
+cover raster extraction, spatial thinning, prediction maps and an
+interactive map of the folds. [Area of Applicability and Extrapolation
+Detection](https://gillescolling.com/BORG/articles/aoa-extrapolation.html)
+shows them on simulated data.
 
 ## Documentation
 
-- [BORG website](https://gillescolling.com/BORG/)
-- [Function reference](https://gillescolling.com/BORG/reference/)
-- [Source on GitHub](https://github.com/gcol33/BORG)
+Start with [Quick
+Start](https://gillescolling.com/BORG/articles/quickstart.html):
+simulated data with known dependence, from the diagnosis to folds,
+leakage checks and the comparison of random and blocked
+cross-validation.
+
+- [Spatial
+  Cross-Validation](https://gillescolling.com/BORG/articles/spatial-cv.html):
+  spatial blocks, block size optimization, environmental blocking,
+  buffered folds and KNNDM.
+- [Temporal
+  Cross-Validation](https://gillescolling.com/BORG/articles/temporal-cv.html):
+  temporal blocks, expanding windows, embargo periods and concept drift.
+- [Risk
+  Taxonomy](https://gillescolling.com/BORG/articles/risk-taxonomy.html):
+  each leakage check, what it detects and how to fix it.
+- [Framework
+  Integration](https://gillescolling.com/BORG/articles/frameworks.html):
+  folds for tidymodels, caret, mlr3, ENMeval and biomod2.
+- [Model Comparison with Blocked
+  Cross-Validation](https://gillescolling.com/BORG/articles/model-comparison.html):
+  the inflation from random folds, model ranking, confidence intervals
+  and null tests.
+- [Feature Selection with Blocked
+  Cross-Validation](https://gillescolling.com/BORG/articles/feature-selection.html):
+  block-permutation importance and forward selection.
+- [Area of Applicability and Extrapolation
+  Detection](https://gillescolling.com/BORG/articles/aoa-extrapolation.html):
+  where predictions leave the training data.
+- [Post-Fit
+  Diagnostics](https://gillescolling.com/BORG/articles/diagnostics.html):
+  residual structure, calibration, null tests, conformal prediction and
+  bootstrap uncertainty.
+- [Full reference](https://gillescolling.com/BORG/reference/): every
+  function.
+
+## Getting help
+
+Questions and bug reports go to the [GitHub
+issues](https://github.com/gcol33/BORG/issues). A bug report is easiest
+to act on with a small reproducible example, for instance made with
+[reprex](https://reprex.tidyverse.org/).
+
+## Contributing
+
+Pull requests are welcome; see the [contributing
+guide](https://gillescolling.com/BORG/CONTRIBUTING.html).
 
 ## Support
 
@@ -201,15 +341,32 @@ Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-FFDD00?logo=buymeaco
 
 ## License
 
-MIT (see the LICENSE.md file)
+BORG is licensed under MIT.
 
 ## Citation
 
+To cite BORG in publications use:
+
+``` text
+Colling G (2026). _BORG: Bounded Outcome Risk Guard for Model
+Evaluation_. doi:10.32614/CRAN.package.BORG
+<https://doi.org/10.32614/CRAN.package.BORG>. R package version 0.3.2,
+<https://gillescolling.com/BORG/>.
+```
+
+BibTeX:
+
 ``` bibtex
-@software{BORG,
-  author = {Colling, Gilles},
+@Manual{colling2026borg,
   title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},
+  author = {Gilles Colling},
   year = {2026},
-  url = {https://github.com/gcol33/BORG}
+  note = {R package version 0.3.2},
+  doi = {10.32614/CRAN.package.BORG},
+  url = {https://gillescolling.com/BORG/},
 }
 ```
+
+Download the citation as
+[BibTeX](https://gillescolling.com/BORG/BORG.bib) or
+[RIS](https://gillescolling.com/BORG/BORG.ris).

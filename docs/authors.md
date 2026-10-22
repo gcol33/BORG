@@ -11,12 +11,15 @@ Source:
 [`inst/CITATION`](https://github.com/gcol33/BORG/blob/HEAD/inst/CITATION)
 
 Colling G (2026). *BORG: Bounded Outcome Risk Guard for Model
-Evaluation*. R package version 0.2.3, <https://github.com/gcol33/BORG>.
+Evaluation*.
+[doi:10.32614/CRAN.package.BORG](https://doi.org/10.32614/CRAN.package.BORG).
+R package version 0.3.2, <https://gillescolling.com/BORG/>.
 
-    @Manual{,
+    @Manual{colling2026borg,
       title = {BORG: Bounded Outcome Risk Guard for Model Evaluation},
       author = {Gilles Colling},
       year = {2026},
-      url = {https://github.com/gcol33/BORG},
-      note = {R package version 0.2.3},
+      note = {R package version 0.3.2},
+      doi = {10.32614/CRAN.package.BORG},
+      url = {https://gillescolling.com/BORG/},
     }

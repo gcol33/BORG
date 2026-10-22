@@ -1,8 +1,12 @@
+citHeader("To cite BORG in publications use:")
+
 bibentry(
-  bibtype  = "Manual",
-  title    = "BORG: Bounded Outcome Risk Guard for Model Evaluation",
-  author   = person("Gilles", "Colling"),
-  year     = "2026",
-  url      = "https://github.com/gcol33/BORG",
-  note     = "R package version 0.2.3"
+  bibtype = "Manual",
+  key     = "colling2026borg",
+  title   = paste0("BORG: ", meta$Title),
+  author  = person("Gilles", "Colling", comment = c(ORCID = "0000-0003-3070-6066")),
+  year    = "2026",
+  note    = paste("R package version", meta$Version),
+  doi     = "10.32614/CRAN.package.BORG",
+  url     = "https://gillescolling.com/BORG/"
 )

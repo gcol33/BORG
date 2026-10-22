@@ -89,7 +89,7 @@
                         <h4 data-toc-skip class="author">Gilles
 Colling</h4>
             
-            <h4 data-toc-skip class="date">2026-10-19</h4>
+            <h4 data-toc-skip class="date">2026-10-23</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gcol33/BORG/blob/HEAD/vignettes/quickstart.Rmd" class="external-link"><code>vignettes/quickstart.Rmd</code></a></small>
       <div class="d-none name"><code>quickstart.Rmd</code></div>
@@ -2341,7 +2341,7 @@ generating folds, it checks the split for leakage.</p>
 <span><span class="co">#&gt;   Soft inflations:  1</span></span>
 <span><span class="co">#&gt;   Train indices:    210 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     90 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:12</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-23 01:30:07</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- SOFT INFLATIONS (warnings) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -2380,7 +2380,7 @@ object instead of throwing, use <code><a href="../reference/borg_inspect.html">b
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    200 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     151 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:12</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-23 01:30:07</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -2417,7 +2417,7 @@ outcome is known and would not exist at prediction time.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    140 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     60 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:12</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-23 01:30:07</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --- HARD VIOLATIONS (must fix) ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -2461,7 +2461,7 @@ BORG will flag this.</p>
 <span><span class="co">#&gt;   Soft inflations:  0</span></span>
 <span><span class="co">#&gt;   Train indices:    210 rows</span></span>
 <span><span class="co">#&gt;   Test indices:     90 rows</span></span>
-<span><span class="co">#&gt;   Inspected at:     2026-10-19 17:39:12</span></span>
+<span><span class="co">#&gt;   Inspected at:     2026-10-23 01:30:07</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No risks detected.</span></span></code></pre></div>
 <p>The correct pattern: fit the scaler on training data only, then apply
@@ -4016,7 +4016,7 @@ diagnosis, the CV strategy, and the software environment.</p>
 <span><span class="co">#&gt; BORG Validation Certificate</span></span>
 <span><span class="co">#&gt; ===========================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Generated: 2026-10-19T17:39:15+0200</span></span>
+<span><span class="co">#&gt; Generated: 2026-10-23T01:30:09+0200</span></span>
 <span><span class="co">#&gt; BORG version: 0.3.2</span></span>
 <span><span class="co">#&gt; Validation: PASSED</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -4061,7 +4061,6 @@ coordinates from the geometry column automatically; you do not need to
 specify <code>coords</code>.</p>
 <div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-spatial.github.io/sf/" class="external-link">sf</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: package 'sf' was built under R version 4.6.1</span></span>
 <span><span class="co">#&gt; Linking to GEOS 3.13.1, GDAL 3.11.4, PROJ 9.7.0; sf_use_s2() is TRUE</span></span>
 <span><span class="va">sf_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_as_sf.html" class="external-link">st_as_sf</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span>, coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">result_sf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/borg.html">borg</a></span><span class="op">(</span><span class="va">sf_data</span>, target <span class="op">=</span> <span class="st">"y.1"</span>, v <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>

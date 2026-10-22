@@ -382,7 +382,7 @@ risk
 #>   Soft inflations:  1
 #>   Train indices:    210 rows
 #>   Test indices:     90 rows
-#>   Inspected at:     2026-10-19 17:39:12
+#>   Inspected at:     2026-10-23 01:30:07
 #> 
 #> --- SOFT INFLATIONS (warnings) ---
 #> 
@@ -431,7 +431,7 @@ bad_risk
 #>   Soft inflations:  0
 #>   Train indices:    200 rows
 #>   Test indices:     151 rows
-#>   Inspected at:     2026-10-19 17:39:12
+#>   Inspected at:     2026-10-23 01:30:07
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -470,7 +470,7 @@ risk_leak
 #>   Soft inflations:  0
 #>   Train indices:    140 rows
 #>   Test indices:     60 rows
-#>   Inspected at:     2026-10-19 17:39:12
+#>   Inspected at:     2026-10-23 01:30:07
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -517,7 +517,7 @@ risk_pp
 #>   Soft inflations:  0
 #>   Train indices:    210 rows
 #>   Test indices:     90 rows
-#>   Inspected at:     2026-10-19 17:39:12
+#>   Inspected at:     2026-10-23 01:30:07
 #> 
 #> No risks detected.
 ```
@@ -1420,7 +1420,7 @@ cert
 #> BORG Validation Certificate
 #> ===========================
 #> 
-#> Generated: 2026-10-19T17:39:15+0200
+#> Generated: 2026-10-23T01:30:09+0200
 #> BORG version: 0.3.2
 #> Validation: PASSED
 #> 
@@ -1471,7 +1471,6 @@ the geometry column automatically; you do not need to specify `coords`.
 ``` r
 
 library(sf)
-#> Warning: package 'sf' was built under R version 4.6.1
 #> Linking to GEOS 3.13.1, GDAL 3.11.4, PROJ 9.7.0; sf_use_s2() is TRUE
 sf_data <- st_as_sf(sim$data, coords = c("x", "y"))
 result_sf <- borg(sf_data, target = "y.1", v = 5)

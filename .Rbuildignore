@@ -23,3 +23,6 @@
 ^Rplots\.pdf$
 ^paper$
 ^CITATION\.cff$
+^README\.Rmd$
+^sidecars$
+^\.run.*$
