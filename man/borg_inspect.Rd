@@ -17,7 +17,10 @@ borg_inspect(
 \arguments{
 \item{object}{An R object to inspect. Supported types include:
 \itemize{
-\item Preprocessing: \code{preProcess}, \code{recipe}, \code{prcomp}
+\item Preprocessing: \code{preProcess}, \code{recipe}, \code{prcomp},
+and base \code{scale()} output (a matrix carrying the
+\code{"scaled:center"}/\code{"scaled:scale"} attributes, or a data
+frame whose columns were replaced by \code{scale()} output)
 \item CV objects: \code{trainControl}, \code{rsplit}, \code{vfold_cv}
 \item Model objects: \code{train}, \code{lm}, \code{glm}
 \item Data frames with train/test split information
@@ -73,11 +76,13 @@ data(mtcars)
 train_idx <- 1:25
 test_idx <- 26:32
 
-# BAD: preProcess fitted on full data (will detect leak)
+# BAD: standardisation fitted on full data (detected as a leak)
 pp_bad <- scale(mtcars[, -1])
+borg_inspect(pp_bad, train_idx = train_idx, test_idx = test_idx)
 
-# GOOD: preProcess fitted on train only
+# GOOD: standardisation fitted on train only
 pp_good <- scale(mtcars[train_idx, -1])
+borg_inspect(pp_good, train_idx = train_idx, test_idx = test_idx)
 
 }
 \seealso{

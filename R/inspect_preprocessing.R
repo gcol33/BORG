@@ -1,4 +1,127 @@
-# Preprocessing object inspectors: preProcess, recipe, prcomp
+# Preprocessing object inspectors: preProcess, recipe, prcomp, base scale()
+
+#' Does an object carry the attributes written by base scale()?
+#' @noRd
+.has_scale_attrs <- function(x) {
+  is.numeric(x) &&
+    (!is.null(attr(x, "scaled:center")) || !is.null(attr(x, "scaled:scale")))
+}
+
+#' Parameters and unscaled values of base scale() output
+#'
+#' Accepts a matrix returned by \code{scale()} or a data frame whose columns
+#' were replaced by \code{scale()} output (matrix columns carrying the
+#' attributes). The original values are recovered as \code{z * scale + center},
+#' so the train-only statistics can be recomputed without the raw data.
+#'
+#' @return \code{NULL} if no scale() attributes are present, otherwise a list
+#'   with \code{raw} (unscaled numeric matrix), \code{center} and \code{scale}
+#'   (numeric, \code{NA} where that column was not centred / not scaled), and
+#'   \code{names} (column names).
+#' @noRd
+.scale_attributes <- function(object) {
+  if (is.data.frame(object)) {
+    cols <- Filter(function(nm) .has_scale_attrs(object[[nm]]), names(object))
+    if (length(cols) == 0) return(NULL)
+    parts <- lapply(cols, function(nm) {
+      part <- .scale_attributes(object[[nm]])
+      part$names <- if (length(part$names) == 1) {
+        nm
+      } else {
+        paste(nm, part$names, sep = ".")
+      }
+      part
+    })
+    return(list(
+      raw = do.call(cbind, lapply(parts, `[[`, "raw")),
+      center = unlist(lapply(parts, `[[`, "center")),
+      scale = unlist(lapply(parts, `[[`, "scale")),
+      names = unlist(lapply(parts, `[[`, "names"))
+    ))
+  }
+
+  if (!.has_scale_attrs(object)) return(NULL)
+
+  z <- as.matrix(object)
+  p <- ncol(z)
+  ctr <- attr(object, "scaled:center")
+  scl <- attr(object, "scaled:scale")
+  center <- if (is.null(ctr)) rep(NA_real_, p) else as.numeric(ctr)
+  scale_ <- if (is.null(scl)) rep(NA_real_, p) else as.numeric(scl)
+
+  raw <- sweep(z, 2, ifelse(is.na(scale_), 1, scale_), `*`)
+  raw <- sweep(raw, 2, ifelse(is.na(center), 0, center), `+`)
+
+  nms <- colnames(z) %||% names(ctr) %||% names(scl) %||% paste0("V", seq_len(p))
+  colnames(raw) <- nms
+  attr(raw, "scaled:center") <- NULL
+  attr(raw, "scaled:scale") <- NULL
+
+  list(raw = raw, center = center, scale = scale_, names = nms)
+}
+
+#' @noRd
+.inspect_scale <- function(object, train_idx, test_idx, data, ...) {
+  risks <- list()
+
+  if (is.null(train_idx) || is.null(test_idx)) {
+    return(risks)
+  }
+
+  sa <- .scale_attributes(object)
+  if (is.null(sa)) {
+    return(risks)
+  }
+
+  # Training rows: taken from the unscaled object when it spans the split,
+  # the whole object when it holds exactly the training rows, otherwise the
+  # matching columns of `data`.
+  n <- nrow(sa$raw)
+  data_cols <- if (is.null(data)) NULL else colnames(data)
+  train_raw <- if (n >= max(train_idx, test_idx)) {
+    sa$raw[train_idx, , drop = FALSE]
+  } else if (n == length(train_idx)) {
+    sa$raw
+  } else if (all(sa$names %in% data_cols)) {
+    as.matrix(data[train_idx, sa$names, drop = FALSE])
+  } else {
+    return(risks)
+  }
+
+  centred <- !is.na(sa$center)
+  scaled <- !is.na(sa$scale)
+
+  # scale() divides by the root mean square sqrt(sum(x^2) / (n - 1)) of the
+  # (centred) column, which equals the sd when the column is centred.
+  train_center <- colMeans(train_raw, na.rm = TRUE)
+  dev <- sweep(train_raw, 2, ifelse(centred, train_center, 0))
+  train_scale <- sqrt(colSums(dev^2, na.rm = TRUE) /
+                        (colSums(!is.na(dev)) - 1))
+
+  if (any(centred)) {
+    risk <- .check_param_leak(
+      stored = sa$center[centred],
+      recomputed = train_center[centred],
+      description = "scale() centering parameters were computed on data beyond training set (mean difference: %.6g)",
+      source_object = "scale()",
+      test_idx = test_idx
+    )
+    if (!is.null(risk)) risks <- c(risks, list(risk))
+  }
+
+  if (any(scaled)) {
+    risk <- .check_param_leak(
+      stored = sa$scale[scaled],
+      recomputed = train_scale[scaled],
+      description = "scale() scaling parameters were computed on data beyond training set (sd difference: %.6g)",
+      source_object = "scale()",
+      test_idx = test_idx
+    )
+    if (!is.null(risk)) risks <- c(risks, list(risk))
+  }
+
+  risks
+}
 
 #' @noRd
 .inspect_preProcess <- function(object, train_idx, test_idx, data, ...) {

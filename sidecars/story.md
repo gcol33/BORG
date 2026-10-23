@@ -41,6 +41,3 @@ Ecologists and data scientists evaluating predictive models on dependent data; m
 - README / landing: claim, mechanism, Usage (A1, A2, A5), sections for A3, A4, routing
 - Quick Start: tutorial on simulated data
 - Spatial, Temporal, Risk Taxonomy, Frameworks, Model Comparison, Feature Selection, AOA, Post-Fit Diagnostics
-
-## Open
-- borg_inspect() on a matrix from scale() returned VALID (no preprocessing leak) for scale(iris[, 1:4]) with train 1:100 / test 101:150, with and without `data =`; the former README claimed it reports a preprocessing leak. The README now uses a prcomp() example, which is detected.

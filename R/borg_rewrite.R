@@ -275,16 +275,18 @@ borg_assimilate <- function(
     return(.rewrite_preprocessing(workflow, risk))
   }
 
-  # Handle case where data itself was scaled (matrix with center/scale attributes)
+  # Data itself was standardised with scale(): recover the unscaled values
+  # from its attributes and standardise again with train-only statistics
   data <- workflow$data
-  if (is.matrix(data) && !is.null(attr(data, "scaled:center"))) {
-    numeric_train <- data[workflow$train_idx, , drop = FALSE]
-    # Recompute on original unscaled data if possible, otherwise re-scale
+  if (is.matrix(data) && .has_scale_attrs(data)) {
+    raw <- .scale_attributes(data)$raw
+    numeric_train <- raw[workflow$train_idx, , drop = FALSE]
     centers <- colMeans(numeric_train, na.rm = TRUE)
     scales <- apply(numeric_train, 2, sd, na.rm = TRUE)
     scales[scales == 0] <- 1
 
-    rescaled <- scale(data, center = centers, scale = scales)
+    rescaled <- scale(raw, center = centers, scale = scales)
+    dimnames(rescaled) <- dimnames(data)
     workflow$data <- rescaled
     return(list(workflow = workflow, success = TRUE))
   }

@@ -6,7 +6,10 @@
 #'
 #' @param object An R object to inspect. Supported types include:
 #'   \itemize{
-#'     \item Preprocessing: \code{preProcess}, \code{recipe}, \code{prcomp}
+#'     \item Preprocessing: \code{preProcess}, \code{recipe}, \code{prcomp},
+#'       and base \code{scale()} output (a matrix carrying the
+#'       \code{"scaled:center"}/\code{"scaled:scale"} attributes, or a data
+#'       frame whose columns were replaced by \code{scale()} output)
 #'     \item CV objects: \code{trainControl}, \code{rsplit}, \code{vfold_cv}
 #'     \item Model objects: \code{train}, \code{lm}, \code{glm}
 #'     \item Data frames with train/test split information
@@ -54,11 +57,13 @@
 #' train_idx <- 1:25
 #' test_idx <- 26:32
 #'
-#' # BAD: preProcess fitted on full data (will detect leak)
+#' # BAD: standardisation fitted on full data (detected as a leak)
 #' pp_bad <- scale(mtcars[, -1])
+#' borg_inspect(pp_bad, train_idx = train_idx, test_idx = test_idx)
 #'
-#' # GOOD: preProcess fitted on train only
+#' # GOOD: standardisation fitted on train only
 #' pp_good <- scale(mtcars[train_idx, -1])
+#' borg_inspect(pp_good, train_idx = train_idx, test_idx = test_idx)
 #'
 #' @export
 borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
@@ -164,9 +169,12 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
    .inspect_mlr3_task(object, train_idx, test_idx, ...)
  } else if (inherits(object, "ResampleResult")) {
    .inspect_mlr3_resample_result(object, train_idx, test_idx, data, ...)
+ } else if (.has_scale_attrs(object)) {
+   .inspect_scale(object, train_idx, test_idx, data, ...)
  } else if (is.data.frame(object)) {
-   .inspect_data_frame(object, train_idx, test_idx,
-                       target_col = target, spatial_cols = coords, ...)
+   c(.inspect_data_frame(object, train_idx, test_idx,
+                         target_col = target, spatial_cols = coords, ...),
+     .inspect_scale(object, train_idx, test_idx, data, ...))
  } else if (.is_trainControl(object)) {
    # caret::trainControl returns a list, detect by structure
    .inspect_trainControl(object, train_idx, test_idx, ...)
@@ -202,7 +210,7 @@ borg_inspect <- function(object, train_idx = NULL, test_idx = NULL, data = NULL,
 
 # Type-specific inspectors are in separate files:
 #   inspect_utils.R          - %||%, .inspect_generic, .is_trainControl, .point_in_polygon
-#   inspect_preprocessing.R  - preProcess, recipe, prcomp
+#   inspect_preprocessing.R  - preProcess, recipe, prcomp, base scale()
 #   inspect_resampling.R     - trainControl, rsplit, vfold_cv, rset, caret train
 #   inspect_data.R           - data.frame (duplicates, target leakage, spatial)
 #   inspect_models.R         - lm, glm, ranger, xgboost, lightgbm, parsnip, workflow, tune

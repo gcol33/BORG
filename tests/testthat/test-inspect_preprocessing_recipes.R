@@ -184,3 +184,78 @@ test_that("inspect_recipe handles unprepped recipe", {
                           data = data)
   expect_s4_class(result, "BorgRisk")
 })
+
+# --- base scale() inspection ---
+
+preprocessing_leaks <- function(result) {
+  Filter(function(r) r$type == "preprocessing_leak", result@risks)
+}
+
+test_that("scale() fitted on all rows before the split is flagged", {
+  x <- iris[, 1:4]
+  scaled <- scale(x)
+
+  result <- borg_inspect(scaled, train_idx = 1:100, test_idx = 101:150)
+  leaks <- preprocessing_leaks(result)
+  expect_false(result@is_valid)
+  expect_length(leaks, 2)
+  expect_true(all(vapply(leaks, function(r) r$source_object, "") == "scale()"))
+
+  result_data <- borg_inspect(scaled, train_idx = 1:100, test_idx = 101:150,
+                              data = x)
+  expect_false(result_data@is_valid)
+  expect_length(preprocessing_leaks(result_data), 2)
+})
+
+test_that("scale() fitted on training rows only is not flagged", {
+  x <- iris[, 1:4]
+  train_idx <- 1:100
+  test_idx <- 101:150
+
+  train_scaled <- scale(x[train_idx, ])
+  result <- borg_inspect(train_scaled, train_idx = train_idx,
+                         test_idx = test_idx, data = x)
+  expect_true(result@is_valid)
+  expect_length(preprocessing_leaks(result), 0)
+
+  test_scaled <- scale(x[test_idx, ],
+                       center = attr(train_scaled, "scaled:center"),
+                       scale = attr(train_scaled, "scaled:scale"))
+  result_test <- borg_inspect(test_scaled, train_idx = train_idx,
+                              test_idx = test_idx, data = x)
+  expect_true(result_test@is_valid)
+
+  full_with_train_params <- scale(x,
+                                  center = colMeans(x[train_idx, ]),
+                                  scale = apply(x[train_idx, ], 2, sd))
+  expect_true(borg_inspect(full_with_train_params, train_idx = train_idx,
+                           test_idx = test_idx)@is_valid)
+})
+
+test_that("scale() with only centering or only scaling is checked", {
+  x <- iris[, 1:4]
+  centred <- scale(x, scale = FALSE)
+  expect_false(borg_inspect(centred, 1:100, 101:150)@is_valid)
+
+  rms_scaled <- scale(x, center = FALSE)
+  expect_false(borg_inspect(rms_scaled, 1:100, 101:150)@is_valid)
+  expect_true(borg_inspect(scale(as.matrix(x[1:100, ]), center = FALSE),
+                           1:100, 101:150, data = x)@is_valid)
+})
+
+test_that("data frame columns standardised with scale() are flagged", {
+  df <- iris[, 1:4]
+  df[] <- lapply(df, scale)
+
+  result <- borg_inspect(df, train_idx = 1:100, test_idx = 101:150)
+  expect_false(result@is_valid)
+  expect_true(any(vapply(preprocessing_leaks(result),
+                         function(r) r$source_object == "scale()", logical(1))))
+
+  df_train <- iris[1:100, 1:4]
+  df_train[] <- lapply(df_train, scale)
+  expect_length(preprocessing_leaks(
+    borg_inspect(df_train, train_idx = 1:100, test_idx = 101:150,
+                 data = iris[, 1:4])
+  ), 0)
+})
