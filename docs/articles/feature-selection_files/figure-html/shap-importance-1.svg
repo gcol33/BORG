@@ -44,21 +44,21 @@
 </defs>
 <g clip-path='url(#cpMjQuMTl8NDk0LjA0fDI2LjE3fDI1Mi4wMg==)'>
 <rect x='24.19' y='26.17' width='469.85' height='225.85' style='stroke-width: 1.07; stroke: none; fill: #FCFCFC;' />
-<polyline points='45.55,252.02 45.55,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='154.27,252.02 154.27,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='262.99,252.02 262.99,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='371.71,252.02 371.71,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='480.43,252.02 480.43,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<line x1='45.55' y1='52.23' x2='472.68' y2='52.23' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
-<line x1='45.55' y1='95.66' x2='229.91' y2='95.66' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
-<line x1='45.55' y1='139.09' x2='171.18' y2='139.09' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
-<line x1='45.55' y1='182.53' x2='149.34' y2='182.53' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
-<line x1='45.55' y1='225.96' x2='63.24' y2='225.96' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
-<circle cx='472.68' cy='52.23' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
-<circle cx='229.91' cy='95.66' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
-<circle cx='171.18' cy='139.09' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
-<circle cx='149.34' cy='182.53' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
-<circle cx='63.24' cy='225.96' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
+<polyline class='preserve-color' points='45.55,252.02 45.55,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='154.27,252.02 154.27,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='262.99,252.02 262.99,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='371.71,252.02 371.71,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='480.43,252.02 480.43,26.17 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<line class='preserve-color' x1='45.55' y1='52.23' x2='472.68' y2='52.23' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
+<line class='preserve-color' x1='45.55' y1='95.66' x2='229.91' y2='95.66' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
+<line class='preserve-color' x1='45.55' y1='139.09' x2='171.18' y2='139.09' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
+<line class='preserve-color' x1='45.55' y1='182.53' x2='149.34' y2='182.53' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
+<line class='preserve-color' x1='45.55' y1='225.96' x2='63.24' y2='225.96' style='stroke-width: 1.71; stroke: #2C3E50; stroke-linecap: butt;' />
+<circle class='preserve-color' cx='472.68' cy='52.23' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
+<circle class='preserve-color' cx='229.91' cy='95.66' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
+<circle class='preserve-color' cx='171.18' cy='139.09' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
+<circle class='preserve-color' cx='149.34' cy='182.53' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
+<circle class='preserve-color' cx='63.24' cy='225.96' r='3.56' style='stroke-width: 0.71; stroke: #2C3E50; fill: #2C3E50;' />
 </g>
 <g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
 <text x='19.26' y='229.11' text-anchor='end' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>x4</text>

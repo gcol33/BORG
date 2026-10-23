@@ -42,7 +42,7 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw0MzIuMDB8MTEuNDJ8MzQ4LjU4)'>
-<rect x='0.00' y='11.42' width='432.00' height='337.15' style='stroke-width: 1.16; stroke: none;' /> fill: #F5F6F8;' />
+<rect x='0.00' y='11.42' width='432.00' height='337.15' style='stroke-width: 1.16; stroke: none;' />
 </g>
 <g clip-path='url(#cpMC4wMHw0MzIuMDB8MC4wMHwzNjAuMDA=)'>
 </g>
@@ -52,7 +52,7 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpNDQuMTJ8MzIxLjY0fDM2LjcxfDMxNC4yMw==)'>
-<rect x='44.12' y='36.71' width='277.52' height='277.52' style='stroke-width: 1.16; stroke: none;' /> fill: #F5F6F8;' />
+<rect x='44.12' y='36.71' width='277.52' height='277.52' style='stroke-width: 1.16; stroke: none;' />
 <polyline points='44.12,270.08 321.64,270.08 ' style='stroke-width: 0.58; stroke: #DFD7CA; stroke-linecap: butt;' />
 <polyline points='44.12,207.00 321.64,207.00 ' style='stroke-width: 0.58; stroke: #DFD7CA; stroke-linecap: butt;' />
 <polyline points='44.12,143.93 321.64,143.93 ' style='stroke-width: 0.58; stroke: #DFD7CA; stroke-linecap: butt;' />
@@ -385,7 +385,7 @@
 <text x='309.03' y='326.48' text-anchor='middle' style='font-size: 0.96em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>1.00</text>
 <text x='182.88' y='340.08' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>x</text>
 <text transform='translate(14.57,175.47) rotate(-90)' text-anchor='middle' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>y</text>
-<rect x='333.60' y='117.74' width='92.42' height='115.45' style='stroke-width: 1.16; stroke: none;' /> fill: #F5F6F8;' />
+<rect x='333.60' y='117.74' width='92.42' height='115.45' style='stroke-width: 1.16; stroke: none;' />
 <text x='339.58' y='133.58' style='font-size: 1.2em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Response (y.1)</text>
 <image width='17.28' height='86.40' x='339.58' y='140.81' preserveAspectRatio='none' xlink:href='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAEsCAYAAAACUNnVAAAA4klEQVQ4jY2QS5LDMAhEH9wk97/cbFMV07NwjAWWYu+A/kr8vV9yZLgF7BMCt7DJCk4YbkpyyizRXVHXMaMB1b651FZD2mnV/BKwoV/RNt4lbaIYAMMly8m/BpKtKOdPzgCOKVbA6ta06uHN4HzMb/LSdDLFrUt7grqV4eJqcNFWP4rVk4w1mUc1brRxT1nKoAB9bSW5BXKNJ6bHGvpVI5pilpFAtDS1LmfaQnGu0RSAC+EyHQ1QAeCLxnCrZON6q+SolP1WM8Imzs2v1phRovpFTYuUjWtOBr7lbUP4BvgH8Q/tz8IBGi+44gAAAABJRU5ErkJggg=='/>
 <polyline points='353.40,210.16 356.86,210.16 ' style='stroke-width: 0.38; stroke: #FFFFFF; stroke-linecap: butt;' />

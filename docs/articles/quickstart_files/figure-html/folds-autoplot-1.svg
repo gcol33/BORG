@@ -44,17 +44,17 @@
 </defs>
 <g clip-path='url(#cpNDIuNTB8NDk0LjA0fDQyLjc5fDIxOC41OA==)'>
 <rect x='42.50' y='42.79' width='451.54' height='175.79' style='stroke-width: 1.07; stroke: none; fill: #FCFCFC;' />
-<polyline points='42.50,210.59 494.04,210.59 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='42.50,178.88 494.04,178.88 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='42.50,147.18 494.04,147.18 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='42.50,115.47 494.04,115.47 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='42.50,83.76 494.04,83.76 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='42.50,52.05 494.04,52.05 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='94.60,218.58 94.60,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='181.44,218.58 181.44,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='268.27,218.58 268.27,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='355.10,218.58 355.10,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='441.94,218.58 441.94,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,210.59 494.04,210.59 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,178.88 494.04,178.88 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,147.18 494.04,147.18 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,115.47 494.04,115.47 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,83.76 494.04,83.76 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='42.50,52.05 494.04,52.05 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='94.60,218.58 94.60,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='181.44,218.58 181.44,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='268.27,218.58 268.27,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='355.10,218.58 355.10,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='441.94,218.58 441.94,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
 <rect x='66.38' y='62.83' width='28.22' height='147.76' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #1B4F72;' />
 <rect x='153.21' y='61.56' width='28.22' height='149.03' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #1B4F72;' />
 <rect x='240.05' y='60.93' width='28.22' height='149.66' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #1B4F72;' />
@@ -90,7 +90,7 @@
 <text x='441.94' y='229.81' text-anchor='middle' style='font-size: 0.88em;fill: #4D4D4D; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>5</text>
 <text x='268.27' y='242.28' text-anchor='middle' style='font-size: 1.1em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Fold</text>
 <text transform='translate(17.84,130.69) rotate(-90)' text-anchor='middle' style='font-size: 1.1em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>Observations</text>
-<rect x='227.42' y='255.56' width='81.70' height='22.48' style='stroke-width: 1.07; stroke: none;' /> fill: #F5F6F8;' />
+<rect x='227.42' y='255.56' width='81.70' height='22.48' style='stroke-width: 1.07; stroke: none;' />
 <rect x='233.61' y='261.75' width='10.10' height='10.10' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #1B4F72;' />
 <rect x='273.18' y='261.75' width='10.10' height='10.10' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #C0392B;' />
 <text x='249.90' y='269.95' style='font-size: 0.88em; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>train</text>

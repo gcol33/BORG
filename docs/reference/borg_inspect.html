@@ -87,7 +87,10 @@ detected risks.</p>
 
 
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
-<dd><p>An R object to inspect. Supported types include:</p><ul><li><p>Preprocessing: <code>preProcess</code>, <code>recipe</code>, <code>prcomp</code></p></li>
+<dd><p>An R object to inspect. Supported types include:</p><ul><li><p>Preprocessing: <code>preProcess</code>, <code>recipe</code>, <code>prcomp</code>,
+and base <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> output (a matrix carrying the
+<code>"scaled:center"</code>/<code>"scaled:scale"</code> attributes, or a data
+frame whose columns were replaced by <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code> output)</p></li>
 <li><p>CV objects: <code>trainControl</code>, <code>rsplit</code>, <code>vfold_cv</code></p></li>
 <li><p>Model objects: <code>train</code>, <code>lm</code>, <code>glm</code></p></li>
 <li><p>Data frames with train/test split information</p></li>
@@ -170,11 +173,13 @@ features used test data during computation</p></dd>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">25</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fl">26</span><span class="op">:</span><span class="fl">32</span></span>
 <span></span>
-<span><span class="co"># BAD: preProcess fitted on full data (will detect leak)</span></span>
+<span><span class="co"># BAD: standardisation fitted on full data (detected as a leak)</span></span>
 <span><span class="va">pp_bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu">borg_inspect</span><span class="op">(</span><span class="va">pp_bad</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># GOOD: preProcess fitted on train only</span></span>
+<span><span class="co"># GOOD: standardisation fitted on train only</span></span>
 <span><span class="va">pp_good</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu">borg_inspect</span><span class="op">(</span><span class="va">pp_good</span>, train_idx <span class="op">=</span> <span class="va">train_idx</span>, test_idx <span class="op">=</span> <span class="va">test_idx</span><span class="op">)</span></span>
 <span></span></code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

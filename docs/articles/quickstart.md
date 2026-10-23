@@ -382,7 +382,7 @@ risk
 #>   Soft inflations:  1
 #>   Train indices:    210 rows
 #>   Test indices:     90 rows
-#>   Inspected at:     2026-10-23 01:30:07
+#>   Inspected at:     2026-10-23 11:07:11
 #> 
 #> --- SOFT INFLATIONS (warnings) ---
 #> 
@@ -431,7 +431,7 @@ bad_risk
 #>   Soft inflations:  0
 #>   Train indices:    200 rows
 #>   Test indices:     151 rows
-#>   Inspected at:     2026-10-23 01:30:07
+#>   Inspected at:     2026-10-23 11:07:11
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -470,7 +470,7 @@ risk_leak
 #>   Soft inflations:  0
 #>   Train indices:    140 rows
 #>   Test indices:     60 rows
-#>   Inspected at:     2026-10-23 01:30:07
+#>   Inspected at:     2026-10-23 11:07:11
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -512,14 +512,26 @@ risk_pp
 #> BorgRisk Assessment
 #> ===================
 #> 
-#> Status: VALID (no hard violations)
-#>   Hard violations:  0
+#> Status: INVALID (2 hard violations) — Resistance is futile
+#>   Hard violations:  2
 #>   Soft inflations:  0
 #>   Train indices:    210 rows
 #>   Test indices:     90 rows
-#>   Inspected at:     2026-10-23 01:30:07
+#>   Inspected at:     2026-10-23 11:07:11
 #> 
-#> No risks detected.
+#> --- HARD VIOLATIONS (must fix) ---
+#> 
+#> [1] preprocessing_leak
+#>     scale() centering parameters were computed on data beyond training set (mean difference: 0.0889683)
+#>     Source: scale()
+#>     Affected: 90 indices (first 5: 211, 212, 213, 214, 215)
+#>     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)
+#> 
+#> [2] preprocessing_leak
+#>     scale() scaling parameters were computed on data beyond training set (sd difference: 0.0359844)
+#>     Source: scale()
+#>     Affected: 90 indices (first 5: 211, 212, 213, 214, 215)
+#>     Fix: Refit preprocessing on training data only. Auto-fix: borg_assimilate(workflow)
 ```
 
 The correct pattern: fit the scaler on training data only, then apply
@@ -1420,7 +1432,7 @@ cert
 #> BORG Validation Certificate
 #> ===========================
 #> 
-#> Generated: 2026-10-23T01:30:09+0200
+#> Generated: 2026-10-23T11:07:14+0200
 #> BORG version: 0.3.2
 #> Validation: PASSED
 #> 

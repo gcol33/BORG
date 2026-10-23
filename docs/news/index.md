@@ -4,6 +4,18 @@
 
 ### Correctness fixes
 
+- [`borg_inspect()`](https://gillescolling.com/BORG/reference/borg_inspect.md)
+  now detects preprocessing leakage in base
+  [`scale()`](https://rdrr.io/r/base/scale.html) output: a matrix
+  carrying the `"scaled:center"`/`"scaled:scale"` attributes, or a data
+  frame whose columns were replaced by
+  [`scale()`](https://rdrr.io/r/base/scale.html) output. The stored
+  centre and scale are compared with the training-row statistics,
+  recovered from the scaled values themselves or from `data`.
+  Standardising on all rows before the split is reported as a hard
+  violation; standardising on the training rows only is not.
+  [`borg_assimilate()`](https://gillescolling.com/BORG/reference/borg_assimilate.md)
+  re-standardises such a matrix from its unscaled values.
 - `borg_cv(strategy = "group_fold")` now assigns groups to folds by
   their label rather than by position. Numeric group identifiers whose
   values were not `1:n_groups` (e.g. site codes) previously produced

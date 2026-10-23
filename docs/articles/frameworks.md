@@ -80,7 +80,7 @@ borg(data, train_idx = train_idx, test_idx = test_idx)
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> No risks detected.
 ```
@@ -161,7 +161,7 @@ borg_inspect(pp_bad, train_idx, test_idx, data = mtcars)
 #>   Soft inflations:  0
 #>   Train indices:    25 rows
 #>   Test indices:     7 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -188,7 +188,7 @@ borg_inspect(pp_good, train_idx, test_idx, data = mtcars)
 #>   Soft inflations:  0
 #>   Train indices:    25 rows
 #>   Test indices:     7 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> No risks detected.
 ```
@@ -351,7 +351,7 @@ borg_inspect(rec_bad, train_idx, test_idx, data = mtcars)
 #>   Soft inflations:  0
 #>   Train indices:    25 rows
 #>   Test indices:     7 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -387,7 +387,7 @@ borg_inspect(rec_good, train_idx, test_idx, data = mtcars)
 #>   Soft inflations:  0
 #>   Train indices:    25 rows
 #>   Test indices:     7 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> No risks detected.
 ```
@@ -566,7 +566,7 @@ borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
 #>   Soft inflations:  0
 #>   Train indices:    0 rows
 #>   Test indices:     0 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> No risks detected.
 ```
@@ -797,7 +797,7 @@ result
 #>   Soft inflations:  0
 #>   Train indices:    252 rows
 #>   Test indices:     113 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:46
 #> 
 #> No risks detected.
 ```
@@ -828,7 +828,7 @@ borg_inspect(rolling, train_idx = NULL, test_idx = NULL)
 #>   Soft inflations:  0
 #>   Train indices:    0 rows
 #>   Test indices:     0 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:47
 #> 
 #> No risks detected.
 ```
@@ -869,7 +869,7 @@ result
 #>   Soft inflations:  0
 #>   Train indices:    91 rows
 #>   Test indices:     109 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:47
 #> 
 #> No risks detected.
 ```
@@ -955,7 +955,7 @@ result
 #>   Soft inflations:  0
 #>   Train indices:    105 rows
 #>   Test indices:     45 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:47
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -992,7 +992,7 @@ result
 #>   Soft inflations:  0
 #>   Train indices:    100 rows
 #>   Test indices:     100 rows
-#>   Inspected at:     2026-10-23 01:29:46
+#>   Inspected at:     2026-10-23 11:06:47
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 

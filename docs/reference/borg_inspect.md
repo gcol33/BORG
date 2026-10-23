@@ -24,7 +24,11 @@ borg_inspect(
 
   An R object to inspect. Supported types include:
 
-  - Preprocessing: `preProcess`, `recipe`, `prcomp`
+  - Preprocessing: `preProcess`, `recipe`, `prcomp`, and base
+    [`scale()`](https://rdrr.io/r/base/scale.html) output (a matrix
+    carrying the `"scaled:center"`/`"scaled:scale"` attributes, or a
+    data frame whose columns were replaced by
+    [`scale()`](https://rdrr.io/r/base/scale.html) output)
 
   - CV objects: `trainControl`, `rsplit`, `vfold_cv`
 
@@ -118,9 +122,11 @@ data(mtcars)
 train_idx <- 1:25
 test_idx <- 26:32
 
-# BAD: preProcess fitted on full data (will detect leak)
+# BAD: standardisation fitted on full data (detected as a leak)
 pp_bad <- scale(mtcars[, -1])
+borg_inspect(pp_bad, train_idx = train_idx, test_idx = test_idx)
 
-# GOOD: preProcess fitted on train only
+# GOOD: standardisation fitted on train only
 pp_good <- scale(mtcars[train_idx, -1])
+borg_inspect(pp_good, train_idx = train_idx, test_idx = test_idx)
 ```

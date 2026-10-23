@@ -44,15 +44,15 @@
 </defs>
 <g clip-path='url(#cpMzcuNjF8NDk0LjA0fDQyLjc5fDMyNC4wMg==)'>
 <rect x='37.61' y='42.79' width='456.43' height='281.23' style='stroke-width: 1.07; stroke: none; fill: #FCFCFC;' />
-<polyline points='37.61,311.24 494.04,311.24 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='37.61,255.66 494.04,255.66 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='37.61,200.08 494.04,200.08 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='37.61,144.50 494.04,144.50 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='37.61,88.92 494.04,88.92 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='100.56,324.02 100.56,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='220.59,324.02 220.59,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='340.62,324.02 340.62,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
-<polyline points='460.65,324.02 460.65,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='37.61,311.24 494.04,311.24 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='37.61,255.66 494.04,255.66 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='37.61,200.08 494.04,200.08 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='37.61,144.50 494.04,144.50 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='37.61,88.92 494.04,88.92 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='100.56,324.02 100.56,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='220.59,324.02 220.59,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='340.62,324.02 340.62,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
+<polyline class='preserve-color' points='460.65,324.02 460.65,42.79 ' style='stroke-width: 0.64; stroke: #DFD7CA; stroke-linecap: butt;' />
 <rect x='58.36' y='311.24' width='13.83' height='0.00' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
 <rect x='72.19' y='311.24' width='13.83' height='0.00' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
 <rect x='86.02' y='311.24' width='13.83' height='0.00' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
@@ -83,7 +83,7 @@
 <rect x='431.80' y='311.24' width='13.83' height='0.00' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
 <rect x='445.63' y='311.24' width='13.83' height='0.00' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
 <rect x='459.46' y='300.12' width='13.83' height='11.12' style='stroke-width: 0.43; stroke: #FFFFFF; stroke-linecap: butt; stroke-linejoin: miter; fill: #B3B3B3;' />
-<line x1='65.27' y1='324.02' x2='65.27' y2='42.79' style='stroke-width: 2.13; stroke: #C0392B; stroke-linecap: butt;' />
+<line class='preserve-color' x1='65.27' y1='324.02' x2='65.27' y2='42.79' style='stroke-width: 2.13; stroke: #C0392B; stroke-linecap: butt;' />
 <text class='preserve-color' x='73.82' y='71.39' style='font-size: 0.996em; font-weight: bold;fill: #C0392B; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>empirical = 0.2871</text>
 <text class='preserve-color' x='70.06' y='85.73' style='font-size: 0.996em; font-weight: bold;fill: #C0392B; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;'>p = 0.0100</text>
 </g>
