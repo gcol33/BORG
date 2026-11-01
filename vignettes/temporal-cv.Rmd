@@ -50,8 +50,8 @@ The problem is look-ahead bias. When random CV scatters observations into folds
 without regard for time, the training set routinely contains future observations.
 A model trained on data from January through December and tested on March has
 already seen April. The test error shrinks because the model has access to
-information that would not exist at prediction time. This is not a subtle
-statistical nuance; it is a data leak that invalidates the entire evaluation.
+information that would not exist at prediction time. This is a data leak that
+invalidates the entire evaluation.
 
 The mechanism is straightforward. Suppose we want to predict species abundance
 in July 2023. Under random 5-fold CV, the training set could include
@@ -306,7 +306,7 @@ In each fold, the training period ends before the test period begins. The gap
 between the last training observation and the first test observation is the
 embargo period. No future data leaks into the training set.
 
-The contiguous block structure is not just a convenience; it is a requirement.
+The folds have to be contiguous blocks of time.
 Consider the alternative: assigning random time points to folds while
 keeping folds "mostly" in order. A fold that tests on March 2021 but
 includes two February 2021 observations in its test set and three March 2021
@@ -734,7 +734,7 @@ The practical workflow is:
 3. If severity is "none" or "mild", proceed. If "moderate" or "severe",
    retrain on more recent data or investigate which features changed and why.
 
-Concept drift detection does not replace temporal CV; it extends it. Temporal
+Concept drift detection is used alongside temporal CV. Temporal
 CV tells you how well the model predicts the next time window given the
 current training data. Drift detection tells you whether the next time window
 is similar enough to the training data for those predictions to be trustworthy.
@@ -828,7 +828,7 @@ is sufficient for most journals.
 
 ## When NOT to use temporal CV
 
-Temporal CV is not always the right choice, even when the data has timestamps.
+Random CV can be appropriate even when the data has timestamps.
 
 **Interpolation tasks.** If the goal is to fill gaps in a time series (e.g.,
 imputing missing sensor readings between known values), random CV correctly

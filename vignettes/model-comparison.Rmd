@@ -55,7 +55,7 @@ The result is that metric inflation varies by model complexity, which means
 random CV can reverse the ranking of candidate models compared to honest,
 spatially blocked CV.
 
-This is not a theoretical concern. Roberts et al. (2017) demonstrated
+Roberts et al. (2017) demonstrated
 inflation exceeding 50% in realistic species distribution modelling
 scenarios. Wadoux et al. (2021) showed that model selection based on random
 CV favours overly complex models that perform poorly at genuinely new
@@ -323,7 +323,7 @@ spatial structure that will not be present at prediction locations.
 
 The comparison between random and blocked rankings is itself informative.
 If both strategies produce the same ranking, the relative ordering of
-models is robust to the choice of CV strategy even if the absolute metrics
+models is insensitive to the choice of CV strategy even if the absolute metrics
 differ. If the rankings diverge, the models that benefit most from random CV
 are the ones most likely to disappoint at new locations. We can formalise
 this by computing the rank correlation (Kendall's tau or Spearman's rho)

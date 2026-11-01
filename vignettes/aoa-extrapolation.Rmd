@@ -58,7 +58,6 @@ when data are spatially autocorrelated, because nearby points that share
 information end up in both training and test sets. Meyer and Pebesma (2021)
 addressed a complementary problem: even with spatially blocked CV, the reported
 accuracy applies only within the environmental space covered by training data.
-Blocked CV does not solve everything.
 They formalized the concept of an *area of applicability* (AOA), the region in
 feature space where a model can make reliable predictions because training data
 covers that region sufficiently. Their dissimilarity index (DI) measures how far
@@ -293,7 +292,7 @@ that no reasonable threshold would include them.
 ## Univariate and multivariate checks
 
 While the AOA uses a weighted nearest-neighbour distance, `borg_extrapolation()`
-takes a different approach: it checks whether each prediction point falls outside
+checks whether each prediction point falls outside
 the training data's environmental envelope. The check works at two levels.
 
 The **univariate** check tests whether each predictor value at the prediction
@@ -506,7 +505,7 @@ considered.
 ## Where predictions change with the training set
 
 While `borg_prediction_map()` only produces predictions for points when they
-appear in a test fold, `borg_stability_map()` takes a different approach: it
+appear in a test fold, `borg_stability_map()`
 refits the model on each fold's training set and predicts *all* locations (not
 just the test set). This gives every location a prediction from every fold,
 enabling a finer-grained view of how sensitive the predictions are to the

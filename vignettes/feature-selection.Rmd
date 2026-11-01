@@ -52,10 +52,10 @@ When observations are autocorrelated, random CV allows nearby points to leak
 information between training and test folds. This inflates the apparent
 performance of every candidate model. But the inflation is not uniform across
 variables: features that happen to correlate with the spatial or temporal
-structure of the data receive a disproportionate boost. The result is that random
+structure of the data gain disproportionately. The result is that random
 CV selects variables that track spatial pattern rather than the true
 signal-to-noise relationship. A model built on those variables will look
-excellent in cross-validation and fail on genuinely new locations or time periods.
+excellent in cross-validation and fail on new locations or time periods.
 
 BORG addresses this by routing every evaluation through blocked CV. When
 coordinates, time indices, or group labels are present, the package generates
@@ -580,9 +580,9 @@ diag
 
 The diagnosis confirms that the data has spatial autocorrelation, which means
 random CV would inflate performance metrics and bias feature selection toward
-spatially structured noise. This step is not optional: skipping diagnosis and
-proceeding directly to feature selection with random CV is the single most common
-source of overfit variable sets in spatial modeling. The diagnosis result drives
+spatially structured noise. Skipping diagnosis and proceeding directly to
+feature selection with random CV is a common source of overfit variable sets in
+spatial modeling. The diagnosis result drives
 the choice of CV strategy in the next step.
 
 ## Generate blocked folds

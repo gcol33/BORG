@@ -268,7 +268,7 @@ leave-disc-out (which can exclude too much data).
 
 # Block size optimization
 
-Block size is not arbitrary. Too small, and nearby autocorrelated
+Block size can be wrong in either direction. Too small, and nearby autocorrelated
 points end up in different folds, reintroducing the very leakage you are trying
 to prevent. Too large, and you waste data by creating folds with very few test
 observations. The right size depends on the autocorrelation range.
@@ -384,7 +384,7 @@ geographic coordinates within the same climate envelope.
 
 ## Leave-disc-out (buffered spatial CV)
 
-`borg_disc_cv()` takes a different approach. It first creates spatial folds
+`borg_disc_cv()` first creates spatial folds
 via k-means blocking, then removes all training points within a radius of
 any test point. These excluded points form a buffer zone that eliminates
 spatial autocorrelation leakage more aggressively than standard blocking.
@@ -587,7 +587,7 @@ captured by geographic blocking alone.
 
 As a post-hoc check, the geodist diagnostic is most useful after selecting a
 CV strategy. Run it after generating your folds to verify that the CV is
-actually testing the model under conditions similar to the prediction task.
+testing the model under conditions similar to the prediction task.
 If the KS statistic is large (above 0.3 is a reasonable threshold), consider
 switching to KNNDM or environmental blocking, or adjusting the block size to
 better match the prediction distances. The diagnostic does not tell you which
@@ -761,8 +761,8 @@ fold sets and average across them.
 
 ## When NOT to use spatial CV
 
-Spatial CV is not always the answer. There are situations where standard
-random CV is appropriate even when the data has spatial coordinates.
+Standard random CV can be appropriate even when the data has spatial
+coordinates.
 
 **Interpolation tasks.** If the explicit goal is to predict at locations
 between known sites (e.g., gap-filling in a sensor network), random CV

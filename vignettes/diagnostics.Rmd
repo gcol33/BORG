@@ -766,9 +766,9 @@ the effective sample size when using blocked CV.
 **Treating calibration as optional.** Calibration errors compound through
 downstream decisions. If a species distribution model reports 90% habitat
 suitability at a location and the true value is 60%, conservation resources get
-allocated to the wrong areas. The question is not whether the model predicts well
-on average, but whether you can trust what the model says about its own confidence
-at any given point.
+allocated to the wrong areas. Calibration checks whether you can trust what the
+model says about its own confidence at any given point, which good average
+accuracy does not guarantee.
 
 **Over-blocking.** Aggressive blocking (many large blocks) reduces the effective
 sample size and can make the model appear worse than it truly is. Block at the
