@@ -39,21 +39,12 @@ navbar:
     - news
     right:
     - search
-    - lightswitch
     - github
+    - lightswitch
   components:
     intro:
-      text: Get Started
+      text: Get started
       href: articles/quickstart.html
-    articles:
-      text: Articles
-      menu:
-      - text: Quick Start
-        href: articles/quickstart.html
-      - text: Risk Taxonomy
-        href: articles/risk-taxonomy.html
-      - text: Framework Integration
-        href: articles/frameworks.html
     github:
       icon: fab fa-github
       href: https://github.com/gcol33/BORG
@@ -211,11 +202,11 @@ reference:
   - as.data.frame.BorgDiagnosis
   - print.borg_cv_report
 articles:
-- title: Getting Started
-  navbar: ~
-  contents: quickstart
-- title: Deep Dives
-  navbar: ~
+- title: Get started
+  contents:
+  - quickstart
+- title: Deep dives
+  navbar: Deep dives
   contents:
   - risk-taxonomy
   - frameworks
