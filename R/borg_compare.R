@@ -28,7 +28,10 @@
 #' @param v Integer. Number of CV folds. Default: 5.
 #' @param repeats Integer. Number of times to repeat CV. Default: 10 for stable
 #'   estimates.
-#' @param seed Integer. Random seed for reproducibility.
+#' @param seed Integer or NULL. Base seed. Repeat \code{r} draws its blocked
+#'   folds with \code{seed + 1000 * (r - 1)} and its random folds with the
+#'   seed after that, so repeats differ and the whole run is reproducible.
+#'   \code{NULL} uses 42.
 #' @param verbose Logical. Print progress messages. Default: TRUE.
 #'
 #' @return A \code{borg_comparison} object (S3 class) containing:
@@ -183,13 +186,16 @@ borg_compare_cv <- function(data,
   random_results <- vector("list", repeats)
   blocked_results <- vector("list", repeats)
 
+  base_seed <- if (is.null(seed)) 42L else as.integer(seed)
+  rep_seeds <- seq(base_seed, by = 1000L, length.out = repeats)
+
   for (rep in seq_len(repeats)) {
     if (verbose && rep %% 5 == 1) {
       message(sprintf("Repeat %d/%d...", rep, repeats))
     }
 
     # Generate random CV folds
-    random_folds <- generate_random_folds(data, v = v)
+    random_folds <- generate_random_folds(data, v = v, seed = rep_seeds[rep] + 1L)
 
     # Generate blocked CV folds
     blocked_folds <- borg_cv(
@@ -202,6 +208,7 @@ borg_compare_cv <- function(data,
       target = target,
       output = "list",
       allow_random = FALSE,
+      seed = rep_seeds[rep],
       verbose = FALSE
     )$folds
 

@@ -1,7 +1,7 @@
 
 # BORG
 
-*cross-validation for data that isn’t independent*
+*cross-validation for spatial, temporal and grouped data*
 
 <!-- badges: start -->
 
@@ -24,15 +24,16 @@ on each other, builds cross-validation folds that keep dependent
 observations apart, and checks train/test splits for leakage, such as
 preprocessing fitted on the test rows.
 
-Dependence is tested from the columns that carry structure: Moran’s I on
-the coordinates for spatial autocorrelation, the autocorrelation
-function and the Ljung-Box test on a time column, and the intraclass
-correlation for groups. The result is a diagnosis with a severity and a
-recommended fold scheme, and the folds are built from that scheme. When
-dependence is found, random k-fold cross-validation is switched off
-unless you request it, and the override is recorded in the result. You
-can then use the folds directly or compare them with random folds before
-deciding which estimate to report.
+Dependence is tested on the response from the columns that carry
+structure: Moran’s I over the coordinates for spatial autocorrelation,
+the autocorrelation function and the Ljung-Box test along the time
+column, and the intraclass correlation coefficient within groups. The
+result is a diagnosis with a severity and a recommended fold scheme, and
+the folds are built from that scheme. When dependence is found, random
+k-fold cross-validation is switched off unless you request it, and the
+override is recorded in the result. You can then use the folds directly
+or compare them with random folds before deciding which estimate to
+report.
 
 BORG supports:
 
@@ -227,7 +228,7 @@ borg_inspect(pca, train_idx = 1:100, test_idx = 101:150, data = x)
 #>   Soft inflations:  0
 #>   Train indices:    100 rows
 #>   Test indices:     50 rows
-#>   Inspected at:     2026-10-23 01:28:36
+#>   Inspected at:     2026-10-30 16:42:36
 #> 
 #> --- HARD VIOLATIONS (must fix) ---
 #> 
@@ -270,7 +271,7 @@ shows them on simulated data.
 ## Documentation
 
 Start with [Quick
-Start](https://gillescolling.com/BORG/articles/quickstart.html):
+Start](https://gillescolling.com/BORG/articles/BORG.html):
 simulated data with known dependence, from the diagnosis to folds,
 leakage checks and the comparison of random and blocked
 cross-validation.

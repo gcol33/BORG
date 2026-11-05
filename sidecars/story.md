@@ -14,7 +14,7 @@ Ecologists and data scientists evaluating predictive models on dependent data; m
 
 ### A1 Diagnose, then build folds
 - answer: borg() tests Moran's I / ACF-Ljung-Box / ICC, recommends a scheme, disables random CV unless allow_random
-- home: vignettes/quickstart.Rmd, vignettes/spatial-cv.Rmd, vignettes/temporal-cv.Rmd
+- home: vignettes/BORG.Rmd, vignettes/spatial-cv.Rmd, vignettes/temporal-cv.Rmd
 - also: README (opening, Usage), DESCRIPTION
 
 ### A2 How much random CV inflates the metric

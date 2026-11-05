@@ -42,9 +42,6 @@ navbar:
     - github
     - lightswitch
   components:
-    intro:
-      text: Get started
-      href: articles/quickstart.html
     github:
       icon: fab fa-github
       href: https://github.com/gcol33/BORG
@@ -202,9 +199,6 @@ reference:
   - as.data.frame.BorgDiagnosis
   - print.borg_cv_report
 articles:
-- title: Get started
-  contents:
-  - quickstart
 - title: Deep dives
   navbar: Deep dives
   contents:
@@ -220,3 +214,5 @@ footer:
   structure:
     left: developed_by
     right: built_with
+redirects:
+- ["articles/quickstart.html", "articles/BORG.html"]

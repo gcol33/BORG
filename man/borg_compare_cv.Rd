@@ -54,7 +54,10 @@ extracted from formula.}
 \item{repeats}{Integer. Number of times to repeat CV. Default: 10 for stable
 estimates.}
 
-\item{seed}{Integer. Random seed for reproducibility.}
+\item{seed}{Integer or NULL. Base seed. Repeat \code{r} draws its blocked
+folds with \code{seed + 1000 * (r - 1)} and its random folds with the
+seed after that, so repeats differ and the whole run is reproducible.
+\code{NULL} uses 42.}
 
 \item{verbose}{Logical. Print progress messages. Default: TRUE.}
 }

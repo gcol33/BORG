@@ -825,6 +825,6 @@ these steps:
 
 ## See Also
 
-- `vignette("quickstart")` for basic usage and concepts
+- `vignette("BORG")` for basic usage and concepts
 
 - `vignette("risk-taxonomy")` for the complete catalog of detectable risks

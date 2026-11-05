@@ -374,6 +374,30 @@ generate_random_folds <- function(data, v, seed = NULL) {
 }
 
 
+#' Assign k-means clusters to v folds. Clusters are visited in a random order
+#' and each goes to the currently smallest fold, so fold sizes stay balanced
+#' while different seeds give different partitions even when k-means
+#' converges to the same clustering. Observations without a cluster are
+#' spread over the folds at random.
+#' @noRd
+assign_clusters_to_folds <- function(clusters, v) {
+  cluster_table <- table(clusters)
+  cluster_ids <- as.integer(names(cluster_table))
+  fold_assignment <- rep(NA_integer_, length(cluster_ids))
+  fold_sizes <- rep(0L, v)
+
+  for (idx in sample.int(length(cluster_ids))) {
+    target_fold <- which.min(fold_sizes)
+    fold_assignment[idx] <- target_fold
+    fold_sizes[target_fold] <- fold_sizes[target_fold] + cluster_table[[idx]]
+  }
+
+  obs_folds <- fold_assignment[match(clusters, cluster_ids)]
+  obs_folds[is.na(obs_folds)] <- sample(seq_len(v), sum(is.na(obs_folds)), replace = TRUE)
+  obs_folds
+}
+
+
 #' Generate Spatial Block Folds (Internal)
 #' @noRd
 generate_spatial_block_folds <- function(data, v, diagnosis, coords, block_size, verbose,
@@ -426,24 +450,7 @@ generate_spatial_block_folds <- function(data, v, diagnosis, coords, block_size,
   clusters <- rep(NA_integer_, n)
   clusters[complete] <- km$cluster
 
-  # Assign clusters to folds (balanced by size)
-  cluster_table <- table(clusters)
-  cluster_ids <- as.integer(names(cluster_table))
-  cluster_order <- order(cluster_table, decreasing = TRUE)
-
-  fold_assignment <- rep(NA_integer_, length(cluster_ids))
-  fold_sizes <- rep(0L, v)
-
-  for (cid in cluster_ids[cluster_order]) {
-    # Assign to fold with smallest current size
-    target_fold <- which.min(fold_sizes)
-    fold_assignment[cid] <- target_fold
-    fold_sizes[target_fold] <- fold_sizes[target_fold] + cluster_table[as.character(cid)]
-  }
-
-  # Create folds
-  obs_folds <- fold_assignment[clusters]
-  obs_folds[is.na(obs_folds)] <- sample(1:v, sum(is.na(obs_folds)), replace = TRUE)
+  obs_folds <- assign_clusters_to_folds(clusters, v)
 
   folds <- lapply(1:v, function(i) {
     test_idx <- which(obs_folds == i)
@@ -1204,22 +1211,7 @@ generate_environmental_block_folds <- function(data, v, diagnosis, coords, env, 
   clusters <- rep(NA_integer_, n)
   clusters[complete] <- km$cluster
 
-  # Assign clusters to folds (balanced by size)
-  cluster_table <- table(clusters)
-  cluster_ids <- as.integer(names(cluster_table))
-  cluster_order <- order(cluster_table, decreasing = TRUE)
-
-  fold_assignment <- rep(NA_integer_, length(cluster_ids))
-  fold_sizes <- rep(0L, v)
-
-  for (cid in cluster_ids[cluster_order]) {
-    target_fold <- which.min(fold_sizes)
-    fold_assignment[cid] <- target_fold
-    fold_sizes[target_fold] <- fold_sizes[target_fold] + cluster_table[as.character(cid)]
-  }
-
-  obs_folds <- fold_assignment[clusters]
-  obs_folds[is.na(obs_folds)] <- sample(seq_len(v), sum(is.na(obs_folds)), replace = TRUE)
+  obs_folds <- assign_clusters_to_folds(clusters, v)
 
   folds <- lapply(seq_len(v), function(i) {
     test_idx <- which(obs_folds == i)

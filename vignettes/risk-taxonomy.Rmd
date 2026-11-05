@@ -758,6 +758,6 @@ as.data.frame(result)
 
 ## See Also
 
-- `vignette("quickstart")` - Basic usage
+- `vignette("BORG")` - Basic usage
 
 - `vignette("frameworks")` - Framework integration

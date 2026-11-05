@@ -166,32 +166,40 @@ exportClasses(BorgDiagnosis)
 exportClasses(BorgRisk)
 exportMethods(show)
 importFrom(Rcpp,sourceCpp)
-importFrom(grDevices,chull)
-importFrom(grDevices,rgb)
-importFrom(graphics,abline)
-importFrom(graphics,axis)
-importFrom(graphics,barplot)
-importFrom(graphics,legend)
-importFrom(graphics,lines)
-importFrom(graphics,mtext)
-importFrom(graphics,par)
-importFrom(graphics,plot)
-importFrom(graphics,plot.new)
-importFrom(graphics,plot.window)
-importFrom(graphics,rect)
-importFrom(graphics,text)
-importFrom(methods,is)
-importFrom(methods,new)
-importFrom(stats,complete.cases)
-importFrom(stats,cor)
-importFrom(stats,median)
-importFrom(stats,model.frame)
-importFrom(stats,prcomp)
-importFrom(stats,predict)
-importFrom(stats,quantile)
-importFrom(stats,sd)
-importFrom(stats,setNames)
-importFrom(stats,var)
+importFrom(grDevices,
+  chull,
+  rgb
+)
+importFrom(graphics,
+  abline,
+  axis,
+  barplot,
+  legend,
+  lines,
+  mtext,
+  par,
+  plot,
+  plot.new,
+  plot.window,
+  rect,
+  text
+)
+importFrom(methods,
+  is,
+  new
+)
+importFrom(stats,
+  complete.cases,
+  cor,
+  median,
+  model.frame,
+  prcomp,
+  predict,
+  quantile,
+  sd,
+  setNames,
+  var
+)
 importFrom(utils,head)
 importMethodsFrom(methods,show)
 useDynLib(BORG, .registration = TRUE)

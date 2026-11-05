@@ -356,7 +356,7 @@ Provide reviewers with:
 ### 6.2 Teaching Materials ⚠️ PARTIAL
 
 ✅ Existing vignettes:
-- `quickstart.Rmd`: Basic usage guide
+- `BORG.Rmd`: Basic usage guide
 - `frameworks.Rmd`: Framework integration examples
 - `risk-taxonomy.Rmd`: Risk type documentation
 
